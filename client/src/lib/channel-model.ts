@@ -8,7 +8,8 @@
  */
 
 export const PSI_CHANNELS = "51,200";
-export const PSI_CHANNEL_COUNT = 51_200;
+import { TOTAL_CHANNELS } from "@shared/wnsp-model";
+export const PSI_CHANNEL_COUNT = TOTAL_CHANNELS;
 export const PSI_CHANNEL_FORMULA = "256 WDM × 50 OAM × 2 polarisations × 2 propagation directions";
 export const PSI_CHANNEL_FORMULA_SHORT = "256 WDM × 50 OAM × 2 POL × 2 DIR";
 export const PSI_CHANNEL_MATH = "256 × 50 × 2 × 2 = 51,200";
@@ -20,4 +21,4 @@ export const CHANNEL_FORMULA_SHORT = "256 × 50 × 2 × 2";
 export const CHANNEL_DIMENSIONS = "N_λ × N_OAM × N_Pol × N_Dir";
 
 export const CHANNEL_META_DESC =
-  `${CHANNEL_COUNT} orthogonal Ψ channels (${CHANNEL_FORMULA}) — orthogonal by quantum mechanics, not software policy.`;
+  `${CHANNEL_COUNT} configured Ψ combinations (${CHANNEL_FORMULA}); practical optical isolation and capacity require measurement.`;

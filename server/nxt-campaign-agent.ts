@@ -13,6 +13,11 @@ import { db } from "./db";
 import { campaignLog } from "../shared/schema";
 import { desc } from "drizzle-orm";
 import { publishToNostr } from "./nostr-service";
+import { PRIOR_ART_CAMPAIGN_SLOTS, BREAKTHROUGH_CAMPAIGN_SLOTS } from "./prior-art-campaign";
+import { OWNER_CAMPAIGN_SLOTS, OWNER_CAMPAIGN_SLOT_IDS, buildOwnerCampaignSlots } from "./owner-campaign";
+import { getOwnerRegister } from "./founding-owner-service";
+import { pool } from "./db";
+import { HARDWARE_REVIEW_HOLD, promotionsArePaused } from "../shared/hardware-readiness";
 
 const TAG = "[NxtCampaign]";
 const DEFAULT_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
@@ -42,7 +47,9 @@ let _state: CampaignState = {
 
 let _timer: ReturnType<typeof setInterval> | null = null;
 
-export function getCampaignState(): CampaignState { return { ..._state }; }
+export function getCampaignState(): CampaignState & { paused: boolean; pauseReason: string | null } {
+  return { ..._state, paused: promotionsArePaused(), pauseReason: promotionsArePaused() ? HARDWARE_REVIEW_HOLD.reason : null };
+}
 
 // ── Message slots ─────────────────────────────────────────────────────────────
 interface Slot {
@@ -63,7 +70,7 @@ When Bitcoin dips, most people panic. Smart builders do the opposite — they <b
 
 Why?
 
-🔶 NXT is the <b>native token of NexusOS</b> — a physics-based OS built on wavelength physics, not cryptographic hashing.
+🔶 NXT is the <b>native token of NexusOS</b> — a hosted software system with wavelength models and a proposed photonic hardware roadmap. Cryptographic protections remain part of the system.
 ⚡ 1,000 sats = 1 NXT. Buy dips. Stack physics.
 🔒 Stake NXT and earn up to <b>420% APY</b>.
 💎 Staking auto-mints <b>WNUSD</b> — a sats-backed stablecoin that funds hardware production.
@@ -92,7 +99,7 @@ wnsp.io #NXT #NexusOS #Bitcoin #WNUSD`,
     id: 1, label: "Staking yields explained", emoji: "🔒",
     telegram: `🔒 <b>NXT Staking — Real Yield, Physics-Backed</b>
 
-Six lock periods. Six yield tiers. All backed by the WNSP physics engine.
+Six lock periods. Six yield tiers defined by staking policy; physics does not guarantee investment returns.
 
 <pre>
  Period   APY     WNUSD Auto-Minted
@@ -107,7 +114,7 @@ Six lock periods. Six yield tiers. All backed by the WNSP physics engine.
 
 💡 Every stake auto-mints <b>WNUSD</b> at 1:1 against your sats collateral.
 🏭 WNUSD is spent on NexusOS <b>photonic hardware</b> production.
-📐 Yield is calculated using <b>E=hf</b> — actual electromagnetic wave physics.
+📐 <b>E=hf</b> supports spectral energy calculations, not a physical derivation or guarantee of staking yield.
 
 Stake via Nostr DM: just send <code>!stake 10000 30</code> to the NexusOS bot.
 
@@ -126,7 +133,7 @@ Six lock periods. Six yield tiers.
 
 Every stake auto-mints WNUSD at 1:1 against sats collateral.
 WNUSD funds photonic hardware production.
-Yield formula: E=hf (real electromagnetic physics)
+Yield follows staking policy; E=hf describes photon energy, not investment returns.
 
 DM bot: !stake 10000 30
 
@@ -145,12 +152,12 @@ Most stablecoins sit idle. <b>WNUSD is different.</b>
 🔹 Collateral never moves without your approval
 
 <b>What WNUSD funds:</b>
-🏭 SNIC — Spectral Network Interface Chip
-📡 PHR-1 — Photonic Hardware Relay
+🏭 SNIC — Spectral Node Integration Circuit
+📡 PHR-1 — Photonic Harmonic Resonator-1
 🌐 Spectral Relay Mesh v1
 🔧 WavelengthScript Compiler α
 
-This is a <b>crowdfunded photonic computing stack</b> that runs the WavelengthScript language natively in hardware by ~2032. No rewrite needed — NexusOS is already written in the language of the destination hardware.
+This is a <b>crowdfunded photonic computing roadmap</b> targeting integration around 2032. The VM runs in software today; native chip execution, optical interfaces and end-to-end performance still require development and validation.
 
 👉 Stake NXT. Mint WNUSD. Build the future.
 wnsp.io
@@ -162,12 +169,12 @@ Auto-minted when you stake NXT
 Auto-redeemed when you unstake
 
 WNUSD funds:
-• SNIC — Spectral Network Interface Chip
-• PHR-1 — Photonic Hardware Relay
+• SNIC — Spectral Node Integration Circuit
+• PHR-1 — Photonic Harmonic Resonator-1
 • Spectral Relay Mesh v1
 • WavelengthScript Compiler α
 
-Photonic computing stack by ~2032. NexusOS already speaks the language of the destination hardware — no rewrite needed.
+Photonic integration target: ~2032, not a guaranteed release. The current VM is software; the hardware interface and native execution require validation.
 
 Stake NXT → Mint WNUSD → Build the future.
 
@@ -176,15 +183,15 @@ wnsp.io #WNUSD #NXT #PhotonicComputing #NexusOS`,
   },
   {
     id: 3, label: "Physics-based blockchain intro", emoji: "📐",
-    telegram: `📐 <b>Why NexusOS Replaces Cryptographic Hashing With Physics</b>
+    telegram: `📐 <b>WNSP Spectral Models and Software Integrity</b>
 
 Traditional blockchains use SHA-256 — an arbitrary math function.
 
-NexusOS uses <b>Maxwell's equations.</b>
+NexusOS models spectral coordinates using physical equations while retaining cryptographic integrity and server-side authorisation.
 
 ⚡ Every address is a wavelength (380–780nm)
-📡 Every transaction validates against electromagnetic wave physics
-🌈 25,600 orthogonal WNSP channels — orthogonal by quantum mechanics, not software policy
+📡 Spectral consistency checks do not replace signatures, hashes or sender authorisation
+🌈 51,200 configured coordinate combinations — measured optical isolation and capacity remain hardware acceptance requirements
 💫 Fee formula: E = hf (Planck's equation — real photon energy)
 
 This isn't a gimmick. When photonic ASICs arrive (~2032), NexusOS nodes run on actual light — not transistors.
@@ -194,14 +201,14 @@ Two live Bitcoin Runes on mainnet: NEXUS•WAVELENGTH + WNSP•BTC
 
 👉 Read the spec: wnsp.io/hardware-spec
 #NexusOS #NXT #WNSP #Physics #Bitcoin`,
-    nostr: `📐 Why NexusOS replaces cryptographic hashing with physics
+    nostr: `📐 WNSP spectral models and software integrity
 
 Traditional blockchains: SHA-256 (arbitrary math)
-NexusOS: Maxwell's equations
+NexusOS: spectral calculations alongside cryptographic integrity and authorisation
 
 Every address = a wavelength (380–780nm)
-Every transaction validates against electromagnetic wave physics
-25,600 orthogonal WNSP channels (quantum mechanics, not software)
+Spectral consistency alone does not authenticate a transaction
+51,200 configured coordinate combinations, not measured optical capacity
 Fee = E=hf (real photon energy)
 
 When photonic ASICs arrive (~2032), NexusOS nodes run on actual light.
@@ -258,7 +265,7 @@ Kardashev Type I: a civilisation that harnesses the full energy output of its ho
 NexusOS is the operating system for that transition.
 
 🌐 WNSP Protocol — wavelength-based addressing (no DNS, no IP)
-🔆 25,600 photonic channels — ready for optical hardware
+🔆 51,200 photonic channels — ready for optical hardware
 💰 NXT token — physics-priced, sats-settled
 💎 WNUSD — stablecoin funding the hardware stack
 🪙 Two live Bitcoin Runes: NEXUS•WAVELENGTH (952596:379) + WNSP•BTC (952733:1958)
@@ -278,7 +285,7 @@ Kardashev Type I: full planetary energy harnessing.
 NexusOS is the OS for that transition:
 
 • WNSP — wavelength-based addressing (no DNS/IP)
-• 25,600 photonic channels
+• 51,200 photonic channels
 • NXT — physics-priced, sats-settled
 • WNUSD — stablecoin → hardware funding
 • Bitcoin Runes: NEXUS•WAVELENGTH + WNSP•BTC (mainnet)
@@ -302,7 +309,7 @@ NexusOS has inscribed its core specifications onto the Bitcoin base layer via Or
 
 📜 <b>WNSP Protocol spec</b> — wavelength-based addressing
 🔮 <b>WavelengthScript Compiler α</b> — the language of photonic hardware
-🌈 <b>25,600 Ψ channel map</b> — the Hilbert space routing table
+🌈 <b>51,200 Ψ channel map</b> — the Hilbert space routing table
 🔬 <b>Compression State Theory</b> — the physics underpinning it all
 
 <b>Why Ordinals?</b> The physics spec must outlast any server. Inscribed on Bitcoin it cannot be censored, altered, or deleted — guaranteed by proof-of-work.
@@ -319,7 +326,7 @@ Every Ordinal is immutable data, secured by proof-of-work forever.
 Inscribed:
 • WNSP Protocol spec — wavelength-based addressing
 • WavelengthScript Compiler α
-• 25,600 Ψ channel map (Hilbert space routing)
+• 51,200 Ψ channel map (Hilbert space routing)
 • Compression State Theory
 
 Why inscribe? Physics specs must outlast any server. Bitcoin makes them uncensorable, unalterable, permanent.
@@ -457,7 +464,7 @@ Step 3 → Inspect the spectral analysis: wavelength distribution, total energy 
 Step 4 → Click Transmit. Your data propagates as photons. On completion: Spectral Receipt — permanent on-chain ordinal with your λ, Ψ, and content hash.
 Step 5 → Retrieve at wnsp.io/spectral-workspace — tune to your wavelength.
 
-25,600 orthogonal channels. Physics addressing. No account required to read.
+51,200 orthogonal channels. Physics addressing. No account required to read.
 
 This architecture runs on silicon today. Migrates to photonic hardware ~2032. Zero rewrite.
 
@@ -568,8 +575,8 @@ fn greet(name: @495nm String) {
 }
 
 What happens when you compile this:
-→ Functions get spectral addresses from E=hf (not assigned arbitrarily)
-→ Variables live at wavelength bands: AUTH=437nm, LOGIC=540nm, EVENT=612nm
+→ Functions get deterministic software spectral addresses using a versioned encoding profile
+→ Variables use spectral labels: AUTH=470nm, LOGIC=540nm, EVENT=612nm
 → Bytecode = photon-energy instructions: PUSH, EMIT, RECV, HALT
 → WNSP VM executes step-by-step with Ψ registers as spectral memory
 
@@ -646,13 +653,13 @@ wnsp.io/developer #NexusOS #WNSP #API #Developer #Physics`,
 
 Every NexusOS address looks like this: <code>Ψ(wdm, oam, pol)</code>
 
-This isn't random. It's a coordinate in a 25,600-channel Hilbert space.
+This isn't random. It's a coordinate in a 51,200-channel Hilbert space.
 
 🔵 <b>WDM (wavelength-division multiplexing)</b> — which colour of light: 1–128 bands, 380–780nm
 🔁 <b>OAM (orbital angular momentum)</b> — which spin mode: 1–100 twists
 ↕️ <b>Pol (polarisation)</b> — which orientation: H (horizontal) or V (vertical)
 
-<b>Total channels: 128 × 100 × 2 = 25,600</b>
+<b>Total channels: 256 × 50 × 2 × 2 = 51,200</b>
 
 Why does this matter?
 ⟨Ψᵢ|Ψⱼ⟩ = 0 — every channel is <b>orthogonal by quantum mechanics</b>. Not by software. Two transmissions on different channels cannot interfere — guaranteed by physics, not policy.
@@ -675,7 +682,7 @@ WDM  = wavelength-division: which colour of light (1–128, 380–780nm)
 OAM  = orbital angular momentum: which spin mode (1–100)
 Pol  = polarisation: H (horizontal) or V (vertical)
 
-Total channels: 128 × 100 × 2 = 25,600
+Total channels: 256 × 50 × 2 × 2 = 51,200
 
 ⟨Ψᵢ|Ψⱼ⟩ = 0
 Every channel is orthogonal by quantum mechanics — not software.
@@ -742,10 +749,47 @@ Try now: wnsp.io/ce-se-pipeline
 #NexusOS #WNSP #WavelengthScript #Physics #Developer #Photonics`,
     tags: ["NexusOS","WNSP","WavelengthScript","Physics","Developer","Photonics"],
   },
+  {
+    id: 16, label: "PHR-1 hardware milestone — Coiltek prototypes", emoji: "🛠",
+    telegram: `🛠 <b>NexusOS hardware milestone: PHR-1 prototypes built</b>
+
+Our first physical PHR-1 bifilar toroid coils are real. Coiltek Pty Ltd in South Australia manufactured and electrically tested <b>three NEX-0589-PROTO-001 units</b> on 27 July 2026. <b>All three passed</b> the reported electrical checks.
+
+Measured at 1 kHz / 1.0 V: average inductance approximately <b>62.2 μH</b>, with DC resistance approximately <b>295 mΩ</b>. This is a manufactured and tested coil prototype — not a claim that the full photonic hardware or proposed ZERO-G behavior has been demonstrated.
+
+The PHR-1 resonator is one step in our hardware build, alongside the planned Syncbox controller and future photonic components. See the prototype record, drawing and test results:
+
+👉 https://wnsp.io/hardware-spec#proto001
+
+#NexusOS #PHR1 #Hardware #Coiltek #WNSP`,
+    nostr: `🛠 NexusOS hardware milestone: PHR-1 prototypes built
+
+Coiltek Pty Ltd in South Australia manufactured and electrically tested three NEX-0589-PROTO-001 bifilar toroid coils on 27 July 2026. All three passed the reported electrical checks.
+
+At 1 kHz / 1.0 V: average inductance ~62.2 μH; DC resistance ~295 mΩ.
+
+This is a tested coil prototype, not a demonstration of the full photonic hardware or proposed ZERO-G behavior. Next steps include the Syncbox controller and future photonic components.
+
+Prototype record, drawing and test results: https://wnsp.io/hardware-spec#proto001
+
+#NexusOS #PHR1 #Hardware #Coiltek #WNSP`,
+    tags: ["NexusOS", "PHR1", "Hardware", "Coiltek", "WNSP"],
+  },
+  ...PRIOR_ART_CAMPAIGN_SLOTS,
+  ...BREAKTHROUGH_CAMPAIGN_SLOTS,
+  ...OWNER_CAMPAIGN_SLOTS,
 ];
+
+// Resolve owner names from the committed transfer, never from a pending request.
+export async function resolveCampaignSlot(slot: Slot): Promise<Slot> {
+  if (!(OWNER_CAMPAIGN_SLOT_IDS as readonly number[]).includes(slot.id)) return slot;
+  const register = await getOwnerRegister(pool);
+  return buildOwnerCampaignSlots(register).find((entry) => entry.id === slot.id)!;
+}
 
 // ── Telegram channel sender ───────────────────────────────────────────────────
 async function sendTelegram(text: string): Promise<{ ok: boolean; messageId?: number; error?: string }> {
+  if (promotionsArePaused()) return { ok: false, error: HARDWARE_REVIEW_HOLD.reason };
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN not set" };
 
@@ -768,6 +812,7 @@ async function sendTelegram(text: string): Promise<{ ok: boolean; messageId?: nu
 
 // ── Discord webhook sender ────────────────────────────────────────────────────
 async function sendDiscord(text: string): Promise<{ ok: boolean; error?: string }> {
+  if (promotionsArePaused()) return { ok: false, error: HARDWARE_REVIEW_HOLD.reason };
   const url = process.env.DISCORD_WEBHOOK_URL;
   if (!url) return { ok: false, error: "DISCORD_WEBHOOK_URL not set" };
   try {
@@ -789,6 +834,7 @@ async function sendDiscord(text: string): Promise<{ ok: boolean; error?: string 
 
 // ── Nostr sender ─────────────────────────────────────────────────────────────
 async function sendNostr(slot: Slot): Promise<{ ok: boolean; eventId?: string; relays?: string[]; error?: string }> {
+  if (promotionsArePaused()) return { ok: false, error: HARDWARE_REVIEW_HOLD.reason };
   try {
     const result = await publishToNostr({
       kind:    "note",
@@ -812,6 +858,10 @@ export async function fireEventBroadcast(opts: {
   body:      string;
   hashtags:  string[];
 }): Promise<{ tg: any; nostr: any; discord: any }> {
+  if (promotionsArePaused()) {
+    const blocked = { ok: false, error: HARDWARE_REVIEW_HOLD.reason };
+    return { tg: blocked, nostr: blocked, discord: blocked };
+  }
   const tags = opts.hashtags.map(t => `#${t}`).join(" ");
   const tgText      = `${opts.emoji} <b>${opts.title}</b>\n\n${opts.body}\n\n${tags}`;
   const nostrText   = `${opts.emoji} ${opts.title}\n\n${opts.body}\n\n${tags}`;
@@ -837,6 +887,7 @@ export async function fireEventBroadcast(opts: {
 }
 
 export async function fireCampaignSlot(slotIndex?: number): Promise<{ slot: Slot; tg: any; nostr: any }> {
+  if (promotionsArePaused()) throw new Error(HARDWARE_REVIEW_HOLD.reason);
   let slot: Slot;
   let idx: number;
 
@@ -851,6 +902,17 @@ export async function fireCampaignSlot(slotIndex?: number): Promise<{ slot: Slot
     slot = SLOTS[idx];
   }
 
+  if ((OWNER_CAMPAIGN_SLOT_IDS as readonly number[]).includes(slot.id)) {
+    const register = await getOwnerRegister(pool);
+    if (!register.replacementComplete) {
+      if (slotIndex !== undefined) throw new Error("Owner announcements await the completed seat 1 transfer");
+      // A pending gift must not stop the rest of the scheduled campaign.
+      _state.slotIndex = idx + 1;
+      console.log(`${TAG} Skipping owner announcement — seat 1 transfer is pending`);
+      return { slot, tg: { ok: false, error: "Owner transfer pending" }, nostr: { ok: false, error: "Owner transfer pending" } };
+    }
+    slot = buildOwnerCampaignSlots(register).find((entry) => entry.id === slot.id)!;
+  }
   console.log(`${TAG} Firing slot id=${slot.id} [arr:${idx}] — "${slot.label}"`);
 
   const discordText = `${slot.emoji} **${slot.label}**\n\n${slot.telegram.replace(/<b>(.*?)<\/b>/g, "**$1**").replace(/<[^>]+>/g, "")}`;
@@ -911,6 +973,11 @@ async function resumeSlotIndex(): Promise<void> {
 }
 
 export function startNxtCampaignAgent(intervalMs?: number) {
+  if (promotionsArePaused()) {
+    stopNxtCampaignAgent();
+    _state.lastStatus = HARDWARE_REVIEW_HOLD.reason;
+    return;
+  }
   if (_timer) return;
   if (process.env.NXT_CAMPAIGN_DISABLED === "true") {
     console.log(`${TAG} Disabled via NXT_CAMPAIGN_DISABLED=true`);

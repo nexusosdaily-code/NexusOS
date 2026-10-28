@@ -382,12 +382,10 @@ function TransmitModal({ item, onClose, onStarted }: { item: VideoRecord; onClos
   const goLive = async () => {
     setErr(null); setStatus("starting");
     try {
-      const token = localStorage.getItem("auth_token");
       const res = await fetch("/api/media/cast/start", {
         method: "POST", credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ videoId: item.id, title: item.filename, mimeType: item.mimeType, psiChannel: sp.psi, nm: sp.nm }),
       });
@@ -399,7 +397,7 @@ function TransmitModal({ item, onClose, onStarted }: { item: VideoRecord; onClos
       socketRef.current = socket;
 
       socket.once("connect", () => {
-        socket.emit("cast:join", { token, castId: cid, role: "broadcaster" });
+        socket.emit("cast:join", { castId: cid, role: "broadcaster" });
       });
 
       socket.on("cast:ready", () => {
@@ -487,10 +485,8 @@ function TransmitModal({ item, onClose, onStarted }: { item: VideoRecord; onClos
 
   const endCast = async () => {
     socketRef.current?.emit("cast:end");
-    const _token = localStorage.getItem("auth_token");
     if (castId) await fetch(`/api/media/cast/${castId}/end`, {
       method: "DELETE", credentials: "include",
-      headers: _token ? { "Authorization": `Bearer ${_token}` } : {},
     }).catch(() => {});
     cleanup();
     setStatus("ended");
@@ -618,8 +614,6 @@ function ViewerModal({ cast, onClose }: { cast: CastRecord; onClose: () => void 
   const col = nmToColor(cast.nm);
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) { setStatus("ended"); return; }
 
     const socket = ioConnect(location.origin, { path: "/ws/p2p", reconnection: false });
     socketRef.current = socket;
@@ -640,7 +634,7 @@ function ViewerModal({ cast, onClose }: { cast: CastRecord; onClose: () => void 
     };
 
     socket.once("connect", () => {
-      socket.emit("cast:join", { token, castId: cast.castId, role: "viewer" });
+      socket.emit("cast:join", { castId: cast.castId, role: "viewer" });
     });
 
     socket.on("cast:offer", async ({ payload }: { payload: RTCSessionDescriptionInit }) => {

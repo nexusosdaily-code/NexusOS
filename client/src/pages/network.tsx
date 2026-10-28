@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -72,20 +73,15 @@ export default function NetworkPage() {
   const [showRegister, setShowRegister] = useState(false);
   const [form, setForm] = useState({ name: "", purpose: "", endpoint: "", capabilities: "" });
   const [preview, setPreview] = useState<ReturnType<typeof ceEncode> | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem("auth_token"));
-  }, []);
+  const { isAuthenticated: isLoggedIn } = useAuth();
 
   // Fetch the logged-in user's spectral identity
   const { data: myPhysics } = useQuery<MyPhysics>({
     queryKey: ["/api/physics/my"],
     enabled: isLoggedIn,
     queryFn: async () => {
-      const token = localStorage.getItem("auth_token");
       const res = await fetch("/api/physics/my", {
-        headers: { "Authorization": `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Not authenticated");
       return res.json();
@@ -104,11 +100,10 @@ export default function NetworkPage() {
 
   const registerMutation = useMutation({
     mutationFn: async (body: object) => {
-      const token = localStorage.getItem("auth_token");
-      if (!token) throw new Error("LOGIN_REQUIRED");
+      if (!isLoggedIn) throw new Error("LOGIN_REQUIRED");
       const res = await fetch("/api/network/nodes/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (res.status === 401) throw new Error("LOGIN_REQUIRED");

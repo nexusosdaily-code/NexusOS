@@ -68,11 +68,9 @@ export default function FriendsPage() {
   const { data: friendsData, isLoading, error } = useQuery<FriendsData>({
     queryKey: ["/api/friends"],
     queryFn: async () => {
-      const token = localStorage.getItem("auth_token");
-      if (!token) throw new Error("Not authenticated");
       
       const res = await fetch("/api/friends", {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) {
         if (res.status === 401) throw new Error("Please log in to view friends");
@@ -84,12 +82,10 @@ export default function FriendsPage() {
 
   const sendRequestMutation = useMutation({
     mutationFn: async (phoneNumber: string) => {
-      const token = localStorage.getItem("auth_token");
       const res = await fetch("/api/friends/request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ phoneNumber }),
       });
@@ -118,12 +114,10 @@ export default function FriendsPage() {
 
   const acceptMutation = useMutation({
     mutationFn: async (friendshipId: string) => {
-      const token = localStorage.getItem("auth_token");
       const res = await fetch("/api/friends/accept", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ friendshipId }),
       });
@@ -138,12 +132,10 @@ export default function FriendsPage() {
 
   const rejectMutation = useMutation({
     mutationFn: async (friendshipId: string) => {
-      const token = localStorage.getItem("auth_token");
       const res = await fetch("/api/friends/reject", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ friendshipId }),
       });
@@ -158,10 +150,9 @@ export default function FriendsPage() {
 
   const removeMutation = useMutation({
     mutationFn: async (friendshipId: string) => {
-      const token = localStorage.getItem("auth_token");
       const res = await fetch(`/api/friends/${friendshipId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to remove");
       return res.json();

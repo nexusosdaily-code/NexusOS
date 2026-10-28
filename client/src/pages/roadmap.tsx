@@ -47,7 +47,8 @@ const PHASES = [
     description:
       "Once the digital layer has enough synchronized nodes, builders begin constructing the PHR-1 Coil — a physical resonance antenna tuned to Z₀ ≈ 376.73 Ω (the characteristic impedance of free space). The Golden Angle (137.5°) is used to phase-match the coil to the vacuum, eliminating Back-EMF and allowing the system to enter a Cold State. The CZC Sink bridges the software command layer to the coil.",
     milestones: [
-      { done: false, text: "PHR-1 Coil blueprint finalised" },
+      { done: true,  text: "PHR-1 Coil blueprint finalised — REV A · Coiltek · 2026-07-16" },
+      { done: true,  text: "PROTO-001 manufactured & tested — Coiltek SA · 2026-07-27 · 3 units, 100% PASS" },
       { done: false, text: "377 Ω impedance match verified in hardware lab" },
       { done: false, text: "Golden Angle (137.5°) winding calibration" },
       { done: false, text: "CZC Sync-Box firmware published" },

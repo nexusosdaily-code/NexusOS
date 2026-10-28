@@ -14,6 +14,7 @@ import {
   Clock, Zap, RefreshCw, Shield, Coins, History, Atom, AlertCircle,
   Lock, Delete, KeyRound, X,
 } from "lucide-react";
+import { amountBucket, destinationType, trackEvent } from "@/lib/analytics";
 
 // ── Physics helpers ────────────────────────────────────────────────────────────
 const H  = 6.626e-34;
@@ -178,7 +179,7 @@ function WnspSigChip({ sig }: { sig?: string | null }) {
 // Direction logic per type
 const INCOMING_TYPES = new Set([
   "message_earning", "stream_earning", "document_earning",
-  "deposit", "receive_p2p", "tip_received", "swap_to_nxt",
+  "deposit", "receive_p2p", "tip_received", "swap_to_nxt", "unstake", "staking_reward",
 ]);
 const SWAP_TYPES = new Set(["swap_to_nxt", "swap_to_sats"]);
 const BURN_TYPES = new Set(["protocol_burn"]);
@@ -556,6 +557,7 @@ export default function WalletPage() {
       return json;
     },
     onSuccess: () => {
+      trackEvent("wallet_transfer", { surface: "wallet", outcome: "success", amount_bucket: amountBucket(sendAmount), destination_type: destinationType(sendAddress) });
       setSendSuccess("Transfer confirmed.");
       setSendAmount(""); setSendAddress(""); setSendMemo(""); setSendError("");
       setPinModal(null); setPinError("");
@@ -563,6 +565,7 @@ export default function WalletPage() {
       setTimeout(() => setSendSuccess(""), 4000);
     },
     onError: (e: any) => {
+      trackEvent("wallet_transfer", { surface: "wallet", outcome: "failure", amount_bucket: amountBucket(sendAmount), destination_type: destinationType(sendAddress) });
       setPinError(""); setSendError(e.message);
       setPinModal(null);
     },
@@ -571,6 +574,7 @@ export default function WalletPage() {
   const handleSend = () => {
     setSendError(""); setSendSuccess(""); setPinError("");
     if (!sendAmount || !sendAddress) return;
+    trackEvent("wallet_transfer", { surface: "wallet", outcome: "started", amount_bucket: amountBucket(sendAmount), destination_type: destinationType(sendAddress) });
     if (pinStatus?.pinSet) {
       setPinModal("confirm");
     } else {

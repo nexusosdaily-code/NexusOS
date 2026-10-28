@@ -1,8 +1,10 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { walletRequest, LEGACY_WALLET_MUTATIONS } from "./wallet-request";
 
 export function getAuthHeaders(): Record<string, string> {
-  const token = localStorage.getItem("auth_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  // Compatibility for callers composing headers. Same-origin cookies carry
+  // authentication; never expose a bearer credential to browser JavaScript.
+  return {};
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -22,7 +24,8 @@ export async function apiRequest(
     ...(data ? { "Content-Type": "application/json" } : {}),
   };
 
-  const res = await fetch(url, {
+  const request = method.toUpperCase() === "POST" && LEGACY_WALLET_MUTATIONS.has(url) ? walletRequest : fetch;
+  const res = await request(url, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,

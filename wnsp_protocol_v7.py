@@ -1021,8 +1021,8 @@ class LambdaEncoder:
             "efficiency": {
                 "characters":       len(content),
                 "particles":        len(frames),
-                "chars_per_particle": result["summary"]["chars_per_frame"],
-                "vs_v2_improvement":  f"{result['summary']['chars_per_frame']:.1f}x",
+                "chars_per_particle": len(content) / len(frames) if frames else 0,
+                "vs_v2_improvement":  f"{len(content) / len(frames) if frames else 0:.1f}x",
             },
             "validation": result["validation"],
         }

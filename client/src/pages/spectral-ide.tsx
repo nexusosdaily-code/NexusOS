@@ -1,7 +1,9 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { assertVmSource, assertBrowserInstructions, VM_MAX_CYCLES } from "@shared/vm-security";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import {
   ArrowLeft, Play, StepForward, RotateCcw, Save, Rocket,
@@ -42,16 +44,7 @@ function nmToColor(nm: number): string {
   if (nm < 625) return "#ea580c";
   return "#dc2626";
 }
-function ceEncode(name: string): { nm: number; psi: string; band: string } {
-  const codes = name.toUpperCase().split("").map(c => c.charCodeAt(0)).filter(c => c >= 32 && c <= 126);
-  if (!codes.length) codes.push(77);
-  const avg = codes.reduce((a, b) => a + b, 0) / codes.length;
-  const nm = parseFloat((380 + ((avg - 32) / 94) * 400).toFixed(2));
-  const wdm = Math.floor((nm - 380) / 4) + 1;
-  const oam = codes.reduce((a, b) => a + b, 0) % 50;
-  const pol = codes.length % 2 === 0 ? "H" : "V";
-  return { nm, psi: `Ψ(${wdm},${oam},${pol})`, band: nmToBand(nm) };
-}
+import { encodeVMName as ceEncode } from "@shared/wnsp-model";
 
 // ── WNSP VM core ─────────────────────────────────────────────────────────────
 interface Ins {
@@ -75,10 +68,11 @@ interface VMState {
 }
 
 function freshVM(): VMState {
-  return { pc: 0, registers: [], agents: [], output: [], tuned: 520, halted: false, cycleCount: 0, kvStore: {}, kvDirty: {} };
+  return { pc: 0, registers: [], agents: [], output: [], tuned: 520, halted: false, cycleCount: 0, kvStore: Object.create(null), kvDirty: Object.create(null) };
 }
 
 function compileWLS(src: string): Ins[] {
+  assertVmSource(src);
   if (!src.trim()) return [];
   const ins: Ins[] = [];
   let off = 0;
@@ -133,10 +127,12 @@ function compileWLS(src: string): Ins[] {
     add(0x0B, "EXEC", `@${e.nm}nm`, line.slice(0, 60), e.nm);
   }
   add(0xFF, "HALT", "", "wavefunction terminated");
+  assertBrowserInstructions(ins);
   return ins;
 }
 
 function stepVM(state: VMState, ins: Ins[], channelLoad: number): VMState {
+  if (state.cycleCount >= VM_MAX_CYCLES) return { ...state, halted: true };
   if (state.halted || state.pc >= ins.length) return { ...state, halted: true };
   const i = ins[state.pc];
   const s: VMState = { ...state, pc: state.pc + 1, cycleCount: state.cycleCount + 1, registers: [...state.registers], agents: [...state.agents], output: [...state.output] };
@@ -170,7 +166,7 @@ function stepVM(state: VMState, ins: Ins[], channelLoad: number): VMState {
     }
     case 0x11: {
       const key = i.args;
-      const val = s.kvStore[key] ?? s.kvDirty[key] ?? null;
+      const val = Object.prototype.hasOwnProperty.call(s.kvDirty, key) ? s.kvDirty[key] : Object.prototype.hasOwnProperty.call(s.kvStore, key) ? s.kvStore[key] : null;
       s.output.push({ text: `LOAD  ${key} ← ${val !== null ? `"${JSON.stringify(val)}"` : "(not set)"}  from contract_state`, type: "store" });
       break;
     }
@@ -400,6 +396,7 @@ function highlight(code: string): string {
 
 // ── Main IDE component ────────────────────────────────────────────────────────
 export default function SpectralIDEPage() {
+  const { isAuthenticated } = useAuth();
   usePageMeta({ title: "Spectral IDE — NexusOS", description: "Write, compile and execute WavelengthScript smart contracts inside the WNSP VM." });
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -432,9 +429,8 @@ export default function SpectralIDEPage() {
   const { data: contracts = [] } = useQuery<any[]>({
     queryKey: ["/api/contracts"],
     queryFn: async () => {
-      const token = localStorage.getItem("auth_token");
-      if (!token) return [];
-      const r = await fetch("/api/contracts", { headers: { Authorization: `Bearer ${token}` } });
+      if (!isAuthenticated) return [];
+      const r = await fetch("/api/contracts", { credentials: "include" });
       if (!r.ok) return [];
       return r.json();
     },
@@ -442,10 +438,9 @@ export default function SpectralIDEPage() {
 
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const token = localStorage.getItem("auth_token");
       const r = await fetch(selectedContract ? `/api/contracts/${selectedContract}` : "/api/contracts", {
         method: selectedContract ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (!r.ok) throw new Error(await r.text());
@@ -460,10 +455,9 @@ export default function SpectralIDEPage() {
 
   const deployMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem("auth_token");
       const r = await fetch(`/api/contracts/${id}/deploy`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!r.ok) throw new Error(await r.text());
       return r.json();
@@ -476,8 +470,7 @@ export default function SpectralIDEPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const token = localStorage.getItem("auth_token");
-      const r = await fetch(`/api/contracts/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      const r = await fetch(`/api/contracts/${id}`, { method: "DELETE", credentials: "include" });
       if (!r.ok) throw new Error(await r.text());
       return r.json();
     },
@@ -488,7 +481,15 @@ export default function SpectralIDEPage() {
   });
 
   const handleCompile = useCallback(() => {
-    const ins = compileWLS(code);
+    if (runRef.current) clearInterval(runRef.current);
+    setRunning(false);
+    let ins: Ins[];
+    try { ins = compileWLS(code); }
+    catch (error) {
+      setCompiled(null);
+      toast({ title: "Compilation stopped", description: (error as Error).message, variant: "destructive" });
+      return;
+    }
     const realIns = ins.filter(i => i.op !== 0x00);
 
     const asmLines = [
@@ -594,15 +595,14 @@ export default function SpectralIDEPage() {
     setImportLoading(true);
     setImportResult(null);
     try {
-      const token = localStorage.getItem("auth_token");
       // G-004 FIX: give a clear login hint before hitting the server
-      if (!token) {
+      if (!isAuthenticated) {
         toast({ title: "Login required", description: "Sign in to use the Import panel", variant: "destructive" });
         return;
       }
       const r = await fetch("/api/ide/transpile", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source_code: importSrc, source_language: importLang, contract_name: importName || undefined }),
       });
       if (!r.ok) {

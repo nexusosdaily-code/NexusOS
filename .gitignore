@@ -1,0 +1,4 @@
+# Rebuilt by npm run build; keep newly generated bundles out of commits.
+/dist/
+/generated-artifacts/
+attached_assets/Screenshot_20261013_085213_Chrome_1791852979968.jpg

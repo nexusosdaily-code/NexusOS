@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Code2, Zap, Copy, Check, Play, Radio, Package, Layers, Music } from "lucide-react";
 import { SpectralPanel } from "@/components/spectral-visuals";
+import { UnicodeCoordinatePanel } from "@/components/unicode-coordinate-panel";
 
 // ── Physics constants ─────────────────────────────────────────────
 const PLANCK_H = 6.626e-34;
@@ -1781,8 +1782,8 @@ export default function CeCodeWriterPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-100">CE Encoder — Human First Contact</h1>
             <p className="text-slate-400 text-sm mt-0.5">
-              Every symbol you write already exists as a photon frequency.
-              CE encoding makes that formal — deterministic, censorship-proof, hardware-ready.
+              Represent text using documented software wavelength coordinates.
+              Explore legacy CE128 or reversible Unicode encoding; optical hardware validation is separate.
             </p>
             <p className="text-slate-600 text-xs mt-1 font-mono">
               WNSP-CE v1.0 · Character Encoding Protocol · AGPL-3.0 Free Infrastructure
@@ -1825,9 +1826,11 @@ export default function CeCodeWriterPage() {
         </TabsList>
 
         <TabsContent value="live">
+          <UnicodeCoordinatePanel />
           <h2 className="text-sm font-semibold text-cyan-300 mb-3">
-            Type anything — watch every symbol become a wavelength
+            Legacy CE128 preview — existing mapping unchanged
           </h2>
+          <p className="mb-3 text-xs text-slate-400">This older summary mapping can share wavelength bins across characters. Use the versioned Unicode profile above for reversible multilingual coordinate sequences.</p>
           <LiveEncodeTab />
         </TabsContent>
 

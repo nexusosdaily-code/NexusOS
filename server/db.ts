@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
+import { transactionAwareDatabase } from "./wallet-transaction-context";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set");
@@ -16,4 +17,4 @@ export const pool = new pg.Pool({
     : { rejectUnauthorized: false },
 });
 
-export const db = drizzle(pool, { schema });
+export const db = transactionAwareDatabase(drizzle(pool, { schema }));

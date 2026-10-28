@@ -352,7 +352,7 @@ export default function TheCoherentStatePage() {
             α is a complex number. Its magnitude |α| = √⟨n⟩ is the field amplitude; its argument arg(α) = φ
             is the optical phase. The coherent state is not an eigenstate of n̂ — it has no definite photon
             number. Instead, its photon-number distribution is <em className="text-slate-300">Poissonian</em>: the
-            minimum possible noise for a given power, set entirely by shot noise.
+            shot-noise reference, not the minimum possible photon-number noise of every state.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs mt-2">
             <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-2">
@@ -373,7 +373,7 @@ export default function TheCoherentStatePage() {
             <div className="rounded-lg border border-slate-800 bg-slate-950 p-3 space-y-2">
               <p className="font-mono text-slate-500">Overcomplete basis</p>
               <p className="font-mono" style={{ color: CYAN }}>1/π ∫|α⟩⟨α| d²α = 1̂</p>
-              <p className="text-slate-600">|α⟩ not orthogonal: ⟨β|α⟩ = e^(−½|α−β|²)</p>
+              <p className="text-slate-600">|α⟩ not orthogonal: |⟨β|α⟩| = e^(−½|α−β|²)</p>
             </div>
           </div>
         </Section>

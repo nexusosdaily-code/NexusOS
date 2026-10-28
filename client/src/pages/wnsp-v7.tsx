@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
+import { colorText400, colorText300, colorOctaveRow, colorGradientDot } from "@/lib/color-classes";
 import { Zap, Waves, Atom, Shield, Lock, Unlock, RotateCcw, Orbit, Check, ArrowLeft } from "lucide-react";
 
 export default function WNSPv7Page() {
@@ -268,7 +269,7 @@ export default function WNSPv7Page() {
                       { mode: "L+4", l: "+4", momentum: "+4ℏ", desc: "Clockwise, 4 helices", color: "blue" }
                     ].map((oam, i) => (
                       <tr key={i} className="border-b border-gray-800 hover:bg-slate-800/30" data-testid={`oam-mode-${oam.mode}`}>
-                        <td className={`p-3 font-mono font-bold text-${oam.color}-400`}>{oam.mode}</td>
+                        <td className={`p-3 font-mono font-bold ${colorText400[oam.color]}`}>{oam.mode}</td>
                         <td className="p-3 text-gray-300 font-mono">{oam.l}</td>
                         <td className="p-3 text-gray-300 font-mono">{oam.momentum}</td>
                         <td className="p-3 text-gray-400">{oam.desc}</td>
@@ -374,18 +375,18 @@ export default function WNSPv7Page() {
                   { band: "C9", freq: "3 ZHz - 10 YHz", role: "High-energy Planck", color: "violet" },
                   { band: "C10", freq: "10 YHz - Planck", role: "Planck boundary", color: "fuchsia" }
                 ].map((octave, i) => (
-                  <div key={i} className={`bg-${octave.color}-900/20 border border-${octave.color}-500/30 rounded-lg p-4 hover:bg-${octave.color}-900/30 transition-colors`}>
+                  <div key={i} className={colorOctaveRow[octave.color]}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className={`font-mono font-bold text-2xl text-${octave.color}-400 w-16`}>
+                        <div className={`font-mono font-bold text-2xl ${colorText400[octave.color]} w-16`}>
                           {octave.band}
                         </div>
                         <div>
                           <div className="font-semibold text-white">{octave.role}</div>
-                          <div className={`text-sm text-${octave.color}-300 font-mono`}>{octave.freq}</div>
+                          <div className={`text-sm ${colorText300[octave.color]} font-mono`}>{octave.freq}</div>
                         </div>
                       </div>
-                      <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-${octave.color}-400 to-${octave.color}-600`} />
+                      <div className={colorGradientDot[octave.color]} />
                     </div>
                   </div>
                 ))}

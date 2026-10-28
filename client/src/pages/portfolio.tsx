@@ -52,13 +52,14 @@ export default function PortfolioPage() {
   const btcUsd      = Number(summary?.btcUsd ?? 65_000);
   const satsPerNxt  = 1_000;
 
-  // Derive staked sats from the live stakes list (active only) — more accurate than summary
+  // Match the wallet's staking total: it includes every stake record, while the
+  // active list below remains available for position-specific actions and yield.
   const stakesArr       = Array.isArray(lightningStakes?.stakes) ? lightningStakes.stakes : [];
   const wnusdArr        = Array.isArray(wnusd)  ? wnusd  : [];
   const lpPosArr        = Array.isArray(lpPos)  ? lpPos  : [];
 
   const activeStakes    = stakesArr.filter((s: any) => s.status === "active");
-  const stakedSatsTotal = activeStakes.reduce((a: number, s: any) => a + Number(s.amountSats ?? 0), 0);
+  const stakedSatsTotal = stakesArr.reduce((a: number, s: any) => a + Number(s.amountSats ?? 0), 0);
   const pendingYield    = activeStakes.reduce((a: number, s: any) => a + parseFloat(s.nxtYield ?? "0"), 0);
 
   const satsUsd     = sats / 100_000_000 * btcUsd;

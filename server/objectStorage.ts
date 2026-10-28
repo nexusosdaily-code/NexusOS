@@ -145,6 +145,11 @@ export class ObjectStorageService {
     }
 
     const entityId = parts.slice(1).join("/");
+    // These bytes are governed by the Wave Vault's per-account SQL grants.
+    // Legacy object/document routes must never serve or change their ACL.
+    if (entityId === "wave-vault" || entityId.startsWith("wave-vault/")) {
+      throw new ObjectNotFoundError();
+    }
     let entityDir = this.getPrivateObjectDir();
     if (!entityDir.endsWith("/")) {
       entityDir = `${entityDir}/`;

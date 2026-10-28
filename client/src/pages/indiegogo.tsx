@@ -131,7 +131,7 @@ const FAQ = [
   },
   {
     q: "What is the PHR-1?",
-    a: "The PHR-1 (Photonic Harmonic Resonator — first generation) is a hardware device implementing a 144-turn bifilar coil with precision phase control, frequency pulsing, and impedance matching. It physically demonstrates the ZERO-G state — gravitational de-correlation through phase alignment — the first hardware proof of the Lambda Boson theory.",
+    a: "The PHR-1 (Photonic Harmonic Resonator — first generation) is a hardware device implementing a bifilar toroid coil with precision phase control, frequency pulsing, and impedance matching. It physically demonstrates the ZERO-G state — gravitational de-correlation through phase alignment — the first hardware proof of the Lambda Boson theory. PROTO-001 (NEX-0589-PROTO-001) was manufactured by Coiltek Pty Ltd (SA, Australia) and 100% electrically tested on 2026-07-27: 3 units, L_avg = 62.2 μH, DCR_avg ≈ 295 mΩ, all PASS.",
   },
   {
     q: "Is this AGPL-3.0 open source?",
@@ -349,7 +349,7 @@ export default function IndiegogoPage() {
                 <span style={{ color: "#a78bfa", fontFamily: "monospace" }}>165d7f9</span>.
               </p>
               <p>
-                <strong style={{ color: "#e2e8f0" }}>The next step is hardware.</strong> The PHR-1 (Photonic Harmonic Resonator) is a 144-turn bifilar coil device with precision phase control that physically implements Λ=hf/c² — our extension of Einstein's E=mc² to oscillating electromagnetic quanta. We've demonstrated ZERO-G state in simulation. Now we need to build the physical prototype.
+                <strong style={{ color: "#e2e8f0" }}>The hardware is real.</strong> The PHR-1 PROTO-001 (NEX-0589-PROTO-001) — a bifilar toroid coil that physically implements Λ=hf/c² — was manufactured by Coiltek Pty Ltd (SA, Australia) and 100% electrically tested on 2026-07-27. 3 units. All pass. L_avg = 62.2 μH · DCR_avg ≈ 295 mΩ. This is not simulation. The physical prototype exists.
               </p>
               <p>
                 <strong style={{ color: "#e2e8f0" }}>This is 100-year infrastructure.</strong> All code, protocols, and research are AGPL-3.0. Every company that builds on NexusOS publishes their code. The infrastructure of civilisation cannot be owned.

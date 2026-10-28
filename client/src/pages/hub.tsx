@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import WelcomeModal from "@/components/WelcomeModal";
+import { ProjectDirection } from "@/components/project-direction";
 import { useUnisat } from "@/hooks/use-unisat";
 import TelegramVideoGallery from "@/components/TelegramVideoGallery";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +92,7 @@ const APP_SECTIONS = [
       { title: "Blockchain",    href: "/blockchain",     Icon: Layers },
       { title: "Nexus Explorer",href: "/nexus-explorer", Icon: Activity },
       { title: "Spectral DB",   href: "/spectral-db",    Icon: Database },
+      { title: "Wave Vault",    href: "/wave-vault",     Icon: HardDrive },
       { title: "Secure Docs",   href: "/secure-docs",    Icon: FileText },
       { title: "Agent Bus",     href: "/agent-bus",      Icon: Activity },
     ],
@@ -105,6 +107,7 @@ const APP_SECTIONS = [
       { title: "WNSP Coord.",   href: "/wnsp/coordinator",Icon: Globe2 },
       { title: "Governance",    href: "/governance",       Icon: Scale },
       { title: "Constitution",  href: "/constitution",    Icon: Shield },
+      { title: "⚖ Compliance Monitor", href: "/constitution/compliance", Icon: Activity },
       { title: "Founding Architects", href: "/founders",      Icon: Users },
       { title: "Stewards",      href: "/stewards",         Icon: Shield },
       { title: "Joint Venture", href: "/joint-venture",    Icon: Globe2 },
@@ -350,6 +353,47 @@ function BtcWalletPill() {
   );
 }
 
+// ── Constitutional compliance hook (exported for testing) ─────────────────────
+export function useConstitutionViolated(): boolean {
+  const { data } = useQuery<{
+    constitution: { articles: Record<string, { status: "COMPLIANT" | "VIOLATED" }> };
+  }>({
+    queryKey: ["/api/constitution/status"],
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  return !!(
+    data?.constitution?.articles &&
+    Object.values(data.constitution.articles).some(
+      (a) => a.status === "VIOLATED",
+    )
+  );
+}
+
+// ── Constitutional violation badge (exported for testing) ─────────────────────
+export function ConstitutionViolationBadge() {
+  const violated = useConstitutionViolated();
+  if (!violated) return null;
+  return (
+    <Link href="/constitution/compliance">
+      <div
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded cursor-pointer text-xs animate-pulse"
+        style={{
+          background: "rgba(239,68,68,0.18)",
+          color: "#f87171",
+          border: "1px solid rgba(239,68,68,0.45)",
+        }}
+        title="Constitutional violation detected — click to view compliance dashboard"
+        data-testid="badge-constitution-violation"
+      >
+        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+        <span className="hidden sm:inline font-semibold">Constitution Violated</span>
+        <span className="sm:hidden font-semibold">Violation</span>
+      </div>
+    </Link>
+  );
+}
+
 function IdentityRail({
   user, wallet, unread, avatarUrl,
 }: {
@@ -371,7 +415,7 @@ function IdentityRail({
   const lambdaKg = energyJ / (C_LIGHT * C_LIGHT);
   const balNum   = parseFloat(wallet?.balance ?? "0");
 
-  const { data: lnData } = useQuery<{ satsBalance: number }>({
+  const { data: lnData, isPending: lnPending } = useQuery<{ satsBalance: number }>({
     queryKey: ["/api/lightning/balance"],
     staleTime: 30_000,
     refetchInterval: 60_000,
@@ -395,6 +439,9 @@ function IdentityRail({
     refetchInterval: 30_000,
   });
   const pendingFriends = friendsData?.pendingRequests?.length ?? 0;
+
+  // ── Constitutional compliance poll ─────────────────────────────────────
+  const constitutionViolated = useConstitutionViolated();
 
   return (
     <div
@@ -443,6 +490,9 @@ function IdentityRail({
 
       <div className="flex-1" />
 
+      {/* Constitutional violation alert */}
+      <ConstitutionViolationBadge />
+
       {/* Pending friend requests badge */}
       {pendingFriends > 0 && (
         <Link href="/inbox">
@@ -471,7 +521,9 @@ function IdentityRail({
           style={{ background: "rgba(250,204,21,0.10)", color: "#facc15", border: "1px solid rgba(250,204,21,0.28)" }}>
           <div className="flex items-center gap-1">
             <Zap className="w-3 h-3" />
-            {fmtSatsNav(satsNum)} sats
+            {lnPending
+              ? <span className="inline-block w-10 h-3 rounded bg-yellow-400/20 animate-pulse" />
+              : <>{fmtSatsNav(satsNum)} sats</>}
           </div>
           <div className="text-[8px] opacity-50 tracking-wide">LIGHTNING</div>
         </div>
@@ -616,7 +668,7 @@ interface PhysicsProfile {
 }
 
 // ── Quick Actions ──────────────────────────────────────────────────────
-function QuickActions() {
+export function QuickActions() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
 
@@ -626,9 +678,11 @@ function QuickActions() {
   });
 
   const actions = [
+    { label: "Wave Vault", Icon: HardDrive, href: "/wave-vault", color: "#38bdf8", feeKey: null },
     { label: "Compose",    Icon: MessageSquarePlus, href: "/inbox",               color: "#22d3ee", feeKey: "message_send" },
     { label: "Go Live",    Icon: MonitorPlay,       href: "/streaming",            color: "#f472b6", feeKey: "stream_start" },
     { label: "Wallet",     Icon: Wallet,            href: "/wallet",               color: "#fbbf24", feeKey: null },
+    { label: "Shareholders", Icon: Shield,          href: "/shareholders",         color: "#fbbf24", feeKey: null },
     { label: "My Profile", Icon: User,              href: `/profile/${user?.username ?? ""}`, color: "#a78bfa", feeKey: null },
     { label: "Directory",  Icon: Users,             href: "/directory",            color: "#67e8f9", feeKey: null },
     { label: "Encode",     Icon: Atom,              href: "/encoding-lab",         color: "#34d399", feeKey: null },
@@ -641,18 +695,19 @@ function QuickActions() {
         const rgba = color === "#22d3ee" ? "34,211,238"
           : color === "#f472b6" ? "244,114,182"
           : color === "#34d399" ? "52,211,153"
+          : color === "#38bdf8" ? "56,189,248"
           : "167,139,250";
         return (
           <button
             key={label}
             data-testid={`quick-action-${label.toLowerCase().replace(" ", "-")}`}
             onClick={() => navigate(href)}
-            className="flex flex-col items-start px-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.02] border gap-0.5"
+            className={`flex min-w-0 max-w-full scroll-m-2 flex-col items-start px-4 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.02] border gap-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 ${label === "Wave Vault" ? "min-h-12 flex-auto justify-center sm:flex-none" : ""}`}
             style={{ background: `rgba(${rgba},0.10)`, color, borderColor: `${color}35` }}
           >
-            <div className="flex items-center gap-2">
-              <Icon className="w-4 h-4" />
-              {label}
+            <div className="flex min-w-0 max-w-full items-center gap-2">
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="min-w-0 break-words">{label}</span>
             </div>
             {fee && (
               <span className="text-[10px] font-mono opacity-60">
@@ -662,6 +717,9 @@ function QuickActions() {
           </button>
         );
       })}
+      <Link href="/live-guide" className="inline-flex min-h-12 items-center rounded-xl border border-[#7ccbd1]/25 bg-[#22d3ee]/[0.06] px-4 text-xs font-semibold text-cyan-200 transition hover:border-[#7ccbd1]/50 hover:bg-[#22d3ee]/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300" aria-label="Read the Live streaming guide">
+        Live streaming guide
+      </Link>
     </div>
   );
 }
@@ -754,24 +812,47 @@ function ConstitutionCard() {
   );
 }
 
-function NavDropdowns() {
+export function AppNav() {
   const [open, setOpen] = useState<string | null>(null);
-  const [, navigate] = useLocation();
-  const barRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const panelId = useId();
 
-  // Close on outside click
+  const { data: sealData } = useQuery<{ blockNumber: number }>({
+    queryKey: ["/api/constitution/seal"],
+    staleTime: 10 * 60_000,
+    retry: 1,
+  });
+
+  // Pointer events include touch without relying on synthetic mouse events.
   useEffect(() => {
-    function handler(e: MouseEvent) {
+    function handler(e: PointerEvent) {
       if (barRef.current && !barRef.current.contains(e.target as Node)) {
         setOpen(null);
       }
     }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
   }, []);
 
   return (
-    <div ref={barRef} className="relative">
+    <nav
+      ref={barRef}
+      aria-label="Applications"
+      className="relative"
+      onKeyDown={event => {
+        if (event.key === "Escape" && open) {
+          event.preventDefault();
+          setOpen(null);
+          triggerRef.current?.focus();
+        }
+      }}
+      onBlur={event => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setOpen(null);
+        }
+      }}
+    >
       {/* Section title bar */}
       <div
         className="flex flex-wrap gap-1 px-2 py-2 rounded-xl"
@@ -783,18 +864,23 @@ function NavDropdowns() {
             <button
               key={section.label}
               data-testid={`nav-section-${section.label.toLowerCase().replace(/\s+/g, "-")}`}
-              onMouseEnter={() => setOpen(section.label)}
-              onClick={() => setOpen(isOpen ? null : section.label)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold tracking-widest uppercase transition-all"
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls={isOpen ? panelId : undefined}
+              onClick={event => {
+                triggerRef.current = event.currentTarget;
+                setOpen(isOpen ? null : section.label);
+              }}
+              className="flex min-h-11 min-w-0 max-w-full scroll-m-2 items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold tracking-widest uppercase transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
               style={{
                 color: isOpen ? section.accent : `${section.accent}80`,
                 background: isOpen ? `${section.accent}15` : "transparent",
                 border: `1px solid ${isOpen ? section.accent + "40" : "transparent"}`,
               }}
             >
-              {section.label}
+              <span className="min-w-0 break-words">{section.label}</span>
               <ChevronRight
-                className="w-3 h-3 transition-transform duration-200"
+                className="w-3 h-3 shrink-0 transition-transform duration-200"
                 style={{ transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}
               />
             </button>
@@ -808,39 +894,44 @@ function NavDropdowns() {
         if (!section) return null;
         return (
           <div
+            id={panelId}
+            role="region"
+            aria-label={section.label}
             className="absolute left-0 right-0 z-50 mt-1 rounded-xl p-3 shadow-2xl"
             style={{
               background: "hsl(222 47% 7%)",
               border: `1px solid ${section.accent}35`,
               boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${section.accent}20`,
             }}
-            onMouseLeave={() => setOpen(null)}
           >
             <p className="text-[10px] font-bold tracking-widest uppercase mb-2 px-1"
               style={{ color: section.accent }}>
               {section.label}
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0.5">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-0.5">
               {section.items.map(({ title, href, Icon }) => (
-                <Link key={href} href={href}>
-                  <div
+                <Link key={href} href={href}
                     onClick={() => setOpen(null)}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white transition-all cursor-pointer group"
+                    className="flex min-h-11 min-w-0 scroll-m-2 items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white transition-all cursor-pointer group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300"
                     style={{ ["--hover-bg" as any]: `${section.accent}12` }}
                     onMouseEnter={e => (e.currentTarget.style.background = `${section.accent}15`)}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                     data-testid={`nav-link-${href.replace(/\//g, "-")}`}
                   >
                     <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: section.accent }} />
-                    <span className="truncate text-xs">{title}</span>
-                  </div>
+                    <span className="min-w-0 break-words text-xs">{title}</span>
+                    {href === "/constitution" && sealData?.blockNumber != null && (
+                      <span className="ml-auto flex-shrink-0 font-mono text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/25">
+                        #{sealData.blockNumber}
+                      </span>
+                    )}
                 </Link>
               ))}
             </div>
           </div>
         );
       })()}
-    </div>
+    </nav>
   );
 }
 
@@ -1248,31 +1339,177 @@ function CanonicalAddressPanel({ username }: { username: string }) {
   );
 }
 
+// ── Public landing hero (shown to unauthenticated visitors) ───────────
+function PublicHero() {
+  return (
+    <div className="min-h-screen" style={{ background: "hsl(222 47% 5%)", color: "white" }}>
+      {/* Top bar */}
+      <div
+        className="sticky top-0 z-50 flex items-center justify-between px-6 py-3"
+        style={{ borderBottom: "1px solid rgba(34,211,238,0.15)", background: "hsl(222 47% 6%)" }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xl font-bold text-white tracking-widest">Λ</span>
+          <span className="text-sm font-semibold text-white/70">NexusOS</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/auth">
+            <button
+              className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+              style={{ background: "rgba(34,211,238,0.15)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.35)" }}
+            >
+              Sign in
+            </button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-12 space-y-12">
+        {/* Hero */}
+        <div className="text-center space-y-6 py-8">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono"
+            style={{ background: "rgba(34,211,238,0.08)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.25)" }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block" />
+            Wavelength Namespace Protocol · v7
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight">
+            WavelengthScript<br />
+            <span style={{ color: "#22d3ee" }}>driving blockchain development</span>
+          </h1>
+
+          <p className="text-lg text-white/50 max-w-2xl mx-auto leading-relaxed">
+            NexusOS has always prioritised building its blockchain with WavelengthScript and WNSP encoding.
+            The language, compiler and protocol work run on conventional computers today; hardware research
+            is a later possibility, not a prerequisite.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href="/auth">
+              <button
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-105"
+                style={{ background: "rgba(34,211,238,0.18)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.45)" }}
+              >
+                Get started →
+              </button>
+            </Link>
+            <Link href="/wnsp">
+              <button
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-105"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.12)" }}
+              >
+                Learn the protocol
+              </button>
+            </Link>
+            <Link href="/blockchain">
+              <button
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-105"
+                style={{ background: "rgba(249,115,22,0.12)", color: "#fb923c", border: "1px solid rgba(249,115,22,0.30)" }}
+              >
+                Explore the blockchain
+              </button>
+            </Link>
+            <Link href="/live-guide" className="inline-flex min-h-11 items-center rounded-xl border border-[#22d3ee]/30 bg-[#22d3ee]/[0.07] px-4 text-sm font-semibold text-cyan-200 transition hover:bg-[#22d3ee]/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300" aria-label="Read the Live streaming guide">
+              Live streaming guide
+            </Link>
+          </div>
+        </div>
+
+        <ProjectDirection />
+
+        {/* Key stats row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Prior Art Claims", value: "35+", color: "#22d3ee" },
+            { label: "Physics Constants", value: "4",   color: "#a78bfa" },
+            { label: "Spectral Channels", value: "16M+", color: "#f472b6" },
+            { label: "Ecosystem Domains", value: "19",  color: "#fbbf24" },
+          ].map(({ label, value, color }) => (
+            <div
+              key={label}
+              className="rounded-xl p-4 text-center"
+              style={{ background: `${color}0a`, border: `1px solid ${color}25` }}
+            >
+              <div className="text-2xl font-bold" style={{ color }}>{value}</div>
+              <div className="text-xs text-white/40 mt-1">{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Ecosystem domains */}
+        <EcosystemDomains />
+
+        {/* Campaign videos */}
+        <CampaignVideos />
+
+        {/* Bottom CTA */}
+        <div
+          className="rounded-2xl p-8 text-center space-y-4"
+          style={{ background: "hsl(222 47% 7%)", border: "1px solid rgba(34,211,238,0.18)" }}
+        >
+          <div className="text-xl font-bold text-white">Ready to claim your spectral address?</div>
+          <p className="text-sm text-white/40 max-w-md mx-auto">
+            Accounts use software-derived Ψ(WDM,OAM,Pol) labels in a finite namespace.
+            A coordinate is not proof of identity or a physical optical channel.
+          </p>
+          <Link href="/auth">
+            <button
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-sm transition-all hover:scale-105"
+              style={{ background: "rgba(34,211,238,0.18)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.45)" }}
+            >
+              Create your account →
+            </button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Hub Page ──────────────────────────────────────────────────────
 export default function HubPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [filter, setFilter] = useState<FeedType>("all");
 
   const { data: walletData } = useQuery<{ wallet: { address: string; balance: string } }>({
     queryKey: ["/api/wallet"],
     refetchInterval: 30_000,
+    enabled: !!user,
   });
 
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ["/api/messages/unread-count"],
     refetchInterval: 15_000,
+    enabled: !!user,
   });
 
-  const { data: feedData, isLoading } = useQuery<{ feed: FeedItem[]; total: number }>({
+  const { data: feedData, isLoading: feedLoading } = useQuery<{ feed: FeedItem[]; total: number }>({
     queryKey: ["/api/feed"],
     refetchInterval: 20_000,
+    enabled: !!user,
   });
 
   const { data: profileData } = useQuery<{ profile: { avatarUrl: string | null; bio: string | null; country: string | null; stateRegion: string | null } }>({
     queryKey: ["/api/settings/profile"],
+    enabled: !!user,
   });
 
-  if (!user) return null;
+  // While auth is still resolving, show a neutral loader
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "hsl(222 47% 5%)" }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="text-5xl font-light text-white tracking-widest animate-pulse">Λ</div>
+          <p className="text-gray-500 text-sm">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show public landing for unauthenticated visitors (auth check resolved)
+  if (!user) return <PublicHero />;
 
   const allItems: FeedItem[] = feedData?.feed ?? [];
   const filtered = filter === "all"
@@ -1344,7 +1581,7 @@ export default function HubPage() {
         <QuickActions />
 
         {/* Nav Dropdowns */}
-        <NavDropdowns />
+        <AppNav />
 
         {/* Feed */}
         <div>
@@ -1371,7 +1608,7 @@ export default function HubPage() {
             </TabsList>
           </Tabs>
 
-          {isLoading ? (
+          {feedLoading ? (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="h-20 rounded-xl animate-pulse"

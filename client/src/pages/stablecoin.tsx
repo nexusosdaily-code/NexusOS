@@ -1,3 +1,4 @@
+import { walletRequest } from "@/lib/wallet-request";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -156,7 +157,7 @@ export default function StablecoinPage() {
 
   const mintMut = useMutation({
     mutationFn: async (satAmount: number) => {
-      const r = await authFetch("/api/wnusd/mint", {
+      const r = await walletRequest("/api/wnusd/mint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ satAmount }),

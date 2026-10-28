@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { useLocation } from "wouter";
+import { queryClient } from "@/lib/queryClient";
 
 interface User {
   id: string;
@@ -9,6 +10,11 @@ interface User {
   isAdmin?: boolean;
   walletAddress?: string;
   balanceUnits?: string;
+  spectralBand?: string;
+  spectralWdm?: number;
+  spectralOam?: number;
+  spectralPol?: string;
+  spectralNm?: number;
 }
 
 interface AuthContextType {
@@ -24,44 +30,40 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const sessionGeneration = useRef(0);
 
-  const fetchUser = useCallback(async (attempt = 1) => {
+  const fetchUser = useCallback(async (attempt = 1, generation = sessionGeneration.current) => {
+    if (generation !== sessionGeneration.current) return;
     try {
-      const token = localStorage.getItem("auth_token");
-      const headers: Record<string, string> = {};
-      if (token && token !== "undefined" && token !== "null") {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+      // Remove credentials retained by older builds; the HttpOnly cookie is
+      // the only browser session credential.
+      localStorage.removeItem("auth_token");
+      sessionStorage.removeItem("auth_token");
 
       const res = await fetch("/api/auth/me", {
-        headers,
         credentials: "include",
       });
+      if (generation !== sessionGeneration.current) return;
 
       if (res.ok) {
         const data = await res.json();
+        if (generation !== sessionGeneration.current) return;
         setUser(data.user);
         setIsLoading(false);
       } else if (res.status === 401 || res.status === 403) {
-        if (attempt < 3) {
-          // Retry — the session may have just been created and a transient
-          // DB connection issue is causing a false 401.  Give it up to two
-          // extra tries before evicting the token.
-          setTimeout(() => fetchUser(attempt + 1), 600 * attempt);
-        } else {
-          localStorage.removeItem("auth_token");
-          setUser(null);
-          setIsLoading(false);
-        }
+        queryClient.clear();
+        setUser(null);
+        setIsLoading(false);
       } else if (attempt < 3) {
-        setTimeout(() => fetchUser(attempt + 1), 1500 * attempt);
+        setTimeout(() => fetchUser(attempt + 1, generation), 1500 * attempt);
       } else {
         setUser(null);
         setIsLoading(false);
       }
     } catch {
+      if (generation !== sessionGeneration.current) return;
       if (attempt < 3) {
-        setTimeout(() => fetchUser(attempt + 1), 1500 * attempt);
+        setTimeout(() => fetchUser(attempt + 1, generation), 1500 * attempt);
       } else {
         setUser(null);
         setIsLoading(false);
@@ -74,16 +76,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser]);
 
   const logout = useCallback(async () => {
+    // An earlier identity response must not restore a user after sign-out.
+    sessionGeneration.current++;
     try {
-      const token = localStorage.getItem("auth_token");
-      await fetch("/api/auth/logout", {
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
-        headers: token ? { "Authorization": `Bearer ${token}` } : {},
         credentials: "include",
       });
+      if (!response.ok && response.status !== 401) throw new Error("Sign-out failed. Please try again.");
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      setUser(null);
+      setIsLoading(false);
     } finally {
       localStorage.removeItem("auth_token");
-      setUser(null);
+      sessionStorage.removeItem("auth_token");
     }
   }, []);
 

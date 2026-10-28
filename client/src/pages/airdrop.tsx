@@ -78,7 +78,7 @@ async function triggerNostrLogin(): Promise<boolean> {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    localStorage.setItem("auth_token", data.token);
+    localStorage.removeItem("auth_token");
     return true;
   } catch { return false; }
 }

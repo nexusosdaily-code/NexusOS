@@ -1,8 +1,10 @@
 import express, { type Express, type Request, type Response } from "express";
 import fs from "fs";
 import path from "path";
+import { originalRequestPathname as requestPathname } from "./request-path-security";
 import { injectMeta, buildVideosPageMeta, buildVideoDetailPageMeta, injectCustomMeta } from "./seo-meta";
 import { storage } from "./storage";
+import { forwardAsyncErrors } from "./http-diagnostics";
 
 // ---------------------------------------------------------------------------
 // Custom-domain hosts that are root-only microsites.
@@ -51,7 +53,6 @@ const CUSTOM_DOMAIN_HOSTS = new Set<string>([
 // Listing them here would make crawlers index thin auth-shell pages.
 // ---------------------------------------------------------------------------
 const EXACT_PUBLIC_PATHS = new Set<string>([
-  "/auth",
   "/contact",
   "/labs",
   // Funding & campaign
@@ -67,7 +68,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/spectral-router", "/spectral-search", "/spectral-contracts",
   "/spectral-bundle",
   // WNSP landing + known child routes
-  "/wnsp", "/wnsp/ordinals",
+  "/wnsp",
   "/wnsp-ordinals",
   "/wnsp-bridge",
   "/wnsp-vm",
@@ -81,18 +82,19 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/rune-swap", "/rune-pipeline",
   "/stake-earn",
   "/fractal-btc",
-  "/nxt-fb-swap", "/swap",
+  "/nxt-fb-swap",
   "/btc-sentinel", "/btc-assets-sentinel",
   "/mempool",
   // Chain / ecosystem
   "/blockchain", "/ecosystem", "/network", "/snic",
   // Governance / open (public constitutional docs)
-  "/open", "/constitution",
+  "/open", "/constitution", "/constitution/compliance",
   // Science & theory
   "/oscillating-quanta", "/planck-alignment", "/reposed-theory", "/silicon-bridge",
   "/compression-explorer",
   "/unified-compression-theory", "/universal-one", "/matter-protocol", "/universal-address", "/element-catalogue", "/standing-wave-trap", "/lossless-channel",
   "/resonance-cavity", "/polariton-exchange", "/the-emitter", "/the-network", "/the-observer", "/the-memory", "/cosmic-lattice", "/the-entangler", "/the-field",
+  "/the-coherent-state", "/the-squeezed-state", "/the-bogoliubov-transform",
   // Protocol & language
   "/wavelength-lang", "/ce-se-pipeline", "/ce-code-writer",
   "/divergence-test",
@@ -110,8 +112,6 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/spectral-ide", "/resonance-cavity",
   "/build", "/shareholders",
   "/build-catalogue", "/nexus-explorer", "/psi-board",
-  // Legacy redirect paths (server redirects in production)
-  "/btc-bridge",
   // Routes registered in public Router()
   "/hardware-treasury", "/spectral-mirror",
 ]);
@@ -237,7 +237,7 @@ function isNoindexSpaPath(pathname: string): boolean {
   return NOINDEX_DYNAMIC_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
-function isPublicSpaPath(pathname: string): boolean {
+export function isPublicSpaPath(pathname: string): boolean {
   if (EXACT_PUBLIC_PATHS.has(pathname)) return true;
   if (pathname.startsWith("/docs/")) {
     const rest = pathname.slice("/docs/".length);
@@ -250,14 +250,6 @@ function isPublicSpaPath(pathname: string): boolean {
     return /^\/videos\/\d+$/.test(pathname);
   }
   return DYNAMIC_PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
-}
-
-function requestPathname(req: Request): string {
-  try {
-    return new URL(req.url, "http://localhost").pathname;
-  } catch {
-    return req.path || "/";
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -384,6 +376,7 @@ export function serveStatic(app: Express) {
     "/fractal-bitcoin":                      "/fractal-btc",
     "/charter":                              "/open",
     "/wnsp/bridge":                          "/wnsp-bridge",
+    "/swap":                                 "/nxt-fb-swap",
   };
   for (const [from, to] of Object.entries(ALIAS_REDIRECTS)) {
     app.get(from, (_req: Request, res: Response) => {
@@ -710,7 +703,12 @@ export function serveStatic(app: Express) {
   });
 
   // Hashed asset files get a 1-year immutable cache; everything else (index.html) gets no-cache.
+  app.use((_req, res, next) => {
+    res.locals.errorStage = "static_delivery";
+    next();
+  });
   app.use(express.static(distPath, {
+    dotfiles: "deny",
     setHeaders(res, filePath) {
       if (/\/assets\//.test(filePath)) {
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
@@ -723,10 +721,12 @@ export function serveStatic(app: Express) {
   const indexPath = path.resolve(distPath, "index.html");
   let cachedHtml: string | null = null;
 
-  function getHtml(): string {
+  function getHtml(res: Response): string {
+    res.locals.errorStage = "spa_template_read";
     if (!cachedHtml) {
       cachedHtml = fs.readFileSync(indexPath, "utf-8");
     }
+    res.locals.errorStage = "spa_metadata";
     return cachedHtml;
   }
 
@@ -735,7 +735,8 @@ export function serveStatic(app: Express) {
   // search-engine crawlers receive the correct indexation signal.
   // Custom-domain hosts are root-only microsites: non-root paths get 404.
   // Injects host/route-aware metadata before serving.
-  app.use("*", async (req, res) => {
+  app.use("*", forwardAsyncErrors(async (req, res) => {
+    res.locals.errorStage = "spa_routing";
     const spaPathname = requestPathname(req);
     const host        = req.hostname || (req.headers.host as string) || "";
     const cleanHost   = host.split(":")[0];
@@ -765,28 +766,35 @@ export function serveStatic(app: Express) {
       try {
         const videos = await storage.getTelegramVideos(20);
         const meta   = buildVideosPageMeta(videos);
-        html = injectCustomMeta(getHtml(), meta);
+        html = injectCustomMeta(getHtml(res), meta);
       } catch {
-        html = injectMeta(getHtml(), host, pathname);
+        html = injectMeta(getHtml(res), host, pathname);
       }
     } else if (videoDetailMatch) {
       // First-party video detail page — emit a canonical VideoObject that
       // resolves to this NexusOS URL, with Telegram kept as a secondary
       // outbound (sameAs) reference only.
+      // Only published records are served publicly; unpublished IDs → 404.
       try {
-        const video = await storage.getTelegramVideo(Number(videoDetailMatch[1]));
+        const video = await storage.getPublishedTelegramVideo(Number(videoDetailMatch[1]));
         if (video) {
           const meta = buildVideoDetailPageMeta(video);
-          html = injectCustomMeta(getHtml(), meta);
+          html = injectCustomMeta(getHtml(res), meta);
         } else {
           status = 404;
-          html = injectMeta(getHtml(), host, pathname);
+          html = injectMeta(getHtml(res), host, pathname);
         }
       } catch {
-        html = injectMeta(getHtml(), host, pathname);
+        // Storage error: signal a temporary failure rather than serving
+        // home-page metadata under a video URL (which would mislead crawlers).
+        res.status(503)
+          .set("Retry-After", "30")
+          .set("Content-Type", "text/html; charset=utf-8")
+          .send("<!doctype html><html><head><title>Service Unavailable</title></head><body><p>Temporarily unavailable. Please try again shortly.</p></body></html>");
+        return;
       }
     } else {
-      html = injectMeta(getHtml(), host, pathname);
+      html = injectMeta(getHtml(res), host, pathname);
     }
 
     if (noindex) {
@@ -797,7 +805,8 @@ export function serveStatic(app: Express) {
       );
     }
 
+    res.locals.errorStage = "spa_send";
     res.status(status).setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(html);
-  });
+  }));
 }

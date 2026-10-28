@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { colorBadge } from "@/lib/color-classes";
 import { Atom, Zap, Scale, Sparkles, ArrowRight, ArrowLeft } from "lucide-react";
 
 export default function NexusV8Page() {
@@ -94,7 +95,7 @@ export default function NexusV8Page() {
                 { band: "VISIBLE", range: "10¹⁴ Hz", role: "Administrative", color: "green" },
               ].map((item, i) => (
                 <div key={i} className="flex items-center justify-between bg-slate-800/50 rounded p-3" data-testid={`band-row-${item.band.toLowerCase()}`}>
-                  <Badge className={`bg-${item.color}-500/20 text-${item.color}-400 border-${item.color}-500/30`}>
+                  <Badge className={colorBadge[item.color]}>
                     {item.band}
                   </Badge>
                   <span className="text-gray-400 font-mono text-xs">{item.range}</span>

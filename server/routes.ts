@@ -1,4 +1,12 @@
 import path from "path";
+import { installLegacyWalletBoundaries, legacyWalletJob } from "./legacy-wallet-transaction"; // routes:not-a-handler
+import { changeLegacySats, changeLegacyNxt } from "./legacy-sats"; // routes:not-a-handler
+import { afterWalletCommit } from "./wallet-transaction-context"; // routes:not-a-handler
+import { settleLegacyInvoice } from "./legacy-invoice-settlement"; // routes:not-a-handler
+import { assertNewQueueInvoice, processLegacyLightningQueue, DefinitivePaymentFailure, PaymentOutcomeUnknown } from "./legacy-lightning-payments"; // routes:not-a-handler
+import { fetchSpectralJson, SpectralServiceError } from "./spectral-client"; // routes:not-a-handler
+import { contractAmount, contractTransaction, ContractSecurityError, createContractActionGuard } from "./contract-security"; // routes:not-a-handler
+import { registerHardwareReviewHold } from "./hardware-review-hold"; // routes:not-a-handler
 import * as nostrService from "./nostr-service.js";
 import * as tgNostrBridge from "./telegram-nostr-bridge";
 import * as lpPools from "./lp-pools";
@@ -11,23 +19,40 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
-import { storage } from "./storage";
-import { authenticate, optionalAuth, logAction } from "./auth";
-import { 
+import { storage } from "./storage"; // routes:not-a-handler
+import { authenticate, optionalAuth, logoutSessionHandler } from "./auth";
+import { browserSocketToken } from "./browser-session-policy"; // routes:not-a-handler
+import { SessionSockets, SocketPeers, boundedSocketLookup } from "./session-sockets"; // routes:not-a-handler
+import { registerP2PFileRoutes } from "./p2p-file-routes"; // routes:not-a-handler
+import { registerP2PCommerceRoutes } from "./p2p-commerce-routes"; // routes:not-a-handler
+import { registerWaveVaultRoutes } from "./wave-vault-routes"; // routes:not-a-handler
+import { canViewStream, watchPrivateStream } from "./p2p-stream-access"; // routes:not-a-handler
+import { registerCommunityElectionRoutes } from "./community-election-handler"; // routes:not-a-handler — registers its own authenticated routes
+import { registerWalletWaveRoutes } from "./wallet-wave-handler"; // routes:not-a-handler — registers authenticated communications before /api/messages/:id
+import { sendWalletWave, acknowledgeWalletWave } from "./wallet-wave-service"; // routes:not-a-handler
+import { resolveWnspRegistry, walletWaveForUser } from "./wnsp-address-resolution"; // routes:not-a-handler
+import { blockFounderPasswordAccess, founderBtcLoginHandler } from "./founder-access";
+import { isFounderAccount } from "./founder-access"; // routes:not-a-handler
+import { logAction } from "./auth"; // routes:not-a-handler
+import {
   loginSchema, registerSchema, spectralEncodeSchema, transferSchema,
   friendRequestSchema, friendActionSchema, sendMessageSchema, initiateCallSchema,
   createStreamSchema, updateStreamSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
-import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics";
-import { getEtchStatus } from "./wnsp-btc-rune-etcher";
-import { isValidMainnetBtcAddress } from "./btc-address-validate";
-import { latticeSign, latticeVerify, documentMessage, getPublicKey as latticeGetPublicKey } from "./lattice-identity";
-import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler";
-import { ledgerEvent } from "./spectral-ledger";
+import { deriveChannel, calcFee, hasAuthority, getBand, LIVE_BURNS, LIVE_FEES, applyGovernanceParam, checkC0001, checkC0002, checkC0005, IHR_FLOOR_NXT, NON_DOMINANCE_PCT, GENESIS_EXECUTION_ADDRESS } from "./physics"; // routes:not-a-handler
+import { getEtchStatus } from "./wnsp-btc-rune-etcher"; // routes:not-a-handler
+import { isValidMainnetBtcAddress } from "./btc-address-validate"; // routes:not-a-handler
+import { latticeSign, latticeVerify, documentMessage, getPublicKey as latticeGetPublicKey } from "./lattice-identity"; // routes:not-a-handler
+import { transpileToWLS, SUPPORTED_LANGS, type SupportedLang } from "./lang-transpiler"; // routes:not-a-handler
+import { ledgerEvent } from "./spectral-ledger"; // routes:not-a-handler
+import { executeOwnerGift, getOwnerRegister, OwnerGiftError } from "./founding-owner-service"; // routes:not-a-handler
 
 // WebSocket clients mapped by userId
-const connectedClients = new Map<string, WebSocket>();
+import { registerPrivateTrustRoutes } from "./private-trust-handler"; // routes:not-a-handler — private authenticated trust workspace
+import { founderWalletLockHandlers, HELD_WALLET_USERNAME, isUserOutgoingLocked, assertUserOutgoingAllowed } from "./founder-wallet-lock"; // routes:not-a-handler
+import { createSpectralBundleHandler } from "./spectral-bundle-create-handler"; // routes:not-a-handler
+const connectedClients = new SocketPeers<{ ws: WebSocket }>();
 
 // ── Withdrawal limits ─────────────────────────────────────────────────────────
 const WITHDRAWAL_EXEMPT_USERS = new Set(["nexus", "leps"]);
@@ -56,6 +81,15 @@ async function checkWithdrawalLimits(userId: string, username: string, amountSat
     return `Daily withdrawal limit is ${WITHDRAWAL_MAX_DAILY.toLocaleString()} sats. Used today: ${dailyUsed.toLocaleString()} sats. Remaining: ${remaining.toLocaleString()} sats.`;
   return null;
 }
+
+// ── Amendment rate limit ──────────────────────────────────────────────────────
+import { checkAmendmentRateLimit, AMENDMENT_MAX_PER_DAY } from "./amendment-rate-limit.js"; // routes:not-a-handler
+import { amendmentHandler } from "./amendment-handler.js";
+import { requireSafetyPermit, safetyStatus, SafetyUnavailable } from "./safety/gateway"; // routes:not-a-handler
+
+// ── Constitutional block counts ──────────────────────────────────────────────
+import { BLOCKED_ENTITIES, REPLIT_AI_USER_ID } from "./genesis_user"; // routes:not-a-handler
+import { BLOCKED_REFERRER_DOMAINS } from "./traffic-logger"; // routes:not-a-handler
 
 // ── Swap limits & circuit breaker ────────────────────────────────────────────
 // Speculators will notice the fixed rate (1 NXT = 1,000 sats). When BTC pumps
@@ -223,30 +257,24 @@ async function secureProxyToSpectralAPI(req: Request, res: Response, endpoint: s
       options.body = JSON.stringify(req.body);
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-    options.signal = controller.signal;
-
-    const response = await fetch(url, options);
-    clearTimeout(timeout);
-    
-    const data = await response.json();
+    const response = await fetchSpectralJson(url, options);
     
     await logAction(req, "spectral_api_call", "spectral_api", endpoint, {
       status: response.status,
     });
     
-    res.status(response.status).json(data);
+    res.status(response.status).json(response.data);
   } catch (error: any) {
-    if (error.name === "AbortError") {
+    if (error instanceof SpectralServiceError && error.status === 504) {
       await logAction(req, "spectral_api_timeout", "spectral_api", endpoint, {}, "failed", "Request timeout");
       return res.status(504).json({ error: "Request timeout" });
     }
     
-    console.error(`Spectral API proxy error: ${error.message}`);
-    await logAction(req, "spectral_api_error", "spectral_api", endpoint, {}, "failed", error.message);
+    const status = error instanceof SpectralServiceError ? error.status : 503;
+    console.error(JSON.stringify({ event: "spectral_dependency_error", requestId: res.locals.requestId, status }));
+    await logAction(req, "spectral_api_error", "spectral_api", endpoint, {}, "failed", "Spectral API request failed");
     
-    res.status(503).json({
+    res.status(status).json({
       error: "Spectral API unavailable",
       message: "The encoding service is not running. Please start the Spectral API.",
     });
@@ -306,6 +334,18 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  const socketSessions = new SessionSockets(ids => storage.getActiveSocketSessions(ids));
+  httpServer.once("close", () => socketSessions.dispose());
+  registerP2PFileRoutes(app, httpServer, socketSessions);
+  registerP2PCommerceRoutes(app);
+  registerWaveVaultRoutes(app);
+  registerHardwareReviewHold(app);
+
+  // Public, read-only deployment status. An amendment receipt never enables this gateway.
+  app.get("/api/safety/status", async (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await safetyStatus());
+  });
 
   // ── Block sensitive path probes (git, env, config scanners) ───────────────
   const BLOCKED_PATH_PATTERNS = [
@@ -313,14 +353,32 @@ export async function registerRoutes(
     /^\/\.env/i,
     /^\/\.htaccess/i,
     /^\/\.ssh/i,
+    /^\/\.aws/i,
+    /^\/\.config/i,
+    /^\/\.DS_Store/i,
+    // WordPress scanner family
     /^\/wp-login\.php/i,
     /^\/wp-admin/i,
+    /^\/wp-json/i,
+    /^\/wp-content/i,
+    /^\/wp-includes/i,
+    /^\/wordpress/i,
+    // PHP probes
     /^\/xmlrpc\.php/i,
     /^\/config\.php/i,
     /^\/phpinfo\.php/i,
+    /^\/php-fpm/i,
+    /\.php$/i,
+    // Server info probes
     /^\/server-status/i,
+    /^\/server-info/i,
+    /^\/_profiler/i,
+    /^\/actuator/i,
+    /^\/cgi-bin/i,
+    // Cloud credential probes
     /^\/\.aws/i,
-    /^\/\.config/i,
+    /^\/metadata\/v1/i,
+    /^\/latest\/meta-data/i,
   ];
   app.use((req, res, next) => {
     if (BLOCKED_PATH_PATTERNS.some(p => p.test(req.path))) {
@@ -333,44 +391,46 @@ export async function registerRoutes(
   // WEBSOCKET SIGNALING FOR VIDEO/VOICE CALLS
   // ============================================
   
-  const wss = new WebSocketServer({ server: httpServer, path: "/ws/signaling" });
+  const wss = new WebSocketServer({ noServer: true });
   wss.on("error", (err) => console.error("[WSS signaling] error:", err.message));
 
   wss.on("connection", async (ws, req) => {
-    const url = new URL(req.url || "", `http://${req.headers.host}`);
-    const token = url.searchParams.get("token");
+    try {
+    const token = browserSocketToken(req);
     
     if (!token) {
       ws.close(1008, "Authentication required");
       return;
     }
     
-    const session = await storage.getSessionByToken(token);
+    const session = await boundedSocketLookup(() => storage.getSessionByToken(token));
     if (!session) {
       ws.close(1008, "Invalid token");
       return;
     }
+    if (!await socketSessions.attach(ws, session)) return;
     
     const userId = session.userId;
-    connectedClients.set(userId, ws);
+    connectedClients.set(userId, { ws });
     console.log(`User ${userId} connected to signaling`);
     
     ws.on("message", async (data) => {
       try {
+        if (!await socketSessions.authorize(ws)) return;
         const message: SignalingMessage = JSON.parse(data.toString());
-        const targetWs = message.targetUserId ? connectedClients.get(message.targetUserId) : null;
+        const targetWs = message.targetUserId ? connectedClients.get(message.targetUserId)?.ws : null;
         
         switch (message.type) {
           case "offer":
           case "answer":
           case "ice-candidate":
             if (targetWs && targetWs.readyState === WebSocket.OPEN) {
-              targetWs.send(JSON.stringify({
+              socketSessions.send(targetWs, JSON.stringify({
                 type: message.type,
                 callId: message.callId,
                 fromUserId: userId,
                 payload: message.payload,
-              }));
+              }), ws);
             }
             break;
             
@@ -379,11 +439,11 @@ export async function registerRoutes(
               await storage.updateCallStatus(message.callId, "active", new Date());
             }
             if (targetWs && targetWs.readyState === WebSocket.OPEN) {
-              targetWs.send(JSON.stringify({
+              socketSessions.send(targetWs, JSON.stringify({
                 type: "call-accept",
                 callId: message.callId,
                 fromUserId: userId,
-              }));
+              }), ws);
             }
             break;
             
@@ -392,11 +452,11 @@ export async function registerRoutes(
               await storage.updateCallStatus(message.callId, "declined");
             }
             if (targetWs && targetWs.readyState === WebSocket.OPEN) {
-              targetWs.send(JSON.stringify({
+              socketSessions.send(targetWs, JSON.stringify({
                 type: "call-reject",
                 callId: message.callId,
                 fromUserId: userId,
-              }));
+              }), ws);
             }
             break;
             
@@ -411,21 +471,21 @@ export async function registerRoutes(
               }
             }
             if (targetWs && targetWs.readyState === WebSocket.OPEN) {
-              targetWs.send(JSON.stringify({
+              socketSessions.send(targetWs, JSON.stringify({
                 type: "call-end",
                 callId: message.callId,
                 fromUserId: userId,
-              }));
+              }), ws);
             }
             break;
             
           case "call-busy":
             if (targetWs && targetWs.readyState === WebSocket.OPEN) {
-              targetWs.send(JSON.stringify({
+              socketSessions.send(targetWs, JSON.stringify({
                 type: "call-busy",
                 callId: message.callId,
                 fromUserId: userId,
-              }));
+              }), ws);
             }
             break;
         }
@@ -435,14 +495,18 @@ export async function registerRoutes(
     });
     
     ws.on("close", () => {
-      connectedClients.delete(userId);
+      connectedClients.remove(userId, ws);
       console.log(`User ${userId} disconnected from signaling`);
     });
+    ws.once("session-ended", () => connectedClients.remove(userId, ws));
     
     ws.on("error", (error) => {
       console.error(`WebSocket error for user ${userId}:`, error);
-      connectedClients.delete(userId);
+      connectedClients.remove(userId, ws);
     });
+    } catch {
+      ws.close(1011, "Session unavailable");
+    }
   });
 
   // ============================================
@@ -450,7 +514,8 @@ export async function registerRoutes(
   // ============================================
   
   // Stream clients: Map<streamId, Map<viewerId, { ws: WebSocket, isBroadcaster: boolean }>>
-  const streamClients = new Map<string, Map<string, { ws: WebSocket; isBroadcaster: boolean }>>();
+  type StreamPeers = SocketPeers<{ ws: WebSocket; isBroadcaster: boolean; registration: Promise<unknown> }>;
+  const streamClients = new Map<string, StreamPeers>();
   
   interface StreamSignalingMessage {
     type: "join-stream" | "leave-stream" | "broadcaster-ready" | "offer" | "answer" | "ice-candidate" | "stream-settings-update" | "stream-ended" | "viewer-count";
@@ -459,13 +524,13 @@ export async function registerRoutes(
     payload?: any;
   }
   
-  const handleViewerLeave = async (streamId: string, userId: string, streamViewers: Map<string, { ws: WebSocket; isBroadcaster: boolean }>) => {
-    streamViewers.delete(userId);
+  const handleViewerLeave = async (streamId: string, userId: string, streamViewers: StreamPeers, socket: WebSocket) => {
+    if (!streamViewers.remove(userId, socket)) return;
     await storage.removeStreamViewer(streamId, userId);
     
     Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
       if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify({
+        socketSessions.send(client.ws, JSON.stringify({
           type: "viewer-left",
           viewerId: userId,
           viewerCount: Array.from(streamViewers.values()).filter(c => !c.isBroadcaster).length,
@@ -475,28 +540,40 @@ export async function registerRoutes(
     console.log(`Viewer ${userId} left stream ${streamId}`);
   };
   
-  const handleBroadcasterDisconnect = (streamId: string, userId: string, streamViewers: Map<string, { ws: WebSocket; isBroadcaster: boolean }>) => {
-    streamViewers.delete(userId);
+  const handleBroadcasterDisconnect = (streamId: string, userId: string, streamViewers: StreamPeers, socket: WebSocket) => {
+    if (!streamViewers.remove(userId, socket)) return;
     
-    Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
+    streamViewers.all().forEach(([viewerId, client]) => {
       if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(JSON.stringify({
+        socketSessions.send(client.ws, JSON.stringify({
           type: "stream-ended",
           streamId,
           reason: "broadcaster-disconnected",
-        }));
+        }), undefined, true);
       }
     });
-    streamClients.delete(streamId);
+    if (streamClients.get(streamId) === streamViewers) streamClients.delete(streamId);
     console.log(`Broadcaster ${userId} disconnected from stream ${streamId}`);
   };
   
-  const streamingWss = new WebSocketServer({ server: httpServer, path: "/ws/streaming" });
+  const streamingWss = new WebSocketServer({ noServer: true });
   streamingWss.on("error", (err) => console.error("[WSS streaming] error:", err.message));
 
+  // A single upgrade dispatcher avoids competing ws servers rejecting each
+  // other's paths; unrelated upgrades (including Socket.IO) are left alone.
+  httpServer.on("upgrade", (req, socket, head) => {
+    let path: string;
+    try { path = new URL(req.url ?? "", "http://socket.invalid").pathname; }
+    catch { return; }
+    const target = path === "/ws/signaling" ? wss : path === "/ws/streaming" ? streamingWss : undefined;
+    if (target) target.handleUpgrade(req, socket, head, ws => target.emit("connection", ws, req));
+  });
+  httpServer.once("close", () => { wss.close(); streamingWss.close(); });
+
   streamingWss.on("connection", async (ws, req) => {
+    try {
     const url = new URL(req.url || "", `http://${req.headers.host}`);
-    const token = url.searchParams.get("token");
+    const token = browserSocketToken(req);
     const streamId = url.searchParams.get("streamId");
     const role = url.searchParams.get("role"); // "broadcaster" or "viewer"
     
@@ -505,17 +582,19 @@ export async function registerRoutes(
       return;
     }
     
-    const session = await storage.getSessionByToken(token);
+    const session = await boundedSocketLookup(() => storage.getSessionByToken(token));
     if (!session) {
       ws.close(1008, "Invalid token");
       return;
     }
+    if (!await socketSessions.attach(ws, session)) return;
     
     const userId = session.userId;
     const isBroadcaster = role === "broadcaster";
     
     // Verify stream exists
     const stream = await storage.getStream(streamId);
+    if (!await socketSessions.authorize(ws)) return;
     if (!stream) {
       ws.close(1008, "Stream not found");
       return;
@@ -526,55 +605,43 @@ export async function registerRoutes(
       ws.close(1008, "Not authorized to broadcast this stream");
       return;
     }
+    if (!await canViewStream(stream, userId)) {
+      ws.close(1008, "Private stream invitation required");
+      return;
+    }
+    if (!await socketSessions.authorize(ws)) return;
+    watchPrivateStream(ws, stream, userId);
     
     // Initialize stream clients map if needed
     if (!streamClients.has(streamId)) {
-      streamClients.set(streamId, new Map());
+      streamClients.set(streamId, new SocketPeers());
     }
     
     const streamViewers = streamClients.get(streamId)!;
-    streamViewers.set(userId, { ws, isBroadcaster });
+    // Share the per-user registration across tabs. The final disconnect must
+    // await even an earlier tab's pending insert before marking that user left.
+    const viewerRegistration = streamViewers.get(userId)?.registration ??
+      (isBroadcaster ? Promise.resolve() : storage.addStreamViewer(streamId, userId));
+    streamViewers.set(userId, { ws, isBroadcaster, registration: viewerRegistration });
     
     console.log(`User ${userId} joined stream ${streamId} as ${isBroadcaster ? "broadcaster" : "viewer"}`);
     
-    // Track viewer in database if not broadcaster
-    if (!isBroadcaster) {
-      await storage.addStreamViewer(streamId, userId);
-      
-      // Notify broadcaster of new viewer
-      Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
-        if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-          client.ws.send(JSON.stringify({
-            type: "viewer-joined",
-            viewerId: userId,
-            viewerCount: streamViewers.size - 1, // Exclude broadcaster
-          }));
-        }
-      });
-    }
-    
-    // Send current viewer count to new connection
-    const viewerCount = Array.from(streamViewers.values()).filter(c => !c.isBroadcaster).length;
-    ws.send(JSON.stringify({
-      type: "viewer-count",
-      streamId,
-      count: viewerCount,
-    }));
-    
     ws.on("message", async (data) => {
       try {
+        if (!await socketSessions.authorize(ws)) return;
         const message: StreamSignalingMessage = JSON.parse(data.toString());
         
         switch (message.type) {
           case "broadcaster-ready":
+            if (!isBroadcaster) break;
             // Notify all viewers that broadcaster is ready
             Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
               if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-                client.ws.send(JSON.stringify({
+                socketSessions.send(client.ws, JSON.stringify({
                   type: "broadcaster-ready",
                   streamId,
                   broadcasterId: userId,
-                }));
+                }), ws);
               }
             });
             break;
@@ -584,12 +651,12 @@ export async function registerRoutes(
             if (isBroadcaster && message.targetViewerId) {
               const viewer = streamViewers.get(message.targetViewerId);
               if (viewer && viewer.ws.readyState === WebSocket.OPEN) {
-                viewer.ws.send(JSON.stringify({
+                socketSessions.send(viewer.ws, JSON.stringify({
                   type: "offer",
                   streamId,
                   fromUserId: userId,
                   payload: message.payload,
-                }));
+                }), ws);
               }
             }
             break;
@@ -599,12 +666,12 @@ export async function registerRoutes(
             if (!isBroadcaster) {
               Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
                 if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-                  client.ws.send(JSON.stringify({
+                  socketSessions.send(client.ws, JSON.stringify({
                     type: "answer",
                     streamId,
                     fromUserId: userId,
                     payload: message.payload,
-                  }));
+                  }), ws);
                 }
               });
             }
@@ -615,23 +682,23 @@ export async function registerRoutes(
               // Broadcaster sends ICE to specific viewer
               const viewer = streamViewers.get(message.targetViewerId);
               if (viewer && viewer.ws.readyState === WebSocket.OPEN) {
-                viewer.ws.send(JSON.stringify({
+                socketSessions.send(viewer.ws, JSON.stringify({
                   type: "ice-candidate",
                   streamId,
                   fromUserId: userId,
                   payload: message.payload,
-                }));
+                }), ws);
               }
             } else if (!isBroadcaster) {
               // Viewer sends ICE to broadcaster
               Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
                 if (client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-                  client.ws.send(JSON.stringify({
+                  socketSessions.send(client.ws, JSON.stringify({
                     type: "ice-candidate",
                     streamId,
                     fromUserId: userId,
                     payload: message.payload,
-                  }));
+                  }), ws);
                 }
               });
             }
@@ -642,11 +709,11 @@ export async function registerRoutes(
             if (isBroadcaster) {
               Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
                 if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-                  client.ws.send(JSON.stringify({
+                  socketSessions.send(client.ws, JSON.stringify({
                     type: "stream-settings-update",
                     streamId,
                     payload: message.payload,
-                  }));
+                  }), ws);
                 }
               });
             }
@@ -655,13 +722,12 @@ export async function registerRoutes(
           case "stream-ended":
             // Broadcaster ends stream
             if (isBroadcaster) {
-              Array.from(streamViewers.entries()).forEach(([viewerId, client]) => {
+              streamViewers.all().forEach(([viewerId, client]) => {
                 if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
-                  client.ws.send(JSON.stringify({
+                  socketSessions.send(client.ws, JSON.stringify({
                     type: "stream-ended",
                     streamId,
-                  }));
-                  client.ws.close(1000, "Stream ended");
+                  }), ws, true);
                 }
               });
               streamClients.delete(streamId);
@@ -671,7 +737,8 @@ export async function registerRoutes(
           case "leave-stream":
             // Viewer explicitly leaves stream
             if (!isBroadcaster) {
-              await handleViewerLeave(streamId, userId, streamViewers);
+              await handleViewerLeave(streamId, userId, streamViewers, ws);
+              ws.close(1000, "Left stream");
             }
             break;
         }
@@ -680,34 +747,76 @@ export async function registerRoutes(
       }
     });
     
-    ws.on("close", async () => {
+    let cleaned = false;
+    const cleanupStream = async () => {
+      if (cleaned) return;
+      cleaned = true;
+      try {
+      // An expiry during an in-flight join must remove the eventual DB row,
+      // rather than delete first and let that join recreate a stale viewer.
+      await viewerRegistration.catch(() => undefined);
       // Check if user was already removed (e.g., by leave-stream message)
       if (!streamViewers.has(userId)) {
         console.log(`User ${userId} already left stream ${streamId}`);
         if (streamViewers.size === 0) {
-          streamClients.delete(streamId);
+          if (streamClients.get(streamId) === streamViewers) streamClients.delete(streamId);
         }
         return;
       }
       
       if (!isBroadcaster) {
         // Use centralized viewer leave handler
-        await handleViewerLeave(streamId, userId, streamViewers);
+        await handleViewerLeave(streamId, userId, streamViewers, ws);
       } else {
         // Use centralized broadcaster disconnect handler
-        handleBroadcasterDisconnect(streamId, userId, streamViewers);
+        handleBroadcasterDisconnect(streamId, userId, streamViewers, ws);
       }
       
       // Clean up empty stream
       if (streamViewers.size === 0) {
-        streamClients.delete(streamId);
+        if (streamClients.get(streamId) === streamViewers) streamClients.delete(streamId);
       }
-    });
+      } catch {
+        console.error("Stream connection cleanup failed");
+      }
+    };
+    ws.on("close", () => { void cleanupStream(); });
+    ws.once("session-ended", () => { void cleanupStream(); });
     
     ws.on("error", (error) => {
       console.error(`Stream WebSocket error for user ${userId}:`, error);
-      streamViewers.delete(userId);
+      void cleanupStream();
     });
+
+    await viewerRegistration;
+    if (!await socketSessions.authorize(ws)) return;
+    if (!isBroadcaster) {
+      for (const [, client] of streamViewers.entries()) {
+        if (client.isBroadcaster) socketSessions.send(client.ws, JSON.stringify({
+          type: "viewer-joined", viewerId: userId,
+          viewerCount: streamViewers.values().filter(c => !c.isBroadcaster).length,
+        }), ws);
+      }
+    } else {
+      // A receiver can already be waiting when capture/owner signaling starts.
+      // Bootstrap after authentication/listener registration, not from an
+      // onopen "ready" frame that can arrive while DB authorization is pending.
+      for (const [viewerId, client] of streamViewers.entries()) {
+        if (!client.isBroadcaster && client.ws.readyState === WebSocket.OPEN) {
+          socketSessions.send(ws, JSON.stringify({
+            type: "viewer-joined", viewerId,
+            viewerCount: streamViewers.values().filter(c => !c.isBroadcaster).length,
+          }), client.ws);
+        }
+      }
+    }
+    socketSessions.send(ws, JSON.stringify({
+      type: "viewer-count", streamId,
+      count: streamViewers.values().filter(c => !c.isBroadcaster).length,
+    }));
+    } catch {
+      ws.close(1011, "Session unavailable");
+    }
   });
 
   // ============================================
@@ -809,6 +918,9 @@ export async function registerRoutes(
 
         console.log(`[NostrAuth] New user created — ${username.slice(0,3)}*** · ${npub.slice(0, 20)}…`);
       } else {
+        if (isFounderAccount(user)) {
+          return res.status(403).json({ error: "The founder account uses BTC-secret sign-in only." });
+        }
         // Backfill pubkey if missing
         if (!user.nostrPubkey) {
           await _db.update(usersT).set({ nostrPubkey: pubkeyHex }).where(eqN(usersT.id, user.id));
@@ -834,7 +946,6 @@ export async function registerRoutes(
           : `Welcome back, ${user.username}!`,
         user: { id: user.id, username: user.username, role: user.role, nostrNpub: npub },
         wallet: wallet ? { address: wallet.address, balance: wallet.balance } : null,
-        token:      session.token,
         expiresAt:  session.expiresAt,
       });
     } catch (e: any) {
@@ -933,7 +1044,6 @@ export async function registerRoutes(
           address: wallet.address,
           balance: wallet.balance,
         } : null,
-        token: session.token,
         expiresAt: session.expiresAt,
       });
     } catch (error: any) {
@@ -943,7 +1053,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", validateRequest(loginSchema), async (req, res) => {
+  app.post("/api/auth/login", validateRequest(loginSchema), blockFounderPasswordAccess, async (req, res) => {
     try {
       if (!await checkRateLimit(req, res, "/api/auth/login", AUTH_RATE_LIMIT_MAX)) return;
       
@@ -1000,7 +1110,6 @@ export async function registerRoutes(
           address: wallet.address,
           balance: wallet.balance,
         } : null,
-        token: session.token,
         expiresAt: session.expiresAt,
       });
     } catch (error: any) {
@@ -1010,79 +1119,16 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/wif-login", async (req: Request, res: Response) => {
-    try {
-      if (!await checkRateLimit(req, res, "/api/auth/wif-login", KEY_AUTH_RATE_LIMIT_MAX)) return;
-      const { wifKey } = req.body;
-      if (!wifKey) return res.status(400).json({ error: "wifKey required" });
+  app.post("/api/auth/wif-login", async (req: Request, res: Response, next) => {
+    if (!await checkRateLimit(req, res, "/api/auth/wif-login", KEY_AUTH_RATE_LIMIT_MAX)) return;
+    next();
+  }, founderBtcLoginHandler);
 
-      const wif = process.env.BTC_INSCRIPTION_WALLET_WIF ?? "";
-      if (!wif || !timingSafeCompare(wifKey.trim(), wif.trim()))
-        return res.status(401).json({ error: "Invalid wallet key" });
-
-      const user = await storage.getUserByUsername("Nexus");
-      if (!user) return res.status(404).json({ error: "Admin account not found" });
-
-      const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
-      await logAction(req, "wif_login", "auth", user.id, {}, "success", "Login via WIF key");
-
-      // Set the same httpOnly cookie as the password login — required for /api/auth/me
-      res.cookie("auth_token", session.token, {
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge:   365 * 24 * 60 * 60 * 1000,
-        path:     "/",
-        secure:   process.env.NODE_ENV === "production",
-      });
-
-      const wallet = await storage.getWallet(user.id);
-      res.json({
-        message: "Login successful",
-        user: { id: user.id, username: user.username, email: user.email, role: user.role },
-        wallet: wallet ? { address: wallet.address, balance: wallet.balance } : null,
-        token:     session.token,
-        expiresAt: session.expiresAt,
-      });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+  app.post("/api/auth/nsec-login", (_req: Request, res: Response) => {
+    res.status(403).json({ error: "Founder Nostr-key login is retired. Use BTC-secret sign-in." });
   });
 
-  app.post("/api/auth/nsec-login", async (req: Request, res: Response) => {
-    try {
-      if (!await checkRateLimit(req, res, "/api/auth/nsec-login", KEY_AUTH_RATE_LIMIT_MAX)) return;
-      const { nsecKey } = req.body;
-      if (!nsecKey) return res.status(400).json({ error: "nsecKey required" });
-
-      const stored = process.env.NOSTR_NSEC ?? "";
-      if (!stored || !timingSafeCompare(nsecKey.trim(), stored.trim()))
-        return res.status(401).json({ error: "Invalid Nostr key" });
-
-      const user = await storage.getUserByUsername("Nexus");
-      if (!user) return res.status(404).json({ error: "Admin account not found" });
-
-      const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"]);
-      await logAction(req, "nsec_login", "auth", user.id, {}, "success", "Login via Nostr nsec key");
-
-      // Set the same httpOnly cookie as the password login — required for /api/auth/me
-      res.cookie("auth_token", session.token, {
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge:   365 * 24 * 60 * 60 * 1000,
-        path:     "/",
-        secure:   process.env.NODE_ENV === "production",
-      });
-
-      const wallet = await storage.getWallet(user.id);
-      res.json({
-        message: "Login successful",
-        user: { id: user.id, username: user.username, email: user.email, role: user.role },
-        wallet: wallet ? { address: wallet.address, balance: wallet.balance } : null,
-        token:     session.token,
-        expiresAt: session.expiresAt,
-      });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
-  });
-
-  app.post("/api/auth/recover", async (req: Request, res: Response) => {
+  app.post("/api/auth/recover", blockFounderPasswordAccess, async (req: Request, res: Response) => {
     try {
       if (!await checkRateLimit(req, res, "/api/auth/recover", KEY_AUTH_RATE_LIMIT_MAX)) return;
       const { username, newPassword, recoveryKey } = req.body;
@@ -1122,6 +1168,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Password must be at least 8 characters" });
       const target = await storage.getUserByUsername(targetUsername);
       if (!target) return res.status(404).json({ error: `User "${targetUsername}" not found` });
+      if (isFounderAccount(target)) return res.status(403).json({ error: "Founder password access is disabled." });
       const bcrypt = await import("bcrypt");
       const hash = await bcrypt.hash(newPassword, 12);
       const { db } = await import("./db");
@@ -1133,19 +1180,7 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  app.post("/api/auth/logout", authenticate, async (req, res) => {
-    try {
-      if (req.session) {
-        await storage.deleteSession(req.session.id);
-      }
-      await logAction(req, "user_logout", "auth", req.user?.id);
-      res.clearCookie("auth_token", { path: "/" });
-      res.json({ message: "Logged out successfully" });
-    } catch (error: any) {
-      console.error("Logout error:", error);
-      res.status(500).json({ error: "Logout failed" });
-    }
-  });
+  app.post("/api/auth/logout", authenticate, logoutSessionHandler);
 
   // ── Nexus Operations Lab Tier Donations ────────────────────────────────
   const LAB_TIER_DEF = [
@@ -1451,6 +1486,63 @@ export async function registerRoutes(
     }
   });
 
+  // ── Bogoliubov Squeezed Compression State — public (Claims 36–39) ──────────
+  app.get("/api/physics/squeezed", async (req, res) => {
+    try {
+      if (!await checkRateLimit(req, res, "/api/physics/squeezed", 60)) return;
+      const strictNum = (v: unknown, integer = false): number | null => {
+        if (v === undefined) return null;
+        if (typeof v !== "string" || !/^-?\d+(\.\d+)?$/.test(v.trim())) return NaN;
+        const n = Number(v.trim());
+        if (!Number.isFinite(n) || (integer && !Number.isInteger(n))) return NaN;
+        return n;
+      };
+      const rParsed = strictNum(req.query.r);
+      if (Number.isNaN(rParsed)) return res.status(400).json({ error: "r must be a finite decimal number" });
+      const r = Math.max(-10, Math.min(10, rParsed ?? 0));
+      const wdmParsed = strictNum(req.query.wdm, true);
+      if (Number.isNaN(wdmParsed)) return res.status(400).json({ error: "wdm must be an integer" });
+      const wdm = wdmParsed ?? 52;
+      const { bogoliubovCoefficients, squeezedVacuum, lambdaSqueezed, lambdaEntangled } = await import("./bogoliubov.js");
+      const payload: any = {
+        description: "Squeezed compression state Λ_B = Λ₀·cosh(2r) per Ψ channel (PRIOR_ART.md Claims 36–39, first disclosed 2026-08-08).",
+        coefficients: bogoliubovCoefficients(r),
+        vacuum: squeezedVacuum(r),
+        channel: lambdaSqueezed(wdm, r),
+      };
+      if (req.query.wdmB !== undefined) {
+        const wdmB = strictNum(req.query.wdmB, true);
+        if (wdmB === null || Number.isNaN(wdmB)) return res.status(400).json({ error: "wdmB must be an integer" });
+        payload.entangledPair = lambdaEntangled(wdm, wdmB, r);
+      }
+      res.json(payload);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ── GuideBot AI ───────────────────────────────────────────────────────────
+  // Public — no auth. Grounded entirely in the WNSP knowledge base; no LLM.
+  app.post("/api/guide/ask", async (req: Request, res: Response) => {
+    try {
+      const { findAnswer } = await import("./guide-knowledge.js");
+      const raw = req.body?.question;
+      if (typeof raw !== "string" || !raw.trim()) {
+        return res.status(400).json({ error: "question is required" });
+      }
+      const question = raw.trim().slice(0, 500);
+      const result   = findAnswer(question);
+      return res.json({
+        answer:     result.answer,
+        route:      result.route      ?? null,
+        routeTitle: result.routeTitle ?? null,
+        confidence: result.confidence,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: "Guide unavailable", detail: err.message });
+    }
+  });
+
   // ── Physics Profile ────────────────────────────────────────────────────────
   app.get("/api/physics/my", authenticate, async (req, res) => {
     try {
@@ -1526,7 +1618,7 @@ export async function registerRoutes(
       // ── Lightning transactions ────────────────────────────────────────────────
       const { db }                   = await import("./db");
       const { lightningTransactions } = await import("../shared/schema");
-      const { eq: eqLn, desc: descLn } = await import("drizzle-orm");
+      const { eq: eqLn, and: andLn, desc: descLn } = await import("drizzle-orm");
       const lnTxs = await db.select().from(lightningTransactions)
         .where(eqLn(lightningTransactions.userId, req.user!.id))
         .orderBy(descLn(lightningTransactions.createdAt))
@@ -1536,6 +1628,7 @@ export async function registerRoutes(
       const LN_LABEL: Record<string, string> = {
         deposit:          "⚡ Lightning Deposit",
         withdrawal:       "⚡ Lightning Withdrawal",
+        unstake:          "↩ Staked sats returned",
         swap_to_nxt:      "⇄ Swap sats → NXT",
         swap_to_sats:     "⇄ Swap NXT → sats",
         send_p2p:         "→ P2P Send",
@@ -1596,7 +1689,7 @@ export async function registerRoutes(
       const [satsStakeRow] = await db
         .select({ total: sqlRaw<string>`coalesce(sum(amount_sats),0)` })
         .from(satsStakes)
-        .where(eqLn(satsStakes.userId, req.user!.id));
+        .where(andLn(eqLn(satsStakes.userId, req.user!.id), eqLn(satsStakes.status, "active")));
       const satsStaked = parseInt(String(satsStakeRow?.total ?? "0"), 10);
 
       // ── WNUSD positions ───────────────────────────────────────────────────────
@@ -1606,7 +1699,7 @@ export async function registerRoutes(
           collateral: sqlRaw<string>`coalesce(sum(collateral_sats),0)`,
         })
         .from(wnusdPositions)
-        .where(eqLn(wnusdPositions.userId, req.user!.id));
+        .where(andLn(eqLn(wnusdPositions.userId, req.user!.id), eqLn(wnusdPositions.status, "active")));
       const wnusdMinted   = parseFloat(String(wnusdRow?.minted   ?? "0"));
       const wnusdColSats  = parseInt(String(wnusdRow?.collateral ?? "0"), 10);
 
@@ -1703,6 +1796,7 @@ export async function registerRoutes(
   // ── Account settings — change password ───────────────────────────────────
   app.post("/api/settings/password", authenticate, async (req: Request, res: Response) => {
     try {
+      if (isFounderAccount(req.user)) return res.status(403).json({ error: "Founder password access is disabled; use BTC-secret sign-in." });
       const { currentPassword, newPassword } = req.body;
       if (!currentPassword || !newPassword)
         return res.status(400).json({ error: "currentPassword and newPassword are required" });
@@ -1982,9 +2076,7 @@ export async function registerRoutes(
         });
       }
 
-      await db.update(lightningWallets)
-        .set({ satsBalance: lnWallet.satsBalance - API_KEY_FEE_SATS, updatedAt: new Date() })
-        .where(eq(lightningWallets.userId, req.user!.id));
+      await changeLegacySats(db, req.user!.id, -API_KEY_FEE_SATS);
       await db.insert(lightningTransactions).values({
         userId:     req.user!.id,
         type:       "service_fee",
@@ -2405,7 +2497,7 @@ export async function registerRoutes(
           "WNSP•BTC":           { runeId: (etch as any).rune_id ?? "952733:1958", status: etch.status },
           "NEXUS•WAVELENGTH":   { runeId: "952596:379",  status: "etched" },
         },
-        channels:  25600,
+        channels:  51200,
         timestamp: new Date().toISOString(),
       });
     } catch (err: any) {
@@ -2478,9 +2570,9 @@ export async function registerRoutes(
       });
 
       // Push live alert to the recipient via WebSocket
-      const recipientWs = connectedClients.get(addressee.id);
+      const recipientWs = connectedClients.get(addressee.id)?.ws;
       if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-        recipientWs.send(JSON.stringify({
+        socketSessions.send(recipientWs, JSON.stringify({
           type: "friend_request",
           friendshipId: friendship.id,
           from: {
@@ -2562,9 +2654,9 @@ export async function registerRoutes(
       });
 
       // Notify the requester via WebSocket that their request was accepted
-      const requesterWs = connectedClients.get(friendship.requesterId);
+      const requesterWs = connectedClients.get(friendship.requesterId)?.ws;
       if (requesterWs && requesterWs.readyState === WebSocket.OPEN) {
-        requesterWs.send(JSON.stringify({
+        socketSessions.send(requesterWs, JSON.stringify({
           type: "friend_accepted",
           friendshipId: updated.id,
           by: { username: req.user!.username, id: req.user!.id },
@@ -2714,130 +2806,44 @@ export async function registerRoutes(
   // LAMBDA MESSAGE ROUTES
   // ============================================
 
+  const { pool: wavePool } = await import("./db");
+  registerWalletWaveRoutes(app, wavePool, authenticate,
+    (req,res) => checkRateLimit(req,res,"/api/messages/wave",30));
+
   app.post("/api/messages/send", authenticate, validateRequest(sendMessageSchema), async (req, res) => {
     try {
       if (!await checkRateLimit(req, res, "/api/messages/send", 30)) return;
 
-      const { recipientId, content, intensity = 32, cycles = 1 } = req.body;
-
-      const friends = await storage.getFriends(req.user!.id);
-      const isFriend = friends.some(f => f.friend.id === recipientId);
-      if (!isFriend) {
-        return res.status(403).json({ error: "Can only send messages to friends" });
-      }
-
-      // ── Physics fee enforcement ─────────────────────────────────────────
-      // Text messages are free — fee calculated for physics metadata only
-      const senderWdm  = req.user!.spectralWdm ?? 200;
-      const msgFee     = calcFee("message_send", senderWdm);
-      const feeNum     = 0; // Text messages are free
-      const senderWallet = await storage.getWallet(req.user!.id);
-      if (!senderWallet) {
-        return res.status(400).json({ error: "Sender wallet not found" });
-      }
-      const senderBalance = parseFloat(senderWallet.balance);
-      // No deduction — text messages are free
-
-      // 50% of fee flows to recipient as spectral earnings — closed economic loop
-      const recipientEarning = feeNum * 0.5;
-      const recipientWallet  = await storage.getWallet(recipientId);
-      if (recipientWallet) {
-        const newRecipientBalance = (parseFloat(recipientWallet.balance) + recipientEarning).toFixed(8);
-        await storage.updateWalletBalance(recipientWallet.id, newRecipientBalance);
-        await storage.createTransaction({
-          fromWalletId: senderWallet.id,
-          toWalletId:   recipientWallet.id,
-          amount:       recipientEarning.toFixed(8),
-          fee:          "0",
-          type:         "message_earning",
-          wavelength:   msgFee.wavelengthNm.toString(),
-          frequency:    msgFee.frequencyHz.toString(),
-          energyCost:   msgFee.energyJ.toString(),
-          metadata:     { action: "message_received", band: msgFee.band, senderId: req.user!.id },
-        });
-      }
-      // Remaining 50% is protocol fee → Orbital Treasury
-      const burnTxMain = await storage.createTransaction({
-        fromWalletId: senderWallet.id,
-        toWalletId:   undefined,
-        amount:       (feeNum * 0.5).toFixed(8),
-        fee:          "0",
-        type:         "protocol_burn",
-        wavelength:   msgFee.wavelengthNm.toString(),
-        frequency:    msgFee.frequencyHz.toString(),
-        energyCost:   msgFee.energyJ.toString(),
-        metadata:     { action: "message_send", band: msgFee.band, recipientId },
-      });
-      // ── BTC auto-inscription hook — NXT fee → Orbital Treasury ────────────
-      import("./btc-bridge-service").then(({ btcBridge }) => {
-        btcBridge.triggerFromBurn({
-          id:               String(burnTxMain?.id ?? Date.now()),
-          amountNxt:        (feeNum * 0.5).toFixed(8),
-          fromWalletAddress: senderWallet.address,
-          reason:           `message_send fee → Orbital Treasury (50%) · band:${msgFee.band}`,
-          wavelength:       msgFee.wavelengthNm.toString(),
-          triggeredBy:      (req as any).user?.username ?? "protocol",
-        }).catch(() => {});
-      }).catch(() => {});
-      // ────────────────────────────────────────────────────────────────────
-
-      let encodedFrames = null;
-      let totalLambdaMass = null;
-      let spectralHash = null;
-      let wavelengthMin = null;
-      let wavelengthMax = null;
-
+      const { recipientId, content, idempotencyKey, intensity = 32, cycles = 1 } = req.body;
+      const recipientAddress = await walletWaveForUser(wavePool, recipientId);
+      // Retain legacy spectral presentation without publishing the encoding or an unsalted hash.
+      let encoding: import("./wallet-wave-service").WaveEncoding | undefined;
       try {
-        const encodeResponse = await fetch(`${SPECTRAL_API_URL}/api/spectral/encode`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: content, options: {} }),
+        const encoded = await fetch(`${SPECTRAL_API_URL}/api/spectral/encode`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: content, options: {} }), signal: AbortSignal.timeout(5000),
         });
-
-        if (encodeResponse.ok) {
-          const encodeData = await encodeResponse.json();
-          encodedFrames = encodeData.frames || encodeData.encoded_frames;
-          totalLambdaMass = encodeData.total_lambda_mass?.toString();
-          spectralHash = encodeData.spectral_hash;
-          if (encodeData.wavelength_range) {
-            wavelengthMin = encodeData.wavelength_range[0]?.toString();
-            wavelengthMax = encodeData.wavelength_range[1]?.toString();
-          }
+        if (encoded.ok) {
+          const data = await encoded.json();
+          encoding = {
+            encodedFrames: data.frames ?? data.encoded_frames, spectralHash: data.spectral_hash,
+            totalLambdaMass: data.total_lambda_mass?.toString(),
+            wavelengthMin: data.wavelength_range?.[0]?.toString(),
+            wavelengthMax: data.wavelength_range?.[1]?.toString(),
+          };
         }
-      } catch (encodeError) {
-        console.error("Spectral encoding failed, storing raw message:", encodeError);
-      }
-
-      const message = await storage.createLambdaMessage({
-        senderId: req.user!.id,
-        recipientId,
-        content,
-        encodedFrames,
-        totalLambdaMass,
-        spectralHash,
-        wavelengthMin,
-        wavelengthMax,
-        intensity,
-        cycles,
-        isRead: false,
-        isDecoded: false,
+      } catch { /* Raw text delivery remains available; the response accurately reports hasEncoding. */ }
+      const delivery = await sendWalletWave(wavePool, req.user!, {
+        recipientAddress, content, idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
+        encoding, intensity, cycles,
       });
-
-      // Stage B: non-fatal ML-DSA-65 lattice sign — binds sender channel to this message
-      try {
-        const { latticeSign: _lsMsg, lambdaMessage: _lmMsg } = await import("./lattice-identity");
-        const _senderNm = req.user!.spectralNm ?? 550;
-        const _msgBytes = _lmMsg(req.user!.id, message.id, recipientId, spectralHash);
-        const { signature: _latticeSig, scheme: _sigScheme } = _lsMsg(req.user!.id, _senderNm, _msgBytes);
-        const { db: _lmDb } = await import("./db");
-        const { lambdaMessages: _lmTbl } = await import("../shared/schema");
-        const { eq: _lmEq } = await import("drizzle-orm");
-        await _lmDb.update(_lmTbl).set({ latticeSig: _latticeSig, sigScheme: _sigScheme }).where(_lmEq(_lmTbl.id, message.id));
-      } catch { /* non-fatal */ }
+      const linked = (await wavePool.query("SELECT message_id FROM wave_communications WHERE id=$1", [delivery.id])).rows[0];
+      const message = await storage.getLambdaMessage(linked.message_id);
+      if (!message) throw new Error("Committed message projection unavailable");
 
       await logAction(req, "message_sent", "messages", message.id, {
         recipientId,
-        hasEncoding: !!encodedFrames,
+        commitment: delivery.commitment,
       });
 
       // Push live delivery via WebSocket to recipient and sender
@@ -2856,13 +2862,13 @@ export async function registerRoutes(
           createdAt: message.createdAt,
         },
       });
-      const recipientWs = connectedClients.get(recipientId);
+      const recipientWs = connectedClients.get(recipientId)?.ws;
       if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-        recipientWs.send(wsPayload);
+        socketSessions.send(recipientWs, wsPayload);
       }
-      const senderWs = connectedClients.get(req.user!.id);
+      const senderWs = connectedClients.get(req.user!.id)?.ws;
       if (senderWs && senderWs.readyState === WebSocket.OPEN) {
-        senderWs.send(wsPayload);
+        socketSessions.send(senderWs, wsPayload);
       }
 
       res.status(201).json({
@@ -2870,12 +2876,15 @@ export async function registerRoutes(
         data: {
           id: message.id,
           recipientId: message.recipientId,
-          hasEncoding: !!encodedFrames,
-          totalLambdaMass,
+          hasEncoding: !!message.encodedFrames,
+          totalLambdaMass: message.totalLambdaMass,
+          commitment: delivery.commitment,
+          blockNumber: delivery.blockNumber,
           createdAt: message.createdAt,
         },
       });
     } catch (error: any) {
+      if (typeof error.status === "number") return res.status(error.status).json({ error: error.message });
       console.error("Send message error:", error);
       await logAction(req, "message_send_error", "messages", undefined, {}, "failed", error.message);
       res.status(500).json({ error: "Failed to send message" });
@@ -3024,15 +3033,19 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Not authorized to mark this message as read" });
       }
 
-      const updated = await storage.markMessageAsRead(req.params.id);
+      const linked = (await wavePool.query("SELECT id FROM wave_communications WHERE message_id=$1", [message.id])).rows[0];
+      const acknowledged = linked ? await acknowledgeWalletWave(wavePool, req.user!, linked.id) : null;
+      const updated = acknowledged ? await storage.getLambdaMessage(message.id) : await storage.markMessageAsRead(req.params.id);
       
       await logAction(req, "message_read", "messages", message.id);
 
       res.json({
         message: "Message marked as read",
-        readAt: updated.readAt,
+        readAt: updated?.readAt,
+        receipt: acknowledged?.receipt ?? null,
       });
     } catch (error: any) {
+      if (typeof error.status === "number") return res.status(error.status).json({ error: error.message });
       console.error("Mark message read error:", error);
       res.status(500).json({ error: "Failed to mark message as read" });
     }
@@ -3049,16 +3062,19 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Not authorized to decode this message" });
       }
 
+      const linked = (await wavePool.query("SELECT id FROM wave_communications WHERE message_id=$1", [message.id])).rows[0];
+      const acknowledged = linked ? await acknowledgeWalletWave(wavePool, req.user!, linked.id) : null;
       if (message.isDecoded) {
         return res.json({
           message: "Message already decoded",
           content: message.content,
+          receipt: acknowledged?.receipt ?? null,
         });
       }
 
       const updated = await storage.markMessageAsDecoded(req.params.id);
       
-      if (!message.isRead) {
+      if (!message.isRead && !linked) {
         await storage.markMessageAsRead(req.params.id);
       }
 
@@ -3070,8 +3086,10 @@ export async function registerRoutes(
         encodedFrames: updated.encodedFrames,
         totalLambdaMass: updated.totalLambdaMass,
         spectralHash: updated.spectralHash,
+        receipt: acknowledged?.receipt ?? null,
       });
     } catch (error: any) {
+      if (typeof error.status === "number") return res.status(error.status).json({ error: error.message });
       console.error("Decode message error:", error);
       res.status(500).json({ error: "Failed to decode message" });
     }
@@ -3284,13 +3302,63 @@ export async function registerRoutes(
     secureProxyToSpectralAPI(req, res, "/api/wnsp/se/orthogonality");
   });
 
-  // ── WASCII Table & Lookup — public, no auth required ─────────
-  app.get("/api/wnsp/wascii/table", (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/table");
+  // ── WASCII Table & Lookup — computed natively, no Spectral API required ─────────
+  // Formula: λ(nm) = 380 + (charCode % 128) / 128 × 400
+  // Physics: f = c / λ,  E = h·f   (WNSP-CE v1.0 / WASCII v7)
+  function buildWasciiTable() {
+    const C = 299_792_458;          // m/s
+    const H = 6.62607015e-34;       // J·s
+    const BASE = 380.0;             // nm
+    const BAND = 400.0;             // nm span
+    const entries = [];
+    // Printable ASCII 32 (space) through 126 (~)
+    for (let code = 32; code <= 126; code++) {
+      const char = String.fromCharCode(code);
+      const wl   = BASE + (code % 128) / 128.0 * BAND;
+      const freq = C / (wl * 1e-9);
+      entries.push({
+        char,
+        wavelength_nm:  Math.round(wl * 1000) / 1000,
+        frequency_hz:   Math.round(freq),
+        energy_joules:  H * freq,
+      });
+    }
+    return entries;
+  }
+
+  app.get("/api/wnsp/wascii/table", (_req, res) => {
+    try {
+      const table = buildWasciiTable();
+      res.json({
+        table,
+        date:    new Date().toISOString().slice(0, 10),
+        version: "v7",
+        count:   table.length,
+        formula: "λ(nm) = 380 + (charCode % 128) / 128 × 400",
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   app.post("/api/wnsp/wascii/lookup", (req, res) => {
-    secureProxyToSpectralAPI(req, res, "/api/wnsp/wascii/lookup");
+    try {
+      const { char } = req.body as { char?: string };
+      if (!char || char.length === 0) return res.status(400).json({ error: "char required" });
+      const C = 299_792_458;
+      const H = 6.62607015e-34;
+      const code = char.charCodeAt(0);
+      const wl   = 380.0 + (code % 128) / 128.0 * 400.0;
+      const freq = C / (wl * 1e-9);
+      res.json({
+        char,
+        wavelength_nm: Math.round(wl * 1000) / 1000,
+        frequency_hz:  Math.round(freq),
+        energy_joules: H * freq,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // ── WASCII v2.0 — Wave Density Spectral Vector ────────────────
@@ -3368,7 +3436,7 @@ export async function registerRoutes(
       const raw = decodeURIComponent(req.params.psiChannel);
       const match = raw.match(/[Ψ\u03A8]\((\d+),(\d+),([HVhv])\)/);
       if (!match) {
-        return res.status(400).json({ error: "Invalid format. Expected Ψ(wdm,oam,pol) e.g. Ψ(52,20,H)" });
+        return res.status(400).json({ error: "Invalid format. Expected Ψ(wdm,oam,pol) e.g. Ψ(1,1,H)" });
       }
       const [, wdmS, oamS, polS] = match;
       const { db: _idDb } = await import("./db");
@@ -4365,10 +4433,10 @@ export async function registerRoutes(
       });
       
       // Notify receiver via WebSocket if online
-      const receiverWs = connectedClients.get(receiverId);
+      const receiverWs = connectedClients.get(receiverId)?.ws;
       if (receiverWs && receiverWs.readyState === WebSocket.OPEN) {
         const caller = await storage.getUser(callerId);
-        receiverWs.send(JSON.stringify({
+        socketSessions.send(receiverWs, JSON.stringify({
           type: "incoming-call",
           callId: call.id,
           callType: type,
@@ -4452,7 +4520,7 @@ export async function registerRoutes(
   app.get("/api/users/:userId/online", authenticate, async (req, res) => {
     try {
       const userId = req.params.userId;
-      const ws = connectedClients.get(userId);
+      const ws = connectedClients.get(userId)?.ws;
       const isOnline = !!ws && ws.readyState === WebSocket.OPEN;
       res.json({ userId, isOnline });
     } catch (error: any) {
@@ -4468,34 +4536,8 @@ export async function registerRoutes(
     try {
       if (!await checkRateLimit(req, res, "/api/streams", 20)) return;
 
-      // ── Physics fee enforcement ─────────────────────────────────────────
-      const streamerWdm    = req.user!.spectralWdm ?? 200;
-      const streamFee      = calcFee("stream_start", streamerWdm);
-      const streamFeeNum   = parseFloat(streamFee.feeNxt);
-      const streamerWallet = await storage.getWallet(req.user!.id);
-      if (!streamerWallet) return res.status(400).json({ error: "Wallet not found" });
-      const streamerBalance = parseFloat(streamerWallet.balance);
-      if (streamerBalance < streamFeeNum) {
-        return res.status(402).json({
-          error: "Insufficient NXT to open a broadcast channel",
-          required: streamFee.feeNxt,
-          available: streamerWallet.balance,
-          physics: { wavelengthNm: streamFee.wavelengthNm, energyJ: streamFee.energyJ, band: streamFee.band },
-        });
-      }
-      await storage.updateWalletBalance(streamerWallet.id, (streamerBalance - streamFeeNum).toFixed(8));
-      await storage.createTransaction({
-        fromWalletId: streamerWallet.id,
-        toWalletId:   undefined,
-        amount:       streamFee.feeNxt,
-        fee:          "0",
-        type:         "stream_fee",
-        wavelength:   streamFee.wavelengthNm.toString(),
-        frequency:    streamFee.frequencyHz.toString(),
-        energyCost:   streamFee.energyJ.toString(),
-        metadata:     { action: "stream_start", band: streamFee.band },
-      });
-      // ────────────────────────────────────────────────────────────────────
+      // Opening a live channel is free. Sats tips/purchases require an explicit
+      // separately confirmed operation; NXT is not spent on P2P broadcasting.
 
       const { title, description, streamType, isPublic, quality, bitrate, frameRate, recordingEnabled } = req.body;
       
@@ -4565,7 +4607,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Stream not found" });
       }
       
-      if (!stream.isPublic && (!req.user || stream.broadcasterId !== req.user.id)) {
+      if (!await canViewStream(stream, req.user?.id)) {
         return res.status(403).json({ error: "This stream is private" });
       }
       
@@ -4665,45 +4707,12 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Stream is not live" });
       }
       
-      if (!stream.isPublic && stream.broadcasterId !== req.user!.id) {
+      if (!await canViewStream(stream, req.user!.id)) {
         return res.status(403).json({ error: "This stream is private" });
       }
 
-      // ── Viewer physics payment → broadcaster earnings ─────────────────
-      // Broadcaster earns when viewers join — they don't pay the join fee, viewer does
-      if (stream.broadcasterId !== req.user!.id) {
-        const viewerWdm     = req.user!.spectralWdm ?? 200;
-        const viewJoinFee   = calcFee("stream_start", viewerWdm); // same rate as opening a channel
-        const viewFeeNum    = parseFloat(viewJoinFee.feeNxt) * 0.2; // 20% of stream_start as join fee
-        const viewerWallet  = await storage.getWallet(req.user!.id);
-        const broadcasterWallet = await storage.getWallet(stream.broadcasterId);
-
-        if (viewerWallet && viewFeeNum > 0) {
-          const viewerBalance = parseFloat(viewerWallet.balance);
-          if (viewerBalance >= viewFeeNum) {
-            await storage.updateWalletBalance(viewerWallet.id, (viewerBalance - viewFeeNum).toFixed(8));
-            // 80% to broadcaster, 20% protocol burn
-            if (broadcasterWallet) {
-              const broadcasterEarning = viewFeeNum * 0.8;
-              const newBroadcasterBalance = (parseFloat(broadcasterWallet.balance) + broadcasterEarning).toFixed(8);
-              await storage.updateWalletBalance(broadcasterWallet.id, newBroadcasterBalance);
-              await storage.createTransaction({
-                fromWalletId: viewerWallet.id,
-                toWalletId:   broadcasterWallet.id,
-                amount:       broadcasterEarning.toFixed(8),
-                fee:          (viewFeeNum * 0.2).toFixed(8),
-                type:         "stream_earning",
-                wavelength:   viewJoinFee.wavelengthNm.toString(),
-                frequency:    viewJoinFee.frequencyHz.toString(),
-                energyCost:   viewJoinFee.energyJ.toString(),
-                metadata:     { action: "viewer_join", streamId: stream.id, viewerWdm, band: viewJoinFee.band },
-              });
-            }
-          }
-          // If viewer can't afford join fee, they can still watch (soft gate for now)
-        }
-      }
-      // ────────────────────────────────────────────────────────────────────
+      // Watching does not debit either wallet. Optional support is a separate
+      // confirmed sats tip, never a silent join fee.
 
       const viewer = await storage.addStreamViewer(stream.id, req.user!.id);
       const broadcaster = await storage.getUser(stream.broadcasterId);
@@ -4749,55 +4758,10 @@ export async function registerRoutes(
       if (!stream || stream.status !== "live") {
         return res.status(404).json({ error: "Stream not found or ended" });
       }
-      // Broadcaster is never billed for their own heartbeat
-      if (stream.broadcasterId === req.user!.id) {
-        return res.json({ billed: false, reason: "broadcaster" });
+      if (!await canViewStream(stream, req.user!.id)) {
+        return res.status(403).json({ error: "Private stream invitation required" });
       }
-
-      const viewerWdm      = req.user!.spectralWdm ?? 200;
-      const minuteFee      = calcFee("stream_start", viewerWdm);
-      const minuteFeeNxt   = parseFloat(minuteFee.feeNxt) * 0.1; // 10% of stream_start per minute
-      const viewerWallet   = await storage.getWallet(req.user!.id);
-      const broadcasterWallet = await storage.getWallet(stream.broadcasterId);
-
-      if (!viewerWallet) {
-        return res.status(402).json({ error: "Viewer wallet not found" });
-      }
-
-      const balance = parseFloat(viewerWallet.balance);
-      if (balance < minuteFeeNxt) {
-        return res.status(402).json({
-          error: "Insufficient NXT — cannot sustain stream",
-          required: minuteFeeNxt,
-          available: balance,
-          physics: { wavelengthNm: minuteFee.wavelengthNm, band: minuteFee.band },
-        });
-      }
-
-      await storage.updateWalletBalance(viewerWallet.id, (balance - minuteFeeNxt).toFixed(8));
-      if (broadcasterWallet) {
-        const earning = minuteFeeNxt * 0.85;
-        const newBal  = (parseFloat(broadcasterWallet.balance) + earning).toFixed(8);
-        await storage.updateWalletBalance(broadcasterWallet.id, newBal);
-        await storage.createTransaction({
-          fromWalletId: viewerWallet.id,
-          toWalletId:   broadcasterWallet.id,
-          amount:       earning.toFixed(8),
-          fee:          (minuteFeeNxt * 0.15).toFixed(8),
-          type:         "stream_earning",
-          wavelength:   minuteFee.wavelengthNm.toString(),
-          frequency:    minuteFee.frequencyHz.toString(),
-          energyCost:   minuteFee.energyJ.toString(),
-          metadata:     { action: "viewer_minute", streamId: stream.id, viewerWdm, band: minuteFee.band },
-        });
-      }
-
-      res.json({
-        billed: true,
-        feeNxt: minuteFeeNxt,
-        newBalance: (balance - minuteFeeNxt).toFixed(8),
-        broadcasterEarning: (minuteFeeNxt * 0.85).toFixed(8),
-      });
+      res.json({ billed: false, reason: "Free viewing; sats tips require explicit consent" });
     } catch (error: any) {
       console.error("Stream heartbeat error:", error);
       res.status(500).json({ error: "Heartbeat failed" });
@@ -4885,6 +4849,10 @@ export async function registerRoutes(
       status: "healthy",
       version: "10.0",
       timestamp: new Date().toISOString(),
+      constitutionalBlock: {
+        blockedEntities: BLOCKED_ENTITIES.length,
+        blockedReferrerDomains: BLOCKED_REFERRER_DOMAINS.length,
+      },
       features: {
         authentication: true,
         auditLogging: true,
@@ -4902,6 +4870,61 @@ export async function registerRoutes(
     });
   });
 
+  // ============================================
+  // CONSTITUTION SEAL — public, no auth required
+  // ============================================
+
+  app.get("/api/constitution/seal", async (_req: Request, res: Response) => {
+    try {
+      const { getConstitutionSeal, computeConstitutionHash } = await import("./constitution_seal");
+      const seal = await getConstitutionSeal();
+      if (!seal) {
+        // Distinguish: did the sealing process fail (table exists, no block) vs
+        // server is still in its 2-second warm-up window (table may not exist yet)?
+        const { pool } = await import("./db");
+        const tableExists = await pool.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables
+            WHERE table_name = 'blockchain_blocks'
+          ) AS exists
+        `);
+        if (tableExists.rows[0]?.exists) {
+          // Table is up — seal should have been written but wasn't. Signal error.
+          return res.status(503).json({
+            error: "Constitution seal missing",
+            message:
+              "The blockchain_blocks table exists but no constitution seal block was found. " +
+              "The sealConstitution() boot process may have failed. " +
+              "Check server logs for [CONSTITUTION] SEAL FAILED entries and restart the server.",
+          });
+        }
+        // Table not ready yet — normal during the first few seconds of a fresh boot
+        return res.status(404).json({
+          error: "Constitution not yet sealed",
+          message: "The genesis sealing process runs at server startup. Try again in a few seconds.",
+        });
+      }
+      return res.json({
+        blockNumber:  seal.blockNumber,
+        psiChannel:   seal.psiChannel,
+        wavelengthNm: seal.wavelengthNm,
+        hash:         seal.hash,
+        timestamp:    seal.sealedAt,
+        frequencyHz:  seal.frequencyHz,
+        energyJoules: seal.energyJoules,
+        band:         "SYSTEM",
+        declaration:  "NexusOS Constitution sealed at SYSTEM band — immutable, physics-signed",
+        verifyHash:   computeConstitutionHash(),
+        amendments:   seal.amendments,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: "Failed to read constitution seal", message: err.message });
+    }
+  });
+
+  // ── Constitution Amendments — SYSTEM/KERNEL only ─────────────────
+  app.post("/api/constitution/amendments", authenticate, amendmentHandler);
+
   // ── Agent Message Bus API ─────────────────────────────────────────
   // Proxy to the Python WNSP bus + persistent message history in PostgreSQL
 
@@ -4917,10 +4940,13 @@ export async function registerRoutes(
   // Bus queue + route log status
   app.get("/api/agent-bus/status", async (req: Request, res: Response) => {
     try {
-      const r = await fetch(`${SPECTRAL_API_URL}/api/wnsp/bus/status`);
-      const d = await r.json();
-      res.json(d);
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+      const result = await fetchSpectralJson(`${SPECTRAL_API_URL}/api/wnsp/bus/status`);
+      res.status(result.status).json(result.data);
+    } catch (error) {
+      const status = error instanceof SpectralServiceError ? error.status : 503;
+      console.error(JSON.stringify({ event: "spectral_dependency_error", requestId: res.locals.requestId, status }));
+      res.status(status).json({ error: error instanceof SpectralServiceError ? error.message : "Spectral API unavailable" });
+    }
   });
 
   // Recent kernel events
@@ -4952,13 +4978,13 @@ export async function registerRoutes(
       const { src, dst, payload, priority = 5, msgType = "MESSAGE" } = req.body;
       if (!src || !dst || !payload) return res.status(400).json({ error: "src, dst, payload required" });
 
-      const busRes = await fetch(`${SPECTRAL_API_URL}/api/wnsp/bus/send`, {
+      const busRes = await fetchSpectralJson(`${SPECTRAL_API_URL}/api/wnsp/bus/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ src, dst, payload, priority }),
       });
-      const busData = await busRes.json() as any;
-      if (!busRes.ok) return res.status(busRes.status).json(busData);
+      const busData = busRes.data as any;
+      if (busRes.status < 200 || busRes.status >= 300) return res.status(busRes.status).json(busData);
 
       // Parse Ψ channels from route string "src Ψ(x,y,P) → dst Ψ(a,b,Q)"
       const routeMatch = busData.route?.match(/Ψ\([^)]+\).*?Ψ\([^)]+\)/);
@@ -4999,7 +5025,9 @@ export async function registerRoutes(
       }).catch(() => {}); // fire-and-forget — never block message routing
 
       res.json({ success: true, ...busData });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    } catch (err: any) {
+      res.status(err instanceof SpectralServiceError ? err.status : 500).json({ error: err.message });
+    }
   });
 
   // Dispatch the next queued message — proxy + update persistence
@@ -6353,13 +6381,13 @@ export async function registerRoutes(
         const videoData = file.buffer.toString("base64");
 
         const encodeText = `${title}${description ? ": " + description : ""}`;
-        const encodeRes = await fetch(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
+        const encodeRes = await fetchSpectralJson(`${SPECTRAL_API_URL}/api/nexus/dev/encode`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ instruction: encodeText, label: title }),
         });
-        if (!encodeRes.ok) return res.status(502).json({ error: "Spectral encode failed" });
-        const enc = await encodeRes.json() as any;
+        if (encodeRes.status < 200 || encodeRes.status >= 300) return res.status(502).json({ error: "Spectral encode failed" });
+        const enc = encodeRes.data as any;
 
         const psiMatch = enc.psi_channel?.match(/Ψ\((\d+),\s*(\d+),\s*([HV])\)/);
         const wdm = psiMatch ? parseInt(psiMatch[1]) : 0;
@@ -6415,7 +6443,7 @@ export async function registerRoutes(
         res.json({ success: true, record, spectral: enc, videoId,
           ordinal: uploadOrdinal ? { units: uploadOrdinal.ordinalUnits.toString(), nxt: (Number(uploadOrdinal.ordinalUnits) / 1e8).toFixed(8) } : null });
       } catch (err: any) {
-        res.status(500).json({ error: err.message });
+        res.status(err instanceof SpectralServiceError ? err.status : 500).json({ error: err.message });
       }
     });
   });
@@ -6744,7 +6772,7 @@ export async function registerRoutes(
       d_energy_per_joule: parseFloat(dEnergy.toFixed(2)),
       r_sym:             rSym,
       m,
-      hilbert_note:      `This WDM band contributes ${subChannels} of the 25,600 Hilbert channels (${N_OAM} OAM × ${N_POL} Pol).`,
+      hilbert_note:      `This WDM band contributes ${subChannels} of the 51,200 Hilbert channels (${N_OAM} OAM × ${N_POL} Pol).`,
       compression_note:  `Higher λ = lower compression state = lower energy per photon = higher symbols/joule.`,
     };
   }
@@ -6788,10 +6816,10 @@ export async function registerRoutes(
       const lookupPsi = psi || lookupUri.match(/Ψ\([^)]+\)/)?.[0] || "";
 
       // exact URI match first, then Ψ channel match
-      let entries = await db.select().from(wnspRegistry).where(eq(wnspRegistry.wnspUri, lookupUri));
-      if (entries.length === 0 && lookupPsi) {
-        entries = await db.select().from(wnspRegistry).where(eq(wnspRegistry.psiChannel, lookupPsi));
-      }
+      const resolvedRows = await resolveWnspRegistry(wavePool, lookupUri, lookupPsi);
+      const { inArray } = await import("drizzle-orm");
+      const entries = resolvedRows.length ? await db.select().from(wnspRegistry)
+        .where(inArray(wnspRegistry.id, resolvedRows.map(r => r.id))) : [];
 
       // increment resolve count
       if (entries.length > 0) {
@@ -6852,6 +6880,17 @@ export async function registerRoutes(
       const { label, resourceType = "user", resourceId, httpUrl, description, isPublic = true } = req.body;
 
       if (!label) return res.status(400).json({ error: "label is required" });
+      let ownerResourceId = resourceId ?? null;
+      if (resourceType === "user") {
+        if (resourceId && resourceId !== req.user!.id)
+          return res.status(403).json({ error: "A user address must be registered by its own account" });
+        ownerResourceId = req.user!.id;
+      } else if (resourceType === "wallet") {
+        const wallet = await storage.getWallet(req.user!.id);
+        if (!wallet || (resourceId && resourceId !== wallet.id))
+          return res.status(403).json({ error: "A wallet address must be registered by its actual wallet owner" });
+        ownerResourceId = wallet.id;
+      }
       const enc = ceSe(label);
 
       // check for duplicate
@@ -6869,7 +6908,7 @@ export async function registerRoutes(
         label,
         ceInput:      label,
         resourceType,
-        resourceId:   resourceId ?? null,
+        resourceId:   ownerResourceId,
         httpUrl:      httpUrl ?? null,
         description:  description ?? null,
         registeredBy: (req as any).user?.id,
@@ -7046,6 +7085,22 @@ export async function registerRoutes(
         pagination: { limit, offset },
       });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
+  });
+
+  // Only public, registered, account-owned wave addresses can be picked for delivery.
+  app.get("/api/directory/recipients", authenticate, async (req: Request, res: Response) => {
+    res.setHeader("Cache-Control", "private, no-store");
+    if (req.query.q !== undefined &&
+      (typeof req.query.q !== "string" || req.query.q.length > 80)) {
+      return res.status(400).json({ error: "Search must be text of at most 80 characters" });
+    }
+    try {
+      const { pool } = await import("./db");
+      const { waveRecipientDirectory } = await import("./wave-recipient-directory");
+      res.json(await waveRecipientDirectory(pool, req.user!.id, req.query.q));
+    } catch {
+      res.status(500).json({ error: "Could not load recipient directory. Please try again." });
+    }
   });
 
   // ── User directory (public) ───────────────────────────────────────────
@@ -7675,6 +7730,11 @@ export async function registerRoutes(
     }
   });
 
+  // Equal-person elections are distinct from legacy band-weighted governance.
+  const { pool: electionPool } = await import("./db");
+  registerCommunityElectionRoutes(app, electionPool, authenticate);
+  registerPrivateTrustRoutes(app, electionPool, authenticate);
+
   // GET /api/governance/params — list all governable protocol parameters
   app.get("/api/governance/params", async (req: Request, res: Response) => {
     try {
@@ -7728,7 +7788,7 @@ export async function registerRoutes(
       if (!govLnWallet || govLnWallet.satsBalance < PROPOSAL_FEE_SATS) {
         return res.status(402).json({ error: `Insufficient sats. Need ${PROPOSAL_FEE_SATS} sats to submit a proposal`, required: PROPOSAL_FEE_SATS, available: govLnWallet?.satsBalance ?? 0 });
       }
-      await govDb.update(govLnW).set({ satsBalance: govLnWallet.satsBalance - PROPOSAL_FEE_SATS, updatedAt: new Date() }).where(govEq(govLnW.userId, user.id));
+      await changeLegacySats(govDb, user.id, -PROPOSAL_FEE_SATS);
       await govDb.insert(govLnTx).values({ userId: user.id, type: "service_fee", amountSats: PROPOSAL_FEE_SATS, memo: `Governance proposal fee`, status: "settled" });
 
       const { title, rationale, parameterKey, proposedValue } = req.body;
@@ -8500,7 +8560,7 @@ export async function registerRoutes(
     { band: "EVENT",   nm: [590,625], color: "#f97316", runeName: "NEXUSOS•EVENT•BAND",   symbol: "Ε", supply: "21000000000", desc: "Orange band — governance & triggers" },
     { band: "STORAGE", nm: [625,780], color: "#f87171", runeName: "NEXUSOS•STORAGE•BAND", symbol: "Δ", supply: "21000000000", desc: "Red band — persistent state & files" },
     { band: "NXT",     nm: [380,780], color: "#a78bfa", runeName: "NEXUSOS•NXT•TOKEN",    symbol: "N", supply: "21000000000", desc: "Full-spectrum — NexusOS native currency" },
-    { band: "WNSP",    nm: [380,780], color: "#fb923c", runeName: "NEXUSOS•WNSP•PROTOCOL",symbol: "Ψ", supply: "25600",       desc: "25,600 orthogonal Ψ channels — Hilbert space density" },
+    { band: "WNSP",    nm: [380,780], color: "#fb923c", runeName: "NEXUSOS•WNSP•PROTOCOL",symbol: "Ψ", supply: "51200",       desc: "51,200 orthogonal Ψ channels — Hilbert space density" },
   ];
 
   app.get("/api/btc-bridge/runes", authenticate, async (req: Request, res: Response) => {
@@ -8564,7 +8624,7 @@ export async function registerRoutes(
     EVENT:   { nm:[590,625], color:"#f97316", symbol:"Ε", runeName:"NEXUSOS•EVENT•BAND",   desc:"Orange band — governance & triggers" },
     STORAGE: { nm:[625,780], color:"#f87171", symbol:"Δ", runeName:"NEXUSOS•STORAGE•BAND", desc:"Red band — persistent state & files" },
     NXT:     { nm:[380,780], color:"#a78bfa", symbol:"N", runeName:"NEXUSOS•NXT•TOKEN",    desc:"Full-spectrum — NexusOS native currency" },
-    WNSP:    { nm:[380,780], color:"#fb923c", symbol:"Ψ", runeName:"NEXUSOS•WNSP•PROTOCOL",desc:"25,600 orthogonal Ψ channels — Hilbert space" },
+    WNSP:    { nm:[380,780], color:"#fb923c", symbol:"Ψ", runeName:"NEXUSOS•WNSP•PROTOCOL",desc:"51,200 orthogonal Ψ channels — Hilbert space" },
   };
 
   function xmlEsc(s: string) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -8657,7 +8717,7 @@ export async function registerRoutes(
   <text x="340" y="316" fill="#ffffff40" font-size="10" font-family="monospace">License</text>
   <text x="420" y="316" fill="#ffffff80" font-size="10" font-family="monospace">AGPL-3.0</text>
   <text x="340" y="334" fill="#ffffff40" font-size="10" font-family="monospace">Channels</text>
-  <text x="420" y="334" fill="#ffffff80" font-size="10" font-family="monospace">25,600 &#936; (Hilbert)</text>
+  <text x="420" y="334" fill="#ffffff80" font-size="10" font-family="monospace">51,200 &#936; (Hilbert)</text>
 
   <!-- Desc -->
   <text x="300" y="374" fill="#ffffff30" font-size="10" font-family="monospace" text-anchor="middle">${xmlEsc(b.desc)}</text>
@@ -8886,8 +8946,7 @@ export async function registerRoutes(
           available: mintLnWallet?.satsBalance ?? 0,
         });
       }
-      const newBalance = mintLnWallet.satsBalance - COMMUNITY_MINT_SATS_FEE;
-      await mintDb.update(mintLnW).set({ satsBalance: newBalance, updatedAt: new Date() }).where(mintEq(mintLnW.userId, user.id));
+      const { satsBalance: newBalance } = await changeLegacySats(mintDb, user.id, -COMMUNITY_MINT_SATS_FEE);
       await mintDb.insert(mintLnTx).values({ userId: user.id, type: "service_fee", amountSats: COMMUNITY_MINT_SATS_FEE, memo: `Community WNSP mint`, status: "settled" });
 
       // Queue BRC-20 mint inscription
@@ -10001,6 +10060,7 @@ export async function registerRoutes(
     if (provider === "coinos") {
       // coinosReq throws on non-2xx; let it bubble so callers can handle gracefully
       const d = await coinosReq("/payments", "POST", { address: bolt11, type: "lightning" });
+      if (!d.preimage && !["paid", "completed", "settled"].includes(d.status)) throw new PaymentOutcomeUnknown("Coinos settlement not confirmed");
       return d.hash ?? d.id ?? "";
     }
     if (provider === "alby") {
@@ -10011,6 +10071,7 @@ export async function registerRoutes(
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.message || `Alby pay error ${r.status}`);
+      if (!d.payment_preimage && !d.preimage) throw new PaymentOutcomeUnknown("Alby settlement not confirmed");
       return d.payment_hash ?? "";
     }
     if (provider === "lnbits") {
@@ -10022,6 +10083,7 @@ export async function registerRoutes(
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || d.message || `LNbits pay error ${r.status}`);
+      if (!d.preimage) throw new PaymentOutcomeUnknown("LNbits settlement not confirmed");
       return d.payment_hash ?? "";
     }
     if (provider === "blink") {
@@ -10032,7 +10094,8 @@ export async function registerRoutes(
       );
       const res = d.lnInvoicePaymentSend;
       if (res.errors?.length) throw new Error(res.errors[0].message);
-      if (res.status === "FAILURE") throw new Error("Blink payment failed");
+      if (res.status === "FAILURE") throw new DefinitivePaymentFailure("Blink explicitly rejected payment");
+      if (res.status !== "SUCCESS") throw new PaymentOutcomeUnknown("Blink payment pending; reconciliation required");
       return bolt11.slice(0, 64);
     }
     throw new Error("No Lightning provider configured.");
@@ -10152,9 +10215,10 @@ export async function registerRoutes(
   // Called after every confirmed inbound deposit. Fire-and-forget: fetches
   // a fresh invoice from the user's saved Lightning address then queues the
   // payment via Blink so sats leave the provider and land in WOS/etc.
-  async function fireAutoSweep(userId: string, amountSats: number) {
-    setImmediate(async () => {
-      try {
+  async function fireAutoSweep(userId: string, amountSats: number, depositId: number) {
+    afterWalletCommit(async () => {
+      await legacyWalletJob(userId, `deposit-sweep:${depositId}`, async () => {
+        if (await isUserOutgoingLocked(userId)) return;
         const { db: swDb } = await import("./db");
         const { users: swUsers, lightningWallets: swLW, lightningTransactions: swLT } = await import("../shared/schema");
         const { eq: swEq, sql: swSql } = await import("drizzle-orm");
@@ -10174,13 +10238,13 @@ export async function registerRoutes(
         const { wallets: swWallets } = await import("../shared/schema");
         const [swNxtWallet] = await swDb.select().from(swWallets).where(swEq(swWallets.userId, userId));
         if (swNxtWallet) {
-          const newNxt = (parseFloat(swNxtWallet.balance) + nxtCredit).toFixed(8);
-          await swDb.update(swWallets).set({ balance: newNxt }).where(swEq(swWallets.userId, userId));
-          console.log(`[AutoSweep] +${nxtCredit.toFixed(4)} NXT credited → wallet now ${newNxt} NXT`);
+          const updated = await changeLegacyNxt(swDb, userId, nxtCredit);
+          console.log(`[AutoSweep] +${nxtCredit.toFixed(4)} NXT credited → wallet now ${updated.balance} NXT`);
         }
 
         // ── Route decision: on-chain for large amounts, lightning for small ──
         const useOnChain = sweepBtcAddr && amountSats >= threshold;
+        if (useOnChain && !isValidMainnetBtcAddress(sweepBtcAddr)) throw new Error("Invalid saved Bitcoin sweep address");
 
         if (useOnChain) {
           // ── On-chain BTC sweep ────────────────────────────────────────────
@@ -10201,21 +10265,17 @@ export async function registerRoutes(
             return;
           }
 
-          await swDb.update(swLW)
-            .set({ satsBalance: swSql`${swLW.satsBalance} - ${amountSats}`, totalWithdrawn: swSql`${swLW.totalWithdrawn} + ${amountSats}`, updatedAt: new Date() })
-            .where(swEq(swLW.userId, userId));
+          await changeLegacySats(swDb, userId, -amountSats, { withdrawn: amountSats });
 
           await swDb.insert(swLT).values({
             userId, type: "withdrawal", amountSats: netSats,
             btcAddress: sweepBtcAddr,
             memo: `₿ Auto-sweep → ${sweepBtcAddr} (fee ${feeSats} sats, net ${netSats})`,
-            status: "pending",
+            status: "queued_btc",
             spectralSig: wnspSignTx(swUser, `auto_sweep_btc::${amountSats}::${sweepBtcAddr}::${Date.now()}`),
           });
 
-          import("./btc-withdrawal-processor.js")
-            .then(m => m.processWithdrawalQueue())
-            .catch(console.error);
+          afterWalletCommit(async () => { const m = await import("./btc-withdrawal-processor.js"); await m.processWithdrawalQueue(); });
 
           console.log(`[AutoSweep] ✅ On-chain withdrawal queued — ${netSats.toLocaleString()} sats net → ${sweepBtcAddr}`);
         } else {
@@ -10227,9 +10287,7 @@ export async function registerRoutes(
           console.log(`[AutoSweep] ⚡ Sweep ${amountSats.toLocaleString()} sats via lightning → ${destAddr}`);
           const sweepInvoices = await lnurlPayBatchInvoices(destAddr, amountSats, "NexusOS auto-sweep");
 
-          await swDb.update(swLW)
-            .set({ satsBalance: swSql`${swLW.satsBalance} - ${amountSats}`, totalWithdrawn: swSql`${swLW.totalWithdrawn} + ${amountSats}`, updatedAt: new Date() })
-            .where(swEq(swLW.userId, userId));
+          await changeLegacySats(swDb, userId, -amountSats, { withdrawn: amountSats });
 
           const storedPR = sweepInvoices.length === 1
             ? sweepInvoices[0].payment_request
@@ -10247,9 +10305,7 @@ export async function registerRoutes(
 
           console.log(`[AutoSweep] ✅ Queued tx #${sweepTx.id} — ${sweepInvoices.length} invoice(s) → ${destAddr}`);
         }
-      } catch (e: any) {
-        console.error("[AutoSweep] ⚠️", e.message);
-      }
+      });
     });
   }
 
@@ -10259,8 +10315,8 @@ export async function registerRoutes(
     const { eq } = await import("drizzle-orm");
     const [existing] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, userId));
     if (existing) return existing;
-    const [created] = await db.insert(lightningWallets).values({ userId }).returning();
-    return created;
+    const [created] = await db.insert(lightningWallets).values({ userId }).onConflictDoNothing().returning();
+    return created ?? (await db.select().from(lightningWallets).where(eq(lightningWallets.userId, userId)))[0];
   }
 
   // Ensure DB tables exist
@@ -10317,112 +10373,31 @@ export async function registerRoutes(
   ): Promise<void> {
     const { db } = await import("./db");
     const { sql: s } = await import("drizzle-orm");
+    // This function is called within the same wallet transaction as its debit.
+    // Validate the complete batch before inserting any outbox row.
+    const parent = (await db.execute(s`SELECT amount_sats,status FROM lightning_transactions
+      WHERE id=${txId} AND user_id=${userId} AND type='withdrawal' FOR UPDATE`)).rows[0] as any;
+    const total = batchInvoices.reduce((sum, inv) => sum + inv.amountSats, 0);
+    if (!parent || parent.status !== "queued" || !Number.isSafeInteger(total) ||
+        total !== Number(parent.amount_sats) || batchInvoices.length === 0 ||
+        batchInvoices.some(inv => !Number.isSafeInteger(inv.amountSats) || inv.amountSats <= 0 || !inv.payment_request) ||
+        new Set(batchInvoices.map(inv => inv.payment_request.toLowerCase())).size !== batchInvoices.length) {
+      throw new Error("Invalid withdrawal invoice batch");
+    }
     for (const inv of batchInvoices) {
+      if (!(await assertNewQueueInvoice(db, inv.payment_request, txId))) continue;
       await db.execute(s`
         INSERT INTO lightning_payment_queue (user_id, tx_id, invoice, amount_sats, status, attempts)
         VALUES (${userId}, ${txId}, ${inv.payment_request}, ${inv.amountSats}, 'queued', 0)
       `);
     }
-    // Fire-and-forget — process immediately in background
-    processBatchQueue(txId).catch(() => { /* silenced — background */ });
+    afterWalletCommit(() => processBatchQueue(txId));
   }
 
   // Attempts to pay all queued invoices for a given tx (or all queued across all txs if txId is null).
   async function processBatchQueue(txId?: number): Promise<void> {
-    const { db } = await import("./db");
-    const { sql: s } = await import("drizzle-orm");
-    const MAX_ATTEMPTS = 5;
-    try {
-      // Fetch queued / retryable items
-      const rows = (await db.execute(
-        txId !== undefined
-          ? s`SELECT * FROM lightning_payment_queue WHERE tx_id = ${txId} AND status IN ('queued','failed') AND attempts < ${MAX_ATTEMPTS} ORDER BY id`
-          : s`SELECT * FROM lightning_payment_queue WHERE status IN ('queued','failed') AND attempts < ${MAX_ATTEMPTS} ORDER BY id`
-      )).rows as any[];
-
-      for (const row of rows) {
-        // Mark processing
-        await db.execute(s`UPDATE lightning_payment_queue SET status='processing' WHERE id=${row.id}`);
-        try {
-          await lnPayInvoice(row.invoice as string);
-          await db.execute(s`
-            UPDATE lightning_payment_queue SET status='paid', paid_at=NOW() WHERE id=${row.id}
-          `);
-          console.log(`[LN Queue] Paid invoice #${row.id} — ${row.amount_sats} sats for tx ${row.tx_id}`);
-        } catch (err: any) {
-          const attempts = (row.attempts as number) + 1;
-          const hitMax = attempts >= MAX_ATTEMPTS;
-          const newStatus = hitMax ? "failed" : "queued";
-          await db.execute(s`
-            UPDATE lightning_payment_queue
-            SET status=${newStatus}, attempts=${attempts}, last_error=${err.message}
-            WHERE id=${row.id}
-          `);
-
-          // Auto-refund when all queue entries for this tx have exhausted attempts
-          if (hitMax) {
-            const stillActive = (await db.execute(s`
-              SELECT COUNT(*) AS cnt FROM lightning_payment_queue
-              WHERE tx_id=${row.tx_id} AND status NOT IN ('failed','paid') AND attempts < ${MAX_ATTEMPTS}
-            `)).rows[0] as any;
-            const allExhausted = (await db.execute(s`
-              SELECT COUNT(*) AS cnt FROM lightning_payment_queue
-              WHERE tx_id=${row.tx_id} AND status='failed' AND attempts >= ${MAX_ATTEMPTS}
-            `)).rows[0] as any;
-            const totalEntries = (await db.execute(s`
-              SELECT COUNT(*) AS cnt FROM lightning_payment_queue WHERE tx_id=${row.tx_id}
-            `)).rows[0] as any;
-
-            if (Number(stillActive.cnt) === 0 && Number(allExhausted.cnt) === Number(totalEntries.cnt)) {
-              // All entries failed — refund the parent tx
-              const parentTx = (await db.execute(s`
-                SELECT user_id, amount_sats FROM lightning_transactions WHERE id=${row.tx_id}
-              `)).rows[0] as any;
-              if (parentTx) {
-                const lw = (await db.execute(s`
-                  SELECT sats_balance, total_withdrawn FROM lightning_wallets WHERE user_id=${parentTx.user_id}
-                `)).rows[0] as any;
-                if (lw) {
-                  const newBal = BigInt(lw.sats_balance) + BigInt(parentTx.amount_sats);
-                  const newWith = BigInt(lw.total_withdrawn) - BigInt(parentTx.amount_sats);
-                  await db.execute(s`
-                    UPDATE lightning_wallets
-                    SET sats_balance=${newBal.toString()}, total_withdrawn=${newWith.toString()}, updated_at=NOW()
-                    WHERE user_id=${parentTx.user_id}
-                  `);
-                }
-                await db.execute(s`
-                  UPDATE lightning_transactions
-                  SET status='refunded', memo=CONCAT(memo, ' [REFUNDED — payment never settled]')
-                  WHERE id=${row.tx_id}
-                `);
-                await db.execute(s`
-                  UPDATE lightning_payment_queue
-                  SET last_error='Refunded to wallet — payment never settled after 5 attempts'
-                  WHERE tx_id=${row.tx_id} AND status='failed'
-                `);
-                console.log(`[LN Queue] Tx #${row.tx_id} exhausted ${MAX_ATTEMPTS} attempts — refunded ${parentTx.amount_sats} sats to wallet`);
-              }
-            }
-          }
-        }
-
-        // Check if parent tx is now fully paid
-        const remaining = (await db.execute(s`
-          SELECT COUNT(*) AS cnt FROM lightning_payment_queue
-          WHERE tx_id=${row.tx_id} AND status NOT IN ('paid')
-        `)).rows[0] as any;
-        if (Number(remaining.cnt) === 0) {
-          await db.execute(s`
-            UPDATE lightning_transactions SET status='completed', completed_at=NOW()
-            WHERE id=${row.tx_id}
-          `);
-          console.log(`[LN Queue] Tx #${row.tx_id} fully paid — all invoices settled`);
-        }
-      }
-    } catch (err: any) {
-      console.error("[LN Queue] processBatchQueue error:", err.message);
-    }
+    const { pool } = await import("./db");
+    await processLegacyLightningQueue(pool, lnPayInvoice, isUserOutgoingLocked, txId);
   }
 
   // GET /api/lightning/queue/:txId — queue progress for a transaction
@@ -10455,11 +10430,8 @@ export async function registerRoutes(
       // Verify ownership
       const txRows = (await db.execute(s`SELECT id FROM lightning_transactions WHERE id=${txId} AND user_id=${req.user!.id}`)).rows;
       if (!txRows.length) return res.status(404).json({ error: "Transaction not found" });
-      // Reset failed items back to queued so they can be retried
-      await db.execute(s`
-        UPDATE lightning_payment_queue SET status='queued', attempts=0
-        WHERE tx_id=${txId} AND status='failed'
-      `);
+      // Only never-attempted queued items may run. Failed/processing/unknown and
+      // refunded historical rows need provider reconciliation, not a blind retry.
       // Kick off processing (fire-and-forget)
       processBatchQueue(txId).catch(() => {});
       res.json({ ok: true, message: "Queue processing started" });
@@ -10663,22 +10635,18 @@ export async function registerRoutes(
       const { eq, and } = await import("drizzle-orm");
 
       const [tx] = await db.select().from(lightningTransactions)
-        .where(and(eq(lightningTransactions.id, txId), eq(lightningTransactions.userId, req.user!.id)));
+        .where(and(eq(lightningTransactions.id, txId), eq(lightningTransactions.userId, req.user!.id), eq(lightningTransactions.type, "deposit")));
       if (!tx) return res.status(404).json({ error: "Invoice not found" });
 
       if (tx.status === "completed") return res.json({ paid: true, amountSats: tx.amountSats });
 
       const paid = await lnCheckInvoice(tx.paymentHash ?? "", tx.paymentRequest ?? undefined);
       if (paid) {
-        const lnWallet = await ensureLnWallet(req.user!.id);
-        await db.update(lightningWallets)
-          .set({ satsBalance: lnWallet.satsBalance + tx.amountSats, totalDeposited: lnWallet.totalDeposited + tx.amountSats, updatedAt: new Date() })
-          .where(eq(lightningWallets.userId, req.user!.id));
-        await db.update(lightningTransactions)
-          .set({ status: "completed", completedAt: new Date() })
-          .where(eq(lightningTransactions.id, tx.id));
-        await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats });
-        fireAutoSweep(req.user!.id, tx.amountSats);
+        await ensureLnWallet(req.user!.id);
+        if (await settleLegacyInvoice(db, req.user!.id, tx.id)) {
+          await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats });
+          fireAutoSweep(req.user!.id, tx.amountSats, tx.id);
+        }
         return res.json({ paid: true, amountSats: tx.amountSats });
       }
       return res.json({ paid: false });
@@ -10701,17 +10669,13 @@ export async function registerRoutes(
         try {
           const paid = await lnCheckInvoice(tx.paymentHash ?? "", tx.paymentRequest ?? undefined);
           if (paid) {
-            const lnWallet = await ensureLnWallet(req.user!.id);
-            await db.update(lightningWallets)
-              .set({ satsBalance: lnWallet.satsBalance + tx.amountSats, totalDeposited: lnWallet.totalDeposited + tx.amountSats, updatedAt: new Date() })
-              .where(eq(lightningWallets.userId, req.user!.id));
-            await db.update(lightningTransactions)
-              .set({ status: "completed", completedAt: new Date() })
-              .where(eq(lightningTransactions.id, tx.id));
-            await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats, recheckCredit: true });
-            fireAutoSweep(req.user!.id, tx.amountSats);
-            credited++;
-            totalSats += tx.amountSats;
+            await ensureLnWallet(req.user!.id);
+            if (await settleLegacyInvoice(db, req.user!.id, tx.id)) {
+              await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats, recheckCredit: true });
+              fireAutoSweep(req.user!.id, tx.amountSats, tx.id);
+              credited++;
+              totalSats += tx.amountSats;
+            }
           }
         } catch { /* skip failed checks */ }
       }
@@ -10728,27 +10692,18 @@ export async function registerRoutes(
       const { eq, and } = await import("drizzle-orm");
 
       const [tx] = await db.select().from(lightningTransactions)
-        .where(and(eq(lightningTransactions.paymentHash, hash), eq(lightningTransactions.userId, req.user!.id)));
+        .where(and(eq(lightningTransactions.paymentHash, hash), eq(lightningTransactions.userId, req.user!.id), eq(lightningTransactions.type, "deposit")));
       if (!tx) return res.status(404).json({ error: "Invoice not found" });
 
       if (tx.status === "completed") return res.json({ paid: true, tx });
 
       const paid = await lnCheckInvoice(hash);
       if (paid) {
-        // Credit sats to user
-        const lnWallet = await ensureLnWallet(req.user!.id);
-        await db.update(lightningWallets)
-          .set({
-            satsBalance: lnWallet.satsBalance + tx.amountSats,
-            totalDeposited: lnWallet.totalDeposited + tx.amountSats,
-            updatedAt: new Date(),
-          })
-          .where(eq(lightningWallets.userId, req.user!.id));
-        await db.update(lightningTransactions)
-          .set({ status: "completed", completedAt: new Date() })
-          .where(eq(lightningTransactions.id, tx.id));
-        await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats });
-        fireAutoSweep(req.user!.id, tx.amountSats);
+        await ensureLnWallet(req.user!.id);
+        if (await settleLegacyInvoice(db, req.user!.id, tx.id)) {
+          await logAction(req, "lightning_deposit", "lightning", req.user!.id, { amountSats: tx.amountSats });
+          fireAutoSweep(req.user!.id, tx.amountSats, tx.id);
+        }
         return res.json({ paid: true, amountSats: tx.amountSats });
       }
       res.json({ paid: false, tx });
@@ -10779,14 +10734,8 @@ export async function registerRoutes(
       const { lightningTransactions, lightningWallets } = await import("../shared/schema");
       const { eq } = await import("drizzle-orm");
 
-      // Deduct first, then pay
-      await db.update(lightningWallets)
-        .set({
-          satsBalance: lnWallet.satsBalance - amountSats,
-          totalWithdrawn: lnWallet.totalWithdrawn + amountSats,
-          updatedAt: new Date(),
-        })
-        .where(eq(lightningWallets.userId, req.user!.id));
+      // Reserve and enqueue atomically. Provider calls happen only after COMMIT.
+      await changeLegacySats(db, req.user!.id, -amountSats, { withdrawn: amountSats });
 
       const [tx] = await db.insert(lightningTransactions).values({
         userId: req.user!.id,
@@ -10794,35 +10743,14 @@ export async function registerRoutes(
         amountSats,
         paymentRequest: bolt11,
         memo: "",
-        status: "pending",
+        status: "queued",
         spectralSig: wnspSignTx(req.user!, `withdrawal::${amountSats}::${bolt11.slice(0, 32)}::${Date.now()}`),
       }).returning();
 
-      try {
-        const payHash = await lnPayInvoice(bolt11);
-        await db.update(lightningTransactions)
-          .set({ status: "completed", paymentHash: payHash, lnbitsPaymentId: payHash, completedAt: new Date() })
-          .where(eq(lightningTransactions.id, tx.id));
-        await logAction(req, "lightning_withdrawal", "lightning", req.user!.id, { amountSats });
-        ledgerEvent({
-          type:        "lightning_pay",
-          label:       `LN Payment: ${amountSats} sats`,
-          content:     `LN_PAY:${tx.id}:${amountSats}sats:${req.user!.username}:out`,
-          fromAddress: (req.user as any).walletAddress ?? req.user!.username,
-          metadata:    { txId: tx.id, amountSats, paymentHash: payHash, userId: req.user!.id },
-        }).catch(() => {});
-        res.json({ ok: true, paymentHash: payHash, amountSats });
-      } catch (payErr: any) {
-        // Refund on failure
-        const fresh = await ensureLnWallet(req.user!.id);
-        await db.update(lightningWallets)
-          .set({ satsBalance: fresh.satsBalance + amountSats, totalWithdrawn: fresh.totalWithdrawn - amountSats, updatedAt: new Date() })
-          .where(eq(lightningWallets.userId, req.user!.id));
-        await db.update(lightningTransactions)
-          .set({ status: "failed" })
-          .where(eq(lightningTransactions.id, tx.id));
-        res.status(500).json({ error: payErr.message });
-      }
+      await queueBatchPayments(req.user!.id, tx.id, [{ amountSats, payment_request: bolt11 }]);
+      await logAction(req, "lightning_withdrawal_queued", "lightning", req.user!.id, { amountSats });
+      res.json({ ok: true, status: "queued", txId: tx.id, amountSats,
+        note: "Payment reserved, not yet confirmed. Unknown provider outcomes remain reserved pending reconciliation." });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
@@ -10876,8 +10804,14 @@ export async function registerRoutes(
           if (tx.type === "deposit") {
             failureReason = "Waiting for payment — this invoice or deposit address has not received funds yet.";
           } else if (tx.type === "withdrawal") {
-            failureReason = "Queued — waiting for the payment worker to process this withdrawal (runs every 60 s).";
+            failureReason = "Historical withdrawal requires provider reconciliation before retrying. No automatic resend or refund.";
           }
+        } else if (tx.status === "unknown" || tx.status === "processing") {
+          failureReason = "Provider settlement is not confirmed. Funds remain reserved; do not submit a replacement payment or assume a refund.";
+        } else if (tx.status === "queued_btc") {
+          failureReason = "Reserved for on-chain payment; broadcast is not yet confirmed.";
+        } else if (tx.status === "partially_refunded") {
+          failureReason = "Some invoices settled; only definitively rejected invoices were refunded. See the per-invoice queue record.";
         } else if (tx.status === "refunded") {
           // Extract refund reason from memo if available
           const memoMatch = tx.memo?.match(/REFUNDED[^—]*—\s*(.+)$/i);
@@ -10909,16 +10843,15 @@ export async function registerRoutes(
       const { eq } = await import("drizzle-orm");
 
       // Deduct sats
-      await db.update(lightningWallets)
-        .set({ satsBalance: lnWallet.satsBalance - amountSats, updatedAt: new Date() })
-        .where(eq(lightningWallets.userId, req.user!.id));
+      await changeLegacySats(db, req.user!.id, -amountSats);
 
       // Credit NXT
       const nxtRaw = nxtAmount;
       const [userWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
       if (userWallet) {
-        const newBal = (parseFloat(userWallet.balance) + nxtRaw).toFixed(8);
-        await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
+        await changeLegacyNxt(db, req.user!.id, nxtRaw);
+      } else {
+        throw new Error("NXT wallet not found; swap rolled back");
       }
 
       await db.insert(lightningTransactions).values({
@@ -10933,7 +10866,7 @@ export async function registerRoutes(
       });
 
       await logAction(req, "lightning_swap_to_nxt", "lightning", req.user!.id, { amountSats, nxtAmount });
-      fireLargeSwapAlert(req.user!.username, amountSats, `sats → NXT (${nxtAmount.toFixed(4)} NXT)`).catch(() => {});
+      afterWalletCommit(() => fireLargeSwapAlert(req.user!.username, amountSats, `sats → NXT (${nxtAmount.toFixed(4)} NXT)`));
       res.json({ ok: true, amountSats, nxtAmount: nxtAmount.toFixed(8), rate: LN_SATS_PER_NXT });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -10962,10 +10895,7 @@ export async function registerRoutes(
 
       // ── Atomic: deduct NXT and credit sats together ──
       await db.transaction(async (tx) => {
-        const newBal = (currentBal - nxtAmount).toFixed(8);
-        await tx.update(wallets)
-          .set({ balance: newBal })
-          .where(eq(wallets.userId, req.user!.id));
+        await changeLegacyNxt(tx, req.user!.id, -nxtAmount);
 
         await tx.update(lightningWallets)
           .set({
@@ -10988,14 +10918,14 @@ export async function registerRoutes(
       });
 
       await logAction(req, "lightning_swap_to_sats", "lightning", req.user!.id, { amountSats, nxtAmount });
-      fireLargeSwapAlert(req.user!.username, amountSats, `NXT → sats (${nxtAmount.toFixed(4)} NXT)`).catch(() => {});
+      afterWalletCommit(() => fireLargeSwapAlert(req.user!.username, amountSats, `NXT → sats (${nxtAmount.toFixed(4)} NXT)`));
 
       // ── Auto-sweep to WoS ────────────────────────────────────────────────────
       // Fire-and-forget after response: fetch invoice from saved LN address → queue
       const sweepUserId = req.user!.id;
       const sweepSats   = amountSats;
-      setImmediate(async () => {
-        try {
+      afterWalletCommit(async () => {
+        await legacyWalletJob(sweepUserId, `swap-sweep:${req.get("Idempotency-Key") ?? req.body.requestId}`, async () => {
           const { db: swDb } = await import("./db");
           const { users: swUsers, lightningWallets: swLW, lightningTransactions: swLT } = await import("../shared/schema");
           const { eq: swEq, sql: swSql } = await import("drizzle-orm");
@@ -11010,13 +10940,7 @@ export async function registerRoutes(
           const sweepInvoices = await lnurlPayBatchInvoices(destAddr, sweepSats, "NexusOS auto-sweep");
 
           // 3. Deduct sats from Lightning wallet (they were credited by the swap above)
-          await swDb.update(swLW)
-            .set({
-              satsBalance:    swSql`${swLW.satsBalance} - ${sweepSats}`,
-              totalWithdrawn: swSql`${swLW.totalWithdrawn} + ${sweepSats}`,
-              updatedAt: new Date(),
-            })
-            .where(swEq(swLW.userId, sweepUserId));
+          await changeLegacySats(swDb, sweepUserId, -sweepSats, { withdrawn: sweepSats });
 
           // 4. Insert withdrawal transaction record
           const storedPR = sweepInvoices.length === 1
@@ -11033,9 +10957,7 @@ export async function registerRoutes(
             sweepInvoices.map(i => ({ amountSats: i.amountSats, payment_request: i.payment_request })));
 
           console.log(`[AutoSweep] ✅ Queued ${sweepInvoices.length} invoice(s) for tx #${sweepTx.id} → ${destAddr}`);
-        } catch (e: any) {
-          console.error("[AutoSweep] ⚠️ Error:", e.message);
-        }
+        });
       });
 
       res.json({ ok: true, amountSats, nxtAmount: nxtAmount.toFixed(8), rate: LN_SATS_PER_NXT, autoSweep: true });
@@ -11079,9 +11001,7 @@ export async function registerRoutes(
         const { lightningWallets: lwLn, lightningTransactions: ltLn } = await import("../shared/schema");
         const { eq: eqLn } = await import("drizzle-orm");
 
-        await dbLn.update(lwLn)
-          .set({ satsBalance: lnWalletLn.satsBalance - amountSats, totalWithdrawn: lnWalletLn.totalWithdrawn + amountSats, updatedAt: new Date() })
-          .where(eqLn(lwLn.userId, req.user!.id));
+        await changeLegacySats(dbLn, req.user!.id, -amountSats, { withdrawn: amountSats });
 
         // Store batch as JSON if multiple invoices, else plain bolt11
         const storedPR = batchInvoices.length === 1
@@ -11112,7 +11032,7 @@ export async function registerRoutes(
       // ── On-chain BTC path ──────────────────────────────────────────────────
       if (amountSats < 1000)
         return res.status(400).json({ error: "Minimum on-chain withdrawal: 1,000 sats" });
-      if (!/^(bc1[a-z0-9]{6,87}|[13][a-zA-HJ-NP-Z0-9]{25,34})$/.test(addr))
+      if (!isValidMainnetBtcAddress(addr))
         return res.status(400).json({ error: "Invalid Bitcoin address. For Lightning, use format user@domain.com" });
 
       const lnWallet = await ensureLnWallet(req.user!.id);
@@ -11141,9 +11061,7 @@ export async function registerRoutes(
       const { lightningWallets, lightningTransactions } = await import("../shared/schema");
       const { eq } = await import("drizzle-orm");
 
-      await db.update(lightningWallets)
-        .set({ satsBalance: lnWallet.satsBalance - amountSats, updatedAt: new Date() })
-        .where(eq(lightningWallets.userId, req.user!.id));
+      await changeLegacySats(db, req.user!.id, -amountSats, { withdrawn: amountSats });
 
       const [tx] = await db.insert(lightningTransactions).values({
         userId:     req.user!.id,
@@ -11151,17 +11069,15 @@ export async function registerRoutes(
         amountSats: netSats,
         btcAddress: addr,
         memo:       `Withdraw ${amountSats} sats → ${addr} (fee ${FEE_SATS} sats, net ${netSats} sats)`,
-        status:     "pending",
+        status:     "queued_btc",
         spectralSig: wnspSignTx(req.user!, `btc_withdraw::${amountSats}::${addr}::${Date.now()}`),
       }).returning();
 
       // Trigger the processor immediately (non-blocking)
-      import("./btc-withdrawal-processor.js")
-        .then(m => m.processWithdrawalQueue())
-        .catch(console.error);
+      afterWalletCommit(async () => { const m = await import("./btc-withdrawal-processor.js"); await m.processWithdrawalQueue(); });
 
       await logAction(req, "lightning_withdraw_btc", "lightning", req.user!.id, { amountSats, btcAddress: addr, feeSats: FEE_SATS, feeTier, feeRateSatVbyte });
-      res.json({ ok: true, txId: tx.id, amountSats, feeSats: FEE_SATS, networkFeeSats, platformFeeSats, netSats, btcAddress: addr, status: "pending",
+      res.json({ ok: true, txId: tx.id, amountSats, feeSats: FEE_SATS, networkFeeSats, platformFeeSats, netSats, btcAddress: addr, status: "queued_btc",
         feeTier, feeRateSatVbyte, confirmEtaMins,
         note: `Withdrawal submitted at ${feeRateSatVbyte} sat/vB (${feeTier}). BTC is being sent on-chain. ~${confirmEtaMins} min confirmation.` });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -11307,9 +11223,7 @@ export async function registerRoutes(
       const provider = detectLnProvider();
 
       // Deduct sats first
-      await db.update(lightningWallets)
-        .set({ satsBalance: lnWallet.satsBalance - amountSats, totalWithdrawn: lnWallet.totalWithdrawn + amountSats, updatedAt: new Date() })
-        .where(eq(lightningWallets.userId, req.user!.id));
+      await changeLegacySats(db, req.user!.id, -amountSats, { withdrawn: amountSats });
 
       // Store batch as JSON when multiple invoices, else plain bolt11
       const storedPR = batchInvoices.length === 1
@@ -11416,6 +11330,29 @@ export async function registerRoutes(
   });
 
   // POST /api/admin/block-withdrawals — toggle withdrawals_blocked for a user (Nexus / Leps only)
+  app.get("/api/founding-owners", async (_req: Request, res: Response) => {
+    try {
+      const { pool } = await import("./db");
+      res.set("Cache-Control", "no-store");
+      res.json(await getOwnerRegister(pool));
+    } catch (error) {
+      console.error("[OwnerRegister] Could not load register", error);
+      res.status(503).json({ error: "Owner register is temporarily unavailable" });
+    }
+  });
+
+  app.post("/api/admin/founding-owner-gift", authenticate, async (req: Request, res: Response) => {
+    try {
+      const { pool } = await import("./db");
+      res.json(await executeOwnerGift(pool, req.user!, req.body));
+    } catch (error) {
+      if (error instanceof OwnerGiftError) return res.status(error.status).json({ error: error.message });
+      if (error instanceof z.ZodError) return res.status(400).json({ error: "Provide a valid recipient, public name and explicit confirmation" });
+      console.error("[OwnerGift] Transfer failed", error);
+      res.status(500).json({ error: "Transfer failed; no partial transfer was committed" });
+    }
+  });
+
   app.post("/api/admin/block-withdrawals", authenticate, async (req: Request, res: Response) => {
     try {
       const admin = (req as any).user!;
@@ -11428,6 +11365,10 @@ export async function registerRoutes(
       const { db } = await import("./db");
       const { users: usersTable } = await import("../shared/schema");
       const { eq } = await import("drizzle-orm");
+      const [target] = await db.select({username:usersTable.username}).from(usersTable).where(eq(usersTable.id,targetUserId));
+      if (target?.username.toLowerCase() === HELD_WALLET_USERNAME) {
+        return res.status(403).json({error:"Use the Nexus-only wallet lock control with explicit confirmation for this wallet"});
+      }
       const [updated] = await db.update(usersTable)
         .set({ withdrawalsBlocked: blocked, updatedAt: new Date() })
         .where(eq(usersTable.id, targetUserId))
@@ -11437,6 +11378,10 @@ export async function registerRoutes(
       return res.json({ ok: true, user: updated.username, withdrawalsBlocked: updated.withdrawalsBlocked });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
+
+  const heldWalletControl = founderWalletLockHandlers(electionPool);
+  app.get("/api/admin/wallet-lock/uncjuddy", authenticate, heldWalletControl.read);
+  app.post("/api/admin/wallet-lock/uncjuddy", authenticate, heldWalletControl.write);
 
   // POST /api/admin/fix-ln-balance — correct a corrupted sats_balance (Nexus / SYSTEM only)
   app.post("/api/admin/fix-ln-balance", authenticate, async (req: Request, res: Response) => {
@@ -11749,25 +11694,33 @@ export async function registerRoutes(
       const { db } = await import("./db");
       const { lightningWallets, lightningTransactions, users: usersTable } = await import("../shared/schema");
       const { eq } = await import("drizzle-orm");
+      if (!Number.isSafeInteger(amountSats) || amountSats < 1 || amountSats > 10_000_000_000)
+        return res.status(400).json({ error: "Invalid sats amount" });
       const [recipient] = await db.select().from(usersTable).where(eq(usersTable.username, recipientUsername));
       if (!recipient) return res.status(404).json({ error: `User '${recipientUsername}' not found` });
       if (recipient.id === req.user!.id) return res.status(400).json({ error: "Cannot send to yourself" });
       const senderWallet = await ensureLnWallet(req.user!.id);
       if (senderWallet.satsBalance < amountSats) return res.status(400).json({ error: `Insufficient sats (have ${senderWallet.satsBalance})` });
-      await db.update(lightningWallets).set({ satsBalance: senderWallet.satsBalance - amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
-      const recipientWallet = await ensureLnWallet(recipient.id);
-      await db.update(lightningWallets).set({ satsBalance: recipientWallet.satsBalance + amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, recipient.id));
+      await ensureLnWallet(recipient.id);
+      const { sql, and, gte } = await import("drizzle-orm");
+      await db.transaction(async tx => {
+      await tx.execute(sql`SELECT user_id FROM lightning_wallets WHERE user_id IN (${req.user!.id},${recipient.id}) ORDER BY user_id FOR UPDATE`);
+      const debit = await tx.update(lightningWallets).set({ satsBalance: sql`${lightningWallets.satsBalance} - ${amountSats}`, updatedAt: new Date() })
+        .where(and(eq(lightningWallets.userId,req.user!.id),gte(lightningWallets.satsBalance,amountSats))).returning({id:lightningWallets.id});
+      if (!debit.length) throw new Error("Insufficient available sats");
+      await tx.update(lightningWallets).set({ satsBalance: sql`${lightningWallets.satsBalance} + ${amountSats}`, updatedAt: new Date() }).where(eq(lightningWallets.userId, recipient.id));
       const txMemo = memo || `P2P: ${req.user!.username} → ${recipientUsername}`;
-      await db.insert(lightningTransactions).values({ userId: req.user!.id, type: "send_p2p", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(req.user!, `p2p_send::${amountSats}::${recipient.id}::${Date.now()}`) });
-      await db.insert(lightningTransactions).values({ userId: recipient.id, type: "receive_p2p", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(recipient, `p2p_recv::${amountSats}::${req.user!.id}::${Date.now()}`) });
+      await tx.insert(lightningTransactions).values({ userId: req.user!.id, type: "send_p2p", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(req.user!, `p2p_send::${amountSats}::${recipient.id}::${Date.now()}`) });
+      await tx.insert(lightningTransactions).values({ userId: recipient.id, type: "receive_p2p", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(recipient, `p2p_recv::${amountSats}::${req.user!.id}::${Date.now()}`) });
+      });
       await logAction(req, "lightning_p2p_send", "lightning", req.user!.id, { recipientUsername, amountSats });
-      ledgerEvent({
+      afterWalletCommit(() => ledgerEvent({
         type:        "lightning_p2p",
         label:       `LN P2P: ${amountSats} sats → ${recipientUsername}`,
         content:     `LN_P2P:${req.user!.username}→${recipientUsername}:${amountSats}sats:${memo ?? "p2p"}`,
         fromAddress: (req.user as any).walletAddress ?? req.user!.username,
         metadata:    { amountSats, from: req.user!.username, to: recipientUsername, memo: memo ?? null },
-      }).catch(() => {});
+      }));
       res.json({ ok: true, amountSats, to: recipientUsername });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -11781,7 +11734,7 @@ export async function registerRoutes(
       const RATES: Record<number, string> = { 7: "5.00", 14: "12.00", 30: "28.00", 90: "90.00", 180: "200.00", 365: "420.00" };
       const { db } = await import("./db");
       const { lightningWallets, satsStakes } = await import("../shared/schema");
-      const { eq, sql: drizzleSql } = await import("drizzle-orm");
+      const { eq, and, gte, sql: drizzleSql } = await import("drizzle-orm");
       const wallet = await ensureLnWallet(req.user!.id);
       if (wallet.satsBalance < amountSats) return res.status(400).json({ error: "Insufficient sats" });
       const nxtYield = ((amountSats / 1000) * (parseFloat(RATES[lockDays]) / 100)).toFixed(8);
@@ -11790,9 +11743,11 @@ export async function registerRoutes(
       // ── Atomic: deduct sats and create stake record together ──
       let stake: any;
       await db.transaction(async (tx) => {
-        await tx.update(lightningWallets)
+        if (!Number.isSafeInteger(amountSats) || amountSats < 1000 || amountSats > 10_000_000_000) throw new Error("Invalid stake amount");
+        const debited = await tx.update(lightningWallets)
           .set({ satsBalance: drizzleSql`${lightningWallets.satsBalance} - ${amountSats}`, updatedAt: new Date() })
-          .where(eq(lightningWallets.userId, req.user!.id));
+          .where(and(eq(lightningWallets.userId, req.user!.id),gte(lightningWallets.satsBalance,amountSats))).returning({id:lightningWallets.id});
+        if (!debited.length) throw new Error("Insufficient available sats");
         [stake] = await tx.insert(satsStakes).values({
           userId: req.user!.id, amountSats, lockDays,
           yieldRatePercent: RATES[lockDays], maturesAt, nxtYield, status: "active",
@@ -11832,13 +11787,13 @@ export async function registerRoutes(
       }
 
       await logAction(req, "sats_stake", "lightning", req.user!.id, { amountSats, lockDays, nxtYield });
-      ledgerEvent({
+      afterWalletCommit(() => ledgerEvent({
         type:        "sats_stake",
         label:       `Sats Stake: ${amountSats} sats × ${lockDays}d`,
         content:     `SATS_STAKE:${stake.id}:${amountSats}sats:${lockDays}days:${req.user!.username}`,
         fromAddress: (req.user as any).walletAddress ?? req.user!.username,
         metadata:    { stakeId: stake.id, amountSats, lockDays, nxtYield },
-      }).catch(() => {});
+      }));
       res.json({ ok: true, stake });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
@@ -11870,85 +11825,95 @@ export async function registerRoutes(
   // POST /api/lightning/unstake/:id — withdraw a staking position (mature = full yield; early = penalty)
   app.post("/api/lightning/unstake/:id", authenticate, async (req: Request, res: Response) => {
     try {
-      const stakeId = parseInt(req.params.id);
+      const stakeId = Number(req.params.id);
+      if (!Number.isSafeInteger(stakeId) || stakeId <= 0) return res.status(400).json({ error: "Invalid stake ID" });
       const { db } = await import("./db");
-      const { satsStakes, lightningWallets, wallets } = await import("../shared/schema");
-      const { eq, and } = await import("drizzle-orm");
-      const [stake] = await db.select().from(satsStakes).where(and(eq(satsStakes.id, stakeId), eq(satsStakes.userId, req.user!.id)));
-      if (!stake) return res.status(404).json({ error: "Stake not found" });
-      if (stake.status !== "active") return res.status(400).json({ error: `Stake already ${stake.status}` });
+      const { satsStakes, lightningWallets, wallets, transactions, lightningTransactions, wnusdPositions, wnusdTransactions } = await import("../shared/schema");
+      const { eq, and, sql } = await import("drizzle-orm");
+      const { randomUUID } = await import("crypto");
+      // Obtain the display price before locking the stake; failure to fetch it must not
+      // leave a partially completed withdrawal.
+      let btcUsd = 66_000;
+      try {
+        const pr = await fetch("https://mempool.space/api/v1/prices", { signal: AbortSignal.timeout(3000) });
+        if (pr.ok) { const pd = await pr.json() as any; btcUsd = pd.USD ?? btcUsd; }
+      } catch { /* display-only fallback */ }
 
-      // ── Early-exit penalty calculation ────────────────────────────────────────
-      const now = new Date();
-      const isEarly = stake.maturesAt > now;
-      const totalMs   = stake.lockDays * 86_400_000;
-      const remainMs  = isEarly ? stake.maturesAt.getTime() - now.getTime() : 0;
-      const penaltyFraction = isEarly ? remainMs / totalMs : 0;          // fraction of lock left
-      const fullYield   = parseFloat(stake.nxtYield ?? "0");
-      const penaltyNxt  = parseFloat((fullYield * penaltyFraction).toFixed(8));
-      const userNxt     = parseFloat((fullYield - penaltyNxt).toFixed(8));
-      const daysRemaining = Math.ceil(remainMs / 86_400_000);
+      const result = await db.transaction(async (tx) => {
+        // Serialise claims for the same stake so concurrent requests cannot pay twice.
+        const [stake] = await tx.select().from(satsStakes)
+          .where(and(eq(satsStakes.id, stakeId), eq(satsStakes.userId, req.user!.id))).for("update");
+        if (!stake) return { error: "Stake not found", status: 404 } as const;
+        if (stake.status !== "active") return { error: `Stake already ${stake.status}`, status: 400 } as const;
 
-      const lnWallet = await ensureLnWallet(req.user!.id);
-      await db.update(lightningWallets).set({ satsBalance: lnWallet.satsBalance + stake.amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
-      const [nxtWallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
-      if (nxtWallet && userNxt > 0) {
-        const newBal = (parseFloat(nxtWallet.balance) + userNxt).toFixed(8);
-        await db.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, req.user!.id));
-      }
+        const now = new Date();
+        const isEarly = stake.maturesAt > now;
+        const remainMs = isEarly ? stake.maturesAt.getTime() - now.getTime() : 0;
+        const penaltyFraction = isEarly ? remainMs / (stake.lockDays * 86_400_000) : 0;
+        const fullYield = parseFloat(stake.nxtYield ?? "0");
+        const penaltyNxt = parseFloat((fullYield * penaltyFraction).toFixed(8));
+        const userNxt = parseFloat((fullYield - penaltyNxt).toFixed(8));
+        const daysRemaining = Math.ceil(remainMs / 86_400_000);
 
-      // ── Route penalty to orbital treasury ────────────────────────────────────
-      if (isEarly && penaltyNxt > 0) {
-        try {
-          const { randomUUID: rU2 } = await import("crypto");
-          const { sql: S3 } = await import("drizzle-orm");
+        const [lnWallet] = await tx.update(lightningWallets)
+          .set({ satsBalance: sql`${lightningWallets.satsBalance} + ${stake.amountSats}`, updatedAt: now })
+          .where(eq(lightningWallets.userId, req.user!.id)).returning({ id: lightningWallets.id });
+        if (!lnWallet) throw new Error("Lightning wallet not found; withdrawal rolled back");
+
+        await tx.insert(lightningTransactions).values({
+          userId: req.user!.id, type: "unstake", amountSats: stake.amountSats,
+          nxtAmount: userNxt.toFixed(8), status: "completed",
+          memo: `Return of principal from stake #${stakeId}`, completedAt: now,
+        });
+
+        if (userNxt > 0) {
+          const [nxtWallet] = await tx.update(wallets)
+            .set({ balance: sql`${wallets.balance} + ${userNxt.toFixed(8)}`, updatedAt: now })
+            .where(eq(wallets.userId, req.user!.id)).returning({ id: wallets.id });
+          if (!nxtWallet) throw new Error("NXT wallet not found; withdrawal rolled back");
+          await tx.insert(transactions).values({
+            toWalletId: nxtWallet.id, amount: userNxt.toFixed(8), fee: "0",
+            type: "staking_reward", status: "confirmed", confirmedAt: now,
+            metadata: { stakeId, source: "sats_staking", isEarly, penaltyNxt: penaltyNxt.toFixed(8) },
+          });
+        }
+
+        if (isEarly && penaltyNxt > 0) {
           const ordinalUnits = Math.round(penaltyNxt * 1e8);
-          await db.execute(S3`
+          await tx.execute(sql`
             INSERT INTO orbital_treasury
               (id, source_record_id, source_label, source_wavelength_nm, source_frequency_hz,
                source_psi_channel, source_band, ordinal_nxt_units, operation_type, deposited_by, memo)
             VALUES
-              (${rU2()}, ${String(stakeId)}, ${'early_exit_penalty'},
+              (${randomUUID()}, ${String(stakeId)}, ${'early_exit_penalty'},
                ${580.0}, ${5.17e14}, ${'Ψ(0,0,H)'}, ${'USER'},
                ${ordinalUnits}, ${'EARLY_EXIT_PENALTY'}, ${req.user!.username},
                ${'Early exit penalty: ' + penaltyNxt.toFixed(8) + ' NXT · ' + daysRemaining + ' days remaining on stake #' + stakeId})
           `);
-        } catch (e: any) { console.warn("[UNSTAKE] Treasury INSERT failed:", e.message); }
-        console.log(`[UNSTAKE] Early exit — stake ${stakeId}: penalty ${penaltyNxt} NXT → orbital treasury`);
-      }
+        }
 
-      await db.update(satsStakes).set({ status: "claimed", claimedAt: new Date() }).where(eq(satsStakes.id, stakeId));
-
-      // ── Auto-redeem the WNUSD position linked to this stake ────────────────
-      try {
-        const { wnusdPositions, wnusdTransactions } = await import("../shared/schema");
-        const { randomUUID } = await import("crypto");
-        const { sql: S2 } = await import("drizzle-orm");
-        const [pos] = await db.select().from(wnusdPositions)
-          .where(and(eq((wnusdPositions as any).stakeId, stakeId), eq(wnusdPositions.status, "active")));
+        const [pos] = await tx.select().from(wnusdPositions)
+          .where(and(eq(wnusdPositions.stakeId, stakeId), eq(wnusdPositions.status, "active")));
         if (pos) {
-          let btcUsd = 66_000;
-          try {
-            const pr = await fetch("https://mempool.space/api/v1/prices", { signal: AbortSignal.timeout(3000) });
-            if (pr.ok) { const pd = await pr.json() as any; btcUsd = pd.USD ?? btcUsd; }
-          } catch { /* fallback */ }
-          await db.transaction(async (tx) => {
-            await tx.update(wnusdPositions).set({ status: "redeemed", updatedAt: new Date() })
-              .where(eq(wnusdPositions.id, pos.id));
-            await tx.insert(wnusdTransactions).values({
-              id: randomUUID(), userId: req.user!.id, positionId: pos.id,
-              type: "auto_redeem", satsDelta: BigInt(-Number(pos.collateralSats)),
-              wnusdDelta: String(-parseFloat(pos.wnusdMinted)), nxtFee: "0",
-              colRatioPct: pos.colRatioPct, btcUsdAtTime: String(btcUsd),
-            } as any);
+          await tx.update(wnusdPositions).set({ status: "redeemed", updatedAt: now })
+            .where(eq(wnusdPositions.id, pos.id));
+          await tx.insert(wnusdTransactions).values({
+            id: randomUUID(), userId: req.user!.id, positionId: pos.id,
+            type: "auto_redeem", satsDelta: -Number(pos.collateralSats),
+            wnusdDelta: String(-parseFloat(pos.wnusdMinted)), nxtFee: "0",
+            colRatioPct: pos.colRatioPct, btcUsdAtTime: String(btcUsd),
           });
         }
-      } catch (wnusdErr: any) {
-        console.warn("[UNSTAKE] WNUSD auto-redeem skipped:", wnusdErr.message);
-      }
 
-      await logAction(req, "sats_unstake", "lightning", req.user!.id, { stakeId, amountSats: stake.amountSats, nxtYield: stake.nxtYield, isEarly, penaltyNxt, daysRemaining });
-      res.json({ ok: true, amountSats: stake.amountSats, nxtYield: String(userNxt), isEarly, penaltyNxt, daysRemaining });
+        await tx.update(satsStakes).set({ status: "claimed", claimedAt: now })
+          .where(eq(satsStakes.id, stakeId));
+        return { ok: true, amountSats: stake.amountSats, nxtYield: userNxt.toFixed(8), isEarly, penaltyNxt, daysRemaining };
+      });
+      if ("error" in result) return res.status(result.status!).json({ error: result.error });
+      try {
+        await logAction(req, "sats_unstake", "lightning", req.user!.id, { stakeId, ...result });
+      } catch (logErr) { console.warn("[UNSTAKE] Audit log failed after payout:", logErr); }
+      res.json(result);
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
@@ -11994,6 +11959,8 @@ export async function registerRoutes(
       const { lightningWallets, lightningTransactions, users: usersTable } = await import("../shared/schema");
       const { eq } = await import("drizzle-orm");
       let recipientUserId = rawId;
+      if (!Number.isSafeInteger(amountSats) || amountSats < 1 || amountSats > 10_000_000_000)
+        return res.status(400).json({ error: "Invalid sats amount" });
       if (!recipientUserId && recipientUsername) {
         const [u] = await db.select().from(usersTable).where(eq(usersTable.username, recipientUsername));
         if (!u) return res.status(404).json({ error: `User '${recipientUsername}' not found` });
@@ -12002,12 +11969,18 @@ export async function registerRoutes(
       if (recipientUserId === req.user!.id) return res.status(400).json({ error: "Cannot tip yourself" });
       const senderWallet = await ensureLnWallet(req.user!.id);
       if (senderWallet.satsBalance < amountSats) return res.status(400).json({ error: "Insufficient sats" });
-      await db.update(lightningWallets).set({ satsBalance: senderWallet.satsBalance - amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
-      const recipientWallet = await ensureLnWallet(recipientUserId);
-      await db.update(lightningWallets).set({ satsBalance: recipientWallet.satsBalance + amountSats, updatedAt: new Date() }).where(eq(lightningWallets.userId, recipientUserId));
-      const txMemo = memo || `⚡ Tip from ${req.user!.username}`;
-      await db.insert(lightningTransactions).values({ userId: req.user!.id, type: "tip_sent", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(req.user!, `tip_sent::${amountSats}::${recipientUserId}::${Date.now()}`) });
-      await db.insert(lightningTransactions).values({ userId: recipientUserId, type: "tip_received", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(req.user!, `tip_recv::${amountSats}::${recipientUserId}::${Date.now()}`) });
+      await ensureLnWallet(recipientUserId);
+      const { sql, and, gte } = await import("drizzle-orm");
+      const txMemo = memo || `Tip from ${req.user!.username}`;
+      await db.transaction(async tx => {
+      await tx.execute(sql`SELECT user_id FROM lightning_wallets WHERE user_id IN (${req.user!.id},${recipientUserId}) ORDER BY user_id FOR UPDATE`);
+      const debit = await tx.update(lightningWallets).set({ satsBalance: sql`${lightningWallets.satsBalance} - ${amountSats}`, updatedAt: new Date() })
+        .where(and(eq(lightningWallets.userId,req.user!.id),gte(lightningWallets.satsBalance,amountSats))).returning({id:lightningWallets.id});
+      if (!debit.length) throw new Error("Insufficient available sats");
+      await tx.update(lightningWallets).set({ satsBalance: sql`${lightningWallets.satsBalance} + ${amountSats}`, updatedAt: new Date() }).where(eq(lightningWallets.userId, recipientUserId));
+      await tx.insert(lightningTransactions).values({ userId: req.user!.id, type: "tip_sent", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(req.user!, `tip_sent::${amountSats}::${recipientUserId}::${Date.now()}`) });
+      await tx.insert(lightningTransactions).values({ userId: recipientUserId, type: "tip_received", amountSats, memo: txMemo, status: "completed", completedAt: new Date(), spectralSig: wnspSignTx(req.user!, `tip_recv::${amountSats}::${recipientUserId}::${Date.now()}`) });
+      });
       await logAction(req, "sats_tip", "lightning", req.user!.id, { recipientUserId, amountSats });
       res.json({ ok: true, amountSats, memo: txMemo });
     } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -12150,15 +12123,14 @@ export async function registerRoutes(
         });
 
       // Deduct total NXT from user wallet
-      const newNxtBal = (nxtBal - nxtTotal).toFixed(8);
-      await storage.updateWalletBalance(wallet.id, newNxtBal);
+      const { db: pipelineDb } = await import("./db");
+      const newNxtBal = (await changeLegacyNxt(pipelineDb, user.id, -nxtTotal)).balance;
 
       // Route 1% fee → Orbital Treasury (NXT indestructible: never burned)
       const { GENESIS_EXECUTION_ADDRESS } = await import("./physics");
       const treasury = await storage.getWalletByAddress(GENESIS_EXECUTION_ADDRESS);
       if (treasury) {
-        const tBal = parseFloat(treasury.balance);
-        await storage.updateWalletBalance(treasury.id, (tBal + nxtFee).toFixed(8));
+        await changeLegacyNxt(pipelineDb, treasury.userId, nxtFee);
         await storage.createTransaction({
           fromWalletId: wallet.id,
           toWalletId:   treasury.id,
@@ -12174,7 +12146,7 @@ export async function registerRoutes(
             note: "1% pipeline fee → Orbital Treasury; NXT never burned",
           },
         } as any);
-      }
+      } else { throw new Error("Orbital Treasury wallet missing; pipeline rolled back"); }
 
       // Credit sats to Lightning wallet
       const { sql: sqlTag } = await import("drizzle-orm");
@@ -13497,75 +13469,10 @@ export async function registerRoutes(
     } catch (err: any) { res.status(500).json({ error: err.message }); }
   });
 
-  // POST /api/marketplace/buy/:id — purchase a listing
+  // Legacy NXT checkout did not atomically settle money or transfer the asset.
+  // Keep historical listings intact; do not pretend they are delivery escrow.
   app.post("/api/marketplace/buy/:id", authenticate, async (req: Request, res: Response) => {
-    try {
-      const listingId = parseInt(req.params.id);
-      const { db } = await import("./db");
-      const { marketplaceListings, wallets } = await import("../shared/schema");
-      const { eq, and } = await import("drizzle-orm");
-
-      const [listing] = await db.select().from(marketplaceListings)
-        .where(and(eq(marketplaceListings.id, listingId), eq(marketplaceListings.status, "active")));
-      if (!listing) return res.status(404).json({ error: "Listing not found or already sold" });
-      if (listing.sellerId === req.user!.id)
-        return res.status(400).json({ error: "Cannot buy your own listing" });
-
-      const price = parseFloat(listing.priceNxt);
-      const fee   = price * MARKETPLACE_FEE_PCT;
-      const total = price + fee;
-
-      // Check buyer balance
-      const buyerWallet = await storage.getWallet(req.user!.id);
-      if (!buyerWallet) return res.status(400).json({ error: "Buyer wallet not found" });
-      const buyerBal = parseFloat(buyerWallet.balance);
-      if (buyerBal < total)
-        return res.status(402).json({ error: `Insufficient NXT. Need ${total.toFixed(4)}, have ${buyerBal.toFixed(4)}` });
-
-      // Deduct from buyer (price + fee)
-      await storage.updateWalletBalance(buyerWallet.id, (buyerBal - total).toFixed(8));
-
-      // Credit seller (price only, not fee)
-      const sellerWallet = await storage.getWallet(listing.sellerId);
-      if (sellerWallet) {
-        const newSellerBal = (parseFloat(sellerWallet.balance) + price).toFixed(8);
-        await storage.updateWalletBalance(sellerWallet.id, newSellerBal);
-      }
-
-      // Redirect marketplace fee to Orbital Treasury — NXT is NEVER destroyed
-      const { GENESIS_EXECUTION_ADDRESS: TREASURY_ADDR } = await import("./physics");
-      const treasuryWlt = await storage.getWalletByAddress(TREASURY_ADDR);
-      if (treasuryWlt) {
-        const tBal2 = parseFloat(treasuryWlt.balance);
-        await storage.updateWalletBalance(treasuryWlt.id, (tBal2 + fee).toFixed(8));
-        await storage.createTransaction({
-          fromWalletId: buyerWallet.id,
-          toWalletId:   treasuryWlt.id,
-          amount:       fee.toFixed(8),
-          fee:          "0.00000000",
-          type:         "treasury_deposit",
-          metadata:     { reason: "marketplace_fee", listingId, pct: "2.5%", note: "Fee redirected to Orbital Treasury — not destroyed" },
-        } as any);
-      }
-
-      // Mark listing sold
-      await db.update(marketplaceListings)
-        .set({ status: "sold", buyerId: req.user!.id, buyerUsername: req.user!.username, soldAt: new Date() })
-        .where(eq(marketplaceListings.id, listingId));
-
-      // Log transactions
-      await storage.createTransaction({
-        fromWalletId: buyerWallet.id,
-        toWalletId:   sellerWallet?.id,
-        amount:       price.toFixed(8),
-        fee:          fee.toFixed(8),
-        type:         "marketplace_sale",
-        metadata:     { action: "marketplace_buy", listingId, assetType: listing.assetType, assetId: listing.assetId },
-      });
-
-      await logAction(req, "marketplace_buy", "marketplace", req.user!.id, { listingId, assetType: listing.assetType, price, fee });
-      res.json({ ok: true, listing: { ...listing, status: "sold" }, paid: total.toFixed(8), fee: fee.toFixed(8) });
-    } catch (err: any) { res.status(500).json({ error: err.message }); }
+    res.status(410).json({ error: "Legacy NXT checkout is disabled. Use /p2p for explicit sats-held purchases and buyer-accepted delivery." });
   });
 
   // POST /api/marketplace/cancel/:id — cancel own listing
@@ -13883,7 +13790,7 @@ export async function registerRoutes(
   {
     const {
       getCampaignState, getCampaignHistory, fireCampaignSlot,
-      startNxtCampaignAgent, stopNxtCampaignAgent, SLOTS,
+      startNxtCampaignAgent, stopNxtCampaignAgent, SLOTS, resolveCampaignSlot,
     } = await import("./nxt-campaign-agent");
 
     // GET /api/campaign/state — agent status + next fire time
@@ -13923,7 +13830,11 @@ export async function registerRoutes(
       const id = parseInt(req.params.slotId);
       const slot = SLOTS.find(s => s.id === id);
       if (!slot) return res.status(404).json({ error: "Slot not found" });
-      res.json({ slot });
+      try {
+        res.json({ slot: await resolveCampaignSlot(slot) });
+      } catch (error) {
+        res.status(409).json({ error: error instanceof Error ? error.message : "Owner announcement unavailable" });
+      }
     });
   }
 
@@ -14043,13 +13954,10 @@ export async function registerRoutes(
 
         await db.transaction(async (tx) => {
           // 1. Deduct sats from lightning wallet
-          await tx.update(lightningWallets)
-            .set({ satsBalance: lw.satsBalance - satAmount })
-            .where(eq(lightningWallets.userId, userId));
+          await changeLegacySats(tx, userId, -satAmount);
 
           // 2. Deduct NXT fee from NXT wallet
-          const newBal = (nxtBalance - nxtFee).toFixed(8);
-          await tx.update(wallets).set({ balance: newBal }).where(eq(wallets.userId, userId));
+          await changeLegacyNxt(tx, userId, -nxtFee);
 
           // 3. Insert orbital_treasury record (ordinal_nxt_units = NXT fee × 1e8)
           const ordinalUnits = Math.round(nxtFee * 1e8);
@@ -14116,6 +14024,7 @@ export async function registerRoutes(
         const pos = (posRows.rows as any[])[0];
         if (!pos) return res.status(404).json({ error: "Position not found" });
         if (pos.status !== "active") return res.status(400).json({ error: "Position is not active" });
+        if (pos.stake_id != null) return res.status(409).json({ error: "Stake-backed collateral must be returned through unstaking, not redeemed twice." });
 
         const collateral = Number(pos.collateral_sats);
         const wnusd      = parseFloat(pos.wnusd_minted);
@@ -14135,9 +14044,7 @@ export async function registerRoutes(
             WHERE id = ${positionId}
           `);
           // 2. Return collateral sats
-          await tx.update(lightningWallets)
-            .set({ satsBalance: lw.satsBalance + collateral })
-            .where(eq(lightningWallets.userId, userId));
+          await changeLegacySats(tx, userId, collateral);
           // 3. Record redemption
           await tx.execute(S`
             INSERT INTO wnusd_transactions
@@ -14322,13 +14229,10 @@ export async function registerRoutes(
 
       await db.transaction(async (tx) => {
         // 1. Deduct sats from lightning wallet
-        await tx.update(lightningWallets)
-          .set({ satsBalance: lw.satsBalance - satAmount })
-          .where(eq(lightningWallets.userId, userId));
+        await changeLegacySats(tx, userId, -satAmount);
 
         // 2. Deduct NXT fee
-        const newNxt = (parseFloat(nxtWallet.balance) - nxtFee).toFixed(8);
-        await tx.update(wallets).set({ balance: newNxt }).where(eq(wallets.userId, userId));
+        await changeLegacyNxt(tx, userId, -nxtFee);
 
         // 3. Orbital treasury entry (NXT fee — never burned)
         const ordinalUnits = Math.round(nxtFee * 1e8);
@@ -14385,9 +14289,7 @@ export async function registerRoutes(
 
       await db.transaction(async (tx) => {
         // Return sats
-        await tx.update(lightningWallets)
-          .set({ satsBalance: lw.satsBalance + satsBack })
-          .where(eq(lightningWallets.userId, userId));
+        await changeLegacySats(tx, userId, satsBack);
 
         // Close position
         await tx.update(wSatsPositions)
@@ -14450,20 +14352,14 @@ export async function registerRoutes(
         const nxtBal = parseFloat(wallet.balance);
         const nxtNeeded = amountA / 1e8;
         if (nxtBal < nxtNeeded) return res.status(400).json({ error: `Insufficient NXT balance (have ${nxtBal.toFixed(4)}, need ${nxtNeeded.toFixed(4)})` });
-        await db.update(wallets).set({
-          balance: (nxtBal - nxtNeeded).toFixed(8),
-          updatedAt: new Date(),
-        }).where(eq(wallets.userId, req.user!.id));
+        await changeLegacyNxt(db, req.user!.id, -nxtNeeded);
       }
 
       if (pool.tokenB === "SATS") {
         const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
         if (!lnWallet) return res.status(400).json({ error: "Lightning wallet not found" });
         if (lnWallet.satsBalance < amountB) return res.status(400).json({ error: `Insufficient sats (have ${lnWallet.satsBalance}, need ${amountB})` });
-        await db.update(lightningWallets).set({
-          satsBalance: lnWallet.satsBalance - amountB,
-          updatedAt: new Date(),
-        }).where(eq(lightningWallets.userId, req.user!.id));
+        await changeLegacySats(db, req.user!.id, -amountB);
       }
 
       const result = await lpPools.addLiquidity(req.user!.id, poolId, amountA, amountB);
@@ -14490,21 +14386,15 @@ export async function registerRoutes(
         const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
         if (wallet) {
           const nxtCredit = result.amountA / 1e8;
-          await db.update(wallets).set({
-            balance: (parseFloat(wallet.balance) + nxtCredit).toFixed(8),
-            updatedAt: new Date(),
-          }).where(eq(wallets.userId, req.user!.id));
-        }
+          await changeLegacyNxt(db, req.user!.id, nxtCredit);
+        } else { throw new Error("NXT wallet missing; liquidity removal rolled back"); }
       }
 
       if (pool.tokenB === "SATS" && result.amountB > 0) {
         const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
         if (lnWallet) {
-          await db.update(lightningWallets).set({
-            satsBalance: lnWallet.satsBalance + result.amountB,
-            updatedAt: new Date(),
-          }).where(eq(lightningWallets.userId, req.user!.id));
-        }
+          await changeLegacySats(db, req.user!.id, result.amountB);
+        } else { throw new Error("Sats wallet missing; liquidity removal rolled back"); }
       }
 
       res.json(result);
@@ -14533,11 +14423,11 @@ export async function registerRoutes(
         if (!wallet) return res.status(400).json({ error: "NXT wallet not found" });
         const nxtNeeded = amountIn / 1e8;
         if (parseFloat(wallet.balance) < nxtNeeded) return res.status(400).json({ error: "Insufficient NXT balance" });
-        await db.update(wallets).set({ balance: (parseFloat(wallet.balance) - nxtNeeded).toFixed(8), updatedAt: new Date() }).where(eq(wallets.userId, req.user!.id));
+        await changeLegacyNxt(db, req.user!.id, -nxtNeeded);
       } else if (inToken === "SATS") {
         const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
         if (!lnWallet || lnWallet.satsBalance < amountIn) return res.status(400).json({ error: "Insufficient sats" });
-        await db.update(lightningWallets).set({ satsBalance: lnWallet.satsBalance - amountIn, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
+        await changeLegacySats(db, req.user!.id, -amountIn);
       }
 
       const result = await lpPools.swap(poolId, tokenIn as "A" | "B", amountIn);
@@ -14545,10 +14435,12 @@ export async function registerRoutes(
       // Credit tokenOut to user wallet
       if (outToken === "NXT" && result.amountOut > 0) {
         const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
-        if (wallet) await db.update(wallets).set({ balance: (parseFloat(wallet.balance) + result.amountOut / 1e8).toFixed(8), updatedAt: new Date() }).where(eq(wallets.userId, req.user!.id));
+        if (!wallet) throw new Error("NXT wallet missing; swap rolled back");
+        await changeLegacyNxt(db, req.user!.id, result.amountOut / 1e8);
       } else if (outToken === "SATS" && result.amountOut > 0) {
         const [lnWallet] = await db.select().from(lightningWallets).where(eq(lightningWallets.userId, req.user!.id));
-        if (lnWallet) await db.update(lightningWallets).set({ satsBalance: lnWallet.satsBalance + result.amountOut, updatedAt: new Date() }).where(eq(lightningWallets.userId, req.user!.id));
+        if (!lnWallet) throw new Error("Sats wallet missing; swap rolled back");
+        await changeLegacySats(db, req.user!.id, result.amountOut);
       }
 
       res.json({ ...result, tokenIn: inToken, tokenOut: outToken });
@@ -14924,7 +14816,7 @@ export async function registerRoutes(
 
 WHAT WE BUILT (live now):
 • WNSP physics engine — replaces cryptographic hashing with Maxwell equation validation
-• 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)
+• 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol × 2 N_Dir)
 • WavelengthScript compiler + WNSP Virtual Machine (browser-native)
 • NXT token wallet, P2P media, Lightning payments, governance
 • NEXUS•WAVELENGTH (NXWV) — Bitcoin Rune 952596:379, 21 trillion supply, 1,000/1,000 mints sealed, zero premine
@@ -15016,7 +14908,7 @@ WHAT IS LIVE RIGHT NOW?
 Every line of code is public. You can verify everything listed below yourself at wnsp.io or on GitHub.
 
 ✅ WNSP Physics Engine — Maxwell equation validation on every transaction
-✅ 25,600 orthogonal Ψ channels (256 WDM × 50 OAM × 2 polarisations)
+✅ 51,200 orthogonal Ψ channels (256 WDM × 50 OAM × 2 pol × 2 N_Dir)
 ✅ NXT Token Wallet — 8-decimal precision, 21 billion supply, fee = E=hf
 ✅ WavelengthScript compiler + WNSP Virtual Machine (runs in your browser)
 ✅ CE→SE Character Encoding — every character mapped to a unique wavelength
@@ -15270,7 +15162,7 @@ wnsp.io | t.me/troglodytememe`,
                     `Step 3 → Inspect spectral analysis: wavelength distribution, energy E=hf, NXT fee\n` +
                     `Step 4 → Transmit → Spectral Receipt (permanent on-chain ordinal: λ, Ψ, content hash)\n` +
                     `Step 5 → Retrieve at wnsp.io/spectral-workspace — tune to your wavelength\n\n` +
-                    `25,600 orthogonal channels. Physics addressing. No account required to read.\n` +
+                    `51,200 orthogonal channels. Physics addressing. No account required to read.\n` +
                     `Runs on silicon today. Migrates to photonic hardware ~2032. Zero rewrite.\n\n` +
                     `👉 wnsp.io/transmission`,
           hashtags: ["NexusOS", "P2P", "WNSP", "Photonics", "Transmission", "Bitcoin"],
@@ -15432,105 +15324,7 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post("/api/spectral-bundles/create", authenticate, async (req: Request, res: Response) => {
-    try {
-      const { db } = await import("./db");
-      const { spectralBundles, wallets, wnusdPositions, wnusdTransactions } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      const { randomUUID } = await import("crypto");
-
-      const nxtAmount   = parseFloat(req.body.nxtAmount   ?? "0");
-      const runesAmount = parseInt(String(req.body.runesAmount ?? "0"), 10);
-      const satsAmount  = parseInt(String(req.body.satsAmount  ?? "0"), 10);
-
-      if (nxtAmount < 0 || runesAmount < 0 || satsAmount < 0)
-        return res.status(400).json({ error: "Amounts must be non-negative" });
-      if (nxtAmount === 0 && runesAmount === 0 && satsAmount === 0)
-        return res.status(400).json({ error: "Bundle must contain at least one asset" });
-
-      // Fetch BTC price
-      let btcUsd = 66_000;
-      try {
-        const pr = await fetch("https://api.coindesk.com/v1/bpi/currentprice/USD.json");
-        if (pr.ok) { const pd = await pr.json() as any; btcUsd = pd.bpi?.USD?.rate_float ?? btcUsd; }
-      } catch {}
-
-      // Deduct NXT from user wallet
-      const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user!.id));
-      if (!wallet) return res.status(400).json({ error: "NXT wallet not found" });
-      const walletBal = parseFloat(wallet.balance);
-      if (nxtAmount > 0 && walletBal < nxtAmount)
-        return res.status(400).json({ error: `Insufficient NXT balance (have ${walletBal.toFixed(2)}, need ${nxtAmount})` });
-
-      // 1 NXT = 1,000 sats; 1 NXWV = 1 NXT = 1,000 sats
-      const NXT_PER_SAT = 1_000;
-      const totalSatsEq = Math.round(nxtAmount * NXT_PER_SAT + runesAmount * NXT_PER_SAT + satsAmount);
-      const totalUsd    = totalSatsEq * (btcUsd / 100_000_000);
-      const colRatio    = 1.5;
-      const wnusdMinted = totalUsd / colRatio;
-
-      if (wnusdMinted < 0.000001) return res.status(400).json({ error: "Bundle value too small to mint WNUSD" });
-
-      // Derive Ψ channel from user spectral data
-      const user = req.user!;
-      const psiChannel = `Ψ(${(user as any).spectralWdm ?? 0},${(user as any).spectralOam ?? 0},${(user as any).spectralPol ?? "H"})`;
-
-      await db.transaction(async (tx) => {
-        // Deduct NXT
-        if (nxtAmount > 0) {
-          await tx.update(wallets)
-            .set({ balance: String((walletBal - nxtAmount).toFixed(8)), updatedAt: new Date() })
-            .where(eq(wallets.id, wallet.id));
-        }
-
-        const bundleId = randomUUID();
-        const posId    = randomUUID();
-
-        // Insert bundle
-        const [bundle] = await tx.insert(spectralBundles).values({
-          id: bundleId,
-          userId:        req.user!.id,
-          nxtLocked:     String(nxtAmount.toFixed(8)),
-          runesLocked:   runesAmount,
-          satsLocked:    satsAmount,
-          totalSatsEq,
-          totalUsdValue: String(totalUsd.toFixed(2)),
-          wnusdMinted:   String(wnusdMinted.toFixed(8)),
-          colRatioPct:   String((colRatio * 100).toFixed(2)),
-          btcUsdAtMint:  String(btcUsd.toFixed(2)),
-          psiChannel,
-          status:        "active",
-        }).returning();
-
-        // Create WNUSD position
-        await tx.insert(wnusdPositions).values({
-          id:             posId,
-          userId:         req.user!.id,
-          collateralSats: totalSatsEq,
-          nxtFeeSent:     "0",
-          wnusdMinted:    String(wnusdMinted.toFixed(8)),
-          colRatioPct:    String((colRatio * 100).toFixed(2)),
-          btcUsdAtMint:   String(btcUsd.toFixed(2)),
-          status:         "active",
-        });
-
-        // Log WNUSD transaction
-        await tx.insert(wnusdTransactions).values({
-          id:           randomUUID(),
-          userId:       req.user!.id,
-          positionId:   posId,
-          type:         "mint",
-          satsDelta:    totalSatsEq,
-          wnusdDelta:   String(wnusdMinted.toFixed(8)),
-          nxtFee:       "0",
-          colRatioPct:  String((colRatio * 100).toFixed(2)),
-          btcUsdAtTime: String(btcUsd.toFixed(2)),
-        });
-
-        res.json({ ok: true, bundle, wnusdMinted: wnusdMinted.toFixed(6), psiChannel });
-      });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
-  });
+  app.post("/api/spectral-bundles/create", authenticate, createSpectralBundleHandler(electionPool));
 
   app.post("/api/spectral-bundles/:id/unwrap", authenticate, async (req: Request, res: Response) => {
     try {
@@ -15704,24 +15498,28 @@ wnsp.io | t.me/troglodytememe`,
       const { rows } = await pool.query(
         `SELECT id, contract_id, channel_load, output, final_registers, final_agents,
                 cycle_count, halted, truncated, chain_tx_id, executed_at
-         FROM contract_executions WHERE contract_id=$1 ORDER BY executed_at DESC LIMIT 50`,
-        [req.params.id]
+         FROM contract_executions WHERE contract_id=$1
+           AND EXISTS (SELECT 1 FROM spectral_contracts c WHERE c.id=$1 AND c.user_id=$2)
+         ORDER BY executed_at DESC LIMIT 50`,
+        [req.params.id, req.user.id]
       );
       res.json(rows);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
   // ── Public app view — no auth required ───────────────────────────────────
-  app.get("/api/app/:slug", async (req, res) => {
+  app.get("/api/app/:slug", optionalAuth, async (req, res) => {
     try {
       const pool = (await import("./db")).pool;
       const { rows } = await pool.query(
-        `SELECT id, name, description, source_code, assembly, manifest, instr_count, deployed_at, app_slug
+        `SELECT id, name, description, source_code, assembly, manifest, instr_count, deployed_at, app_slug, user_id
          FROM spectral_contracts WHERE app_slug=$1 AND is_public=true AND status='deployed'`,
         [req.params.slug]
       );
       if (!rows[0]) return res.status(404).json({ error: "Not found" });
-      res.json(rows[0]);
+      const { user_id, ...publicContract } = rows[0];
+      res.setHeader("Cache-Control", "private, no-store");
+      res.json({ ...publicContract, can_execute: req.user?.id === user_id });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
@@ -15745,39 +15543,63 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  // ── Public contract run — full v1.1 execution ────────────────────────────────
-  app.post("/api/app/:slug/run", async (req, res) => {
+  // Public previews remain local. Persistent/financial/external actions require the owner.
+  const contractActionGuard = createContractActionGuard();
+  app.post("/api/app/:slug/run", authenticate, contractActionGuard, async (req, res) => {
+    if (!isValidUUID(req.body?.request_id)) return res.status(400).json({ error: "A unique request_id is required for each execution" });
     try {
-      const pool = (await import("./db")).pool;
+      const databasePool = (await import("./db")).pool;
+      const execution = await contractTransaction(databasePool, async (pool) => {
       const rawLoad = parseInt(req.body?.channel_load ?? "42");
       const channelLoad = Math.max(0, Math.min(100, isNaN(rawLoad) ? 42 : rawLoad));
 
       // 1. Load deployed contract (with contract wallet balance)
       const { rows: cRows } = await pool.query(
-        `SELECT id, name, source_code, user_id, contract_nxt_balance
-         FROM spectral_contracts
-         WHERE app_slug=$1 AND is_public=true AND status='deployed'`,
+        `SELECT c.id, c.name, c.source_code, c.user_id, c.contract_nxt_balance,
+                u.role AS owner_role, u.spectral_band AS owner_band
+         FROM spectral_contracts c JOIN users u ON u.id=c.user_id
+         WHERE c.app_slug=$1 AND c.is_public=true AND c.status='deployed' FOR UPDATE OF c`,
         [req.params.slug]
       );
-      if (!cRows[0]) return res.status(404).json({ error: "Contract not found" });
+      if (!cRows[0]) throw new ContractSecurityError(404, "Contract not found");
       const contract = cRows[0];
+      if (contract.user_id !== req.user!.id) {
+        throw new ContractSecurityError(403, "Only the contract owner may execute real actions. Public browser previews remain available.");
+      }
+      await assertUserOutgoingAllowed(req.user!.id, pool);
+      const { rows: previous } = await pool.query(`SELECT id FROM contract_executions WHERE id=$1`, [req.body.request_id]);
+      if (previous.length) throw new ContractSecurityError(409, "This execution request was already processed; it was not repeated");
+      const safetyControlled = contract.user_id === REPLIT_AI_USER_ID || contract.owner_role === "ai_agent" || contract.owner_band === "SYSTEM";
+      const checkSafety = async () => {
+        if (safetyControlled) await requireSafetyPermit(contract.user_id, contract.id);
+      };
+      await checkSafety();
 
       // 2. Load persistent state for this contract
       const { rows: stateRows } = await pool.query(
         `SELECT key, value FROM contract_state WHERE contract_id=$1`,
         [contract.id]
       );
-      const initialState: Record<string, any> = {};
+      const initialState: Record<string, any> = Object.create(null);
       for (const r of stateRows) initialState[r.key] = r.value;
 
       // 3. Run VM server-side with persistent state
       const { runToHalt, fireEffects, ceEncode } = await import("./wnsp_vm");
       const result = runToHalt(contract.source_code, channelLoad, initialState);
+      if (result.effects.some(fx => fx.type === "XFER_SATS")) {
+        throw new ContractSecurityError(422, "Sats transfers are not supported by this execution route; no changes were applied");
+      }
+      if (result.effects.length > 128) throw new ContractSecurityError(422, "Too many external actions in one execution");
       const { psi: contractPsi, nm: contractNm } = ceEncode(contract.name);
+
+      // Recheck after computation and before persistent/financial/external effects.
+      // Containment cannot be bypassed by an operator's client-side checks.
+      await checkSafety();
 
       // 4. Persist state delta (STORE instructions)
       const stateDeltaKeys = Object.keys(result.stateDelta);
       for (const key of stateDeltaKeys) {
+        await checkSafety();
         await pool.query(
           `INSERT INTO contract_state (contract_id, key, value, updated_at)
            VALUES ($1, $2, $3::jsonb, now())
@@ -15789,39 +15611,27 @@ wnsp.io | t.me/troglodytememe`,
       // 5. Execute XFER_NXT effects from contract wallet
       const transferResults: any[] = [];
       const xferNxtEffects = result.effects.filter(fx => fx.type === "XFER_NXT");
-      let contractBalance = parseFloat(contract.contract_nxt_balance ?? "0");
+      let contractBalance = String(contract.contract_nxt_balance ?? "0.00000000");
       for (const fx of xferNxtEffects) {
-        const amt = parseFloat(fx.amount ?? "0");
-        if (amt <= 0) {
-          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: "0", status: "skipped_zero" });
-          continue;
-        }
-        if (contractBalance < amt) {
-          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: amt.toFixed(8), status: "insufficient_balance", balance: contractBalance.toFixed(8) });
-          continue;
-        }
-        contractBalance -= amt;
-        try {
+        await checkSafety();
+        const amt = contractAmount(fx.amount);
+        if (!fx.to || fx.to.length > 256) throw new ContractSecurityError(422, "Invalid transfer destination");
+        const { rows: debited } = await pool.query(
+          `UPDATE spectral_contracts SET contract_nxt_balance=contract_nxt_balance-$1::numeric
+           WHERE id=$2 AND contract_nxt_balance >= $1::numeric RETURNING contract_nxt_balance`,
+          [amt, contract.id]
+        );
+        if (!debited[0]) throw new ContractSecurityError(409, "Insufficient contract balance; no changes were applied");
+        contractBalance = debited[0].contract_nxt_balance;
           const { rows: txR } = await pool.query(
             `INSERT INTO blockchain_tx_pool
                (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status, tx_type, audit_meta)
              VALUES ($1, $2, $3, $4, $5, $6, '0.00000000', 'pending', 'contract_xfer', $7)
              RETURNING id`,
-            [contractPsi, fx.to ?? "unknown", amt.toFixed(8), `CONTRACT_XFER:${contract.id}`, contractNm.toFixed(4), contractPsi,
-             JSON.stringify({ contract_id: contract.id, contract_name: contract.name, to: fx.to, amount: amt.toFixed(8) })]
+            [contractPsi, fx.to, amt, `CONTRACT_XFER:${contract.id}`, contractNm.toFixed(4), contractPsi,
+             JSON.stringify({ contract_id: contract.id, contract_name: contract.name, to: fx.to, amount: amt })]
           );
-          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: amt.toFixed(8), tx_id: txR[0].id, status: "executed" });
-        } catch (xferErr: any) {
-          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: amt.toFixed(8), status: "tx_failed", error: xferErr.message });
-          contractBalance += amt; // roll back deduction
-        }
-      }
-      // Persist updated contract balance
-      if (contractBalance !== parseFloat(contract.contract_nxt_balance ?? "0")) {
-        await pool.query(
-          `UPDATE spectral_contracts SET contract_nxt_balance=$1 WHERE id=$2`,
-          [contractBalance.toFixed(8), contract.id]
-        );
+          transferResults.push({ type: "XFER_NXT", to: fx.to, amount: amt, tx_id: txR[0].id, status: "executed" });
       }
 
       // 6. Execute SUBCALL effects — sub-contract invocation (depth-1 only)
@@ -15829,12 +15639,18 @@ wnsp.io | t.me/troglodytememe`,
       const callEffects = result.effects.filter(fx => fx.type === "SUBCALL" && fx.slug);
       for (const fx of callEffects) {
         try {
+          await checkSafety();
           const { rows: subRows } = await pool.query(
-            `SELECT id, name, source_code FROM spectral_contracts
-             WHERE app_slug=$1 AND status='deployed' AND is_public=true`,
+            `SELECT c.id, c.name, c.source_code, c.user_id,
+                    u.role AS owner_role, u.spectral_band AS owner_band
+             FROM spectral_contracts c JOIN users u ON u.id=c.user_id
+             WHERE c.app_slug=$1 AND c.status='deployed' AND c.is_public=true`,
             [fx.slug]
           );
           if (!subRows[0]) { subcallResults.push({ slug: fx.slug, status: "not_found" }); continue; }
+          if (subRows[0].user_id === REPLIT_AI_USER_ID || subRows[0].owner_role === "ai_agent" || subRows[0].owner_band === "SYSTEM") {
+            await requireSafetyPermit(subRows[0].user_id, subRows[0].id);
+          }
           const subResult = runToHalt(subRows[0].source_code, channelLoad); // no state, no financial ops
           subcallResults.push({
             slug:        fx.slug,
@@ -15858,11 +15674,11 @@ wnsp.io | t.me/troglodytememe`,
            (contract_id, caller_user_id, caller_address, channel_load, output, final_registers,
             final_agents, cycle_count, halted, truncated,
             state_delta, transfer_results, subcall_results, effects_count,
-            contract_name, contract_slug)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            contract_name, contract_slug, id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
          RETURNING id`,
         [
-          contract.id, null, "PUBLIC", channelLoad,
+          contract.id, req.user!.id, req.user!.username, channelLoad,
           JSON.stringify(result.output), JSON.stringify(result.registers),
           JSON.stringify(result.agents), result.cycleCount, result.halted, result.truncated,
           JSON.stringify(result.stateDelta),
@@ -15871,13 +15687,14 @@ wnsp.io | t.me/troglodytememe`,
           effectsCount,
           contract.name,
           req.params.slug,
+          req.body.request_id,
         ]
       );
       const executionId = execRows[0].id;
 
       // 8. Blockchain audit record — rich tx_type + audit_meta
       let chainTxId: string | null = null;
-      try {
+      {
         const auditMeta = {
           execution_id:    executionId,
           contract_id:     contract.id,
@@ -15899,15 +15716,10 @@ wnsp.io | t.me/troglodytememe`,
         );
         chainTxId = txRows[0].id;
         await pool.query(`UPDATE contract_executions SET chain_tx_id=$1 WHERE id=$2`, [chainTxId, executionId]);
-      } catch (txErr: any) {
-        console.warn("[ContractRun] Blockchain tx insert failed:", txErr.message);
       }
 
-      // 9. Fire kernel side-effects (non-blocking)
-      fireEffects(result.effects, pool, contract.name, executionId, contract.id)
-        .catch((e: Error) => console.warn("[ContractRun] Side-effect error:", e.message));
-
-      res.json({
+      await checkSafety();
+      return { dispatch: () => fireEffects(result.effects, databasePool, contract.name, executionId, contract.id, checkSafety), response: {
         id:               executionId,
         contract_id:      contract.id,
         channel_load:     channelLoad,
@@ -15921,10 +15733,14 @@ wnsp.io | t.me/troglodytememe`,
         state_delta:      result.stateDelta,
         transfer_results: transferResults,
         subcall_results:  subcallResults,
-        contract_balance: contractBalance.toFixed(8),
+        contract_balance: contractBalance,
         executed_at:      new Date().toISOString(),
+      }};
       });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+      // External effects must never fire from a rolled-back execution.
+      execution.dispatch().catch((e: Error) => console.warn("[ContractRun] Side-effect error:", e.message));
+      res.json(execution.response);
+    } catch (e: any) { res.status(e instanceof ContractSecurityError ? e.status : e.code === "FOUNDER_WALLET_LOCKED" ? 423 : e instanceof SafetyUnavailable ? 503 : 500).json({ error: e instanceof ContractSecurityError || e instanceof SafetyUnavailable || e.code === "FOUNDER_WALLET_LOCKED" ? e.message : "Contract execution failed; database changes were rolled back" }); }
   });
 
   // ── Contract state — public read ──────────────────────────────────────────
@@ -15946,39 +15762,30 @@ wnsp.io | t.me/troglodytememe`,
   });
 
   // ── Fund contract wallet — authenticated, deployer only ───────────────────
-  app.post("/api/contracts/:id/fund", authenticate, async (req: any, res) => {
+  app.post("/api/contracts/:id/fund", authenticate, contractActionGuard, async (req: any, res) => {
     if (!isValidUUID(req.params.id)) return res.status(400).json({ error: "Invalid contract id" });
     try {
-      const pool = (await import("./db")).pool;
-      const amountNxt = parseFloat(req.body?.amount_nxt ?? "0");
-      if (isNaN(amountNxt) || amountNxt <= 0) return res.status(400).json({ error: "amount_nxt must be > 0" });
-      if (amountNxt > 1_000_000) return res.status(400).json({ error: "Max single fund: 1,000,000 NXT" });
+      const databasePool = (await import("./db")).pool;
+      const amountNxt = contractAmount(req.body?.amount_nxt);
+      if (Number(amountNxt) > 1_000_000) return res.status(400).json({ error: "Max single fund: 1,000,000 NXT" });
+      const funding = await contractTransaction(databasePool, async (pool) => {
 
       // Verify ownership
       const { rows: cRows } = await pool.query(
-        `SELECT id, name, contract_nxt_balance FROM spectral_contracts WHERE id=$1 AND user_id=$2`,
+        `SELECT id, name, contract_nxt_balance FROM spectral_contracts WHERE id=$1 AND user_id=$2 FOR UPDATE`,
         [req.params.id, req.user.id]
       );
-      if (!cRows[0]) return res.status(404).json({ error: "Contract not found or not yours" });
-
-      // Deduct from deployer's NXT wallet (Drizzle)
-      const { db } = await import("./db");
-      const { wallets } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      const [wallet] = await db.select().from(wallets).where(eq(wallets.userId, req.user.id));
-      if (!wallet) return res.status(400).json({ error: "No NXT wallet found" });
-      const bal = parseFloat(wallet.balance);
-      if (bal < amountNxt) return res.status(400).json({ error: `Insufficient NXT (have ${bal.toFixed(2)}, need ${amountNxt})` });
-
-      // Atomic: deduct from wallet, credit to contract balance
-      await db.update(wallets)
-        .set({ balance: (bal - amountNxt).toFixed(8), updatedAt: new Date() })
-        .where(eq(wallets.userId, req.user.id));
-
-      const newContractBal = parseFloat(cRows[0].contract_nxt_balance) + amountNxt;
-      await pool.query(
-        `UPDATE spectral_contracts SET contract_nxt_balance=$1 WHERE id=$2`,
-        [newContractBal.toFixed(8), cRows[0].id]
+      if (!cRows[0]) throw new ContractSecurityError(404, "Contract not found or not yours");
+      await assertUserOutgoingAllowed(req.user.id, pool);
+      const { rows: wallets } = await pool.query(
+        `UPDATE wallets SET balance=balance-$1::numeric, updated_at=NOW()
+         WHERE user_id=$2 AND balance >= $1::numeric RETURNING balance`,
+        [amountNxt, req.user.id]
+      );
+      if (!wallets[0]) throw new ContractSecurityError(409, "Insufficient NXT balance or wallet unavailable");
+      const { rows: credited } = await pool.query(
+        `UPDATE spectral_contracts SET contract_nxt_balance=contract_nxt_balance+$1::numeric WHERE id=$2 RETURNING contract_nxt_balance`,
+        [amountNxt, cRows[0].id]
       );
 
       // Blockchain record
@@ -15989,18 +15796,20 @@ wnsp.io | t.me/troglodytememe`,
         `INSERT INTO blockchain_tx_pool
            (from_address, to_address, amount_nxt, memo, wavelength_nm, psi_channel, fee_paid, status, tx_type, audit_meta)
          VALUES ($1, $2, $3, $4, $5, $6, '0.00000000', 'pending', 'contract_fund', $7)`,
-        [nm.toFixed(4), psi, amountNxt.toFixed(8), `CONTRACT_FUND:${cRows[0].id}`, nm.toFixed(4), psi,
-         JSON.stringify({ contract_id: cRows[0].id, contract_name: cRows[0].name, funder: req.user.username, amount: amountNxt.toFixed(8) })]
+        [nm.toFixed(4), psi, amountNxt, `CONTRACT_FUND:${cRows[0].id}`, nm.toFixed(4), psi,
+         JSON.stringify({ contract_id: cRows[0].id, contract_name: cRows[0].name, funder: req.user.username, amount: amountNxt })]
       );
 
-      res.json({
+      return {
         contract_id:          cRows[0].id,
         contract_name:        cRows[0].name,
-        funded_nxt:           amountNxt.toFixed(8),
-        contract_nxt_balance: newContractBal.toFixed(8),
-        wallet_balance_after: (bal - amountNxt).toFixed(8),
+        funded_nxt:           amountNxt,
+        contract_nxt_balance: credited[0].contract_nxt_balance,
+        wallet_balance_after: wallets[0].balance,
+      };
       });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+      res.json(funding);
+    } catch (e: any) { res.status(e instanceof ContractSecurityError ? e.status : 500).json({ error: e instanceof ContractSecurityError ? e.message : "Contract funding failed; database changes were rolled back" }); }
   });
 
   // ── Nexus Explorer — contract execution audit ledger ─────────────────────
@@ -16153,6 +15962,7 @@ wnsp.io | t.me/troglodytememe`,
         FROM traffic_logs
         WHERE is_bot = true
           AND bot_name IS NOT NULL
+          AND bot_name NOT LIKE 'BLOCKED-REFERRER:%'
           AND created_at >= NOW() - ${interval}::interval
         GROUP BY bot_name
         ORDER BY hits DESC
@@ -16215,6 +16025,22 @@ wnsp.io | t.me/troglodytememe`,
           AND created_at >= NOW() - ${interval}::interval
       `);
 
+      // Blocked referrers — constitutional exclusions that returned HTTP 403
+      const blockedReferrers = await db.execute(sql`
+        SELECT
+          REPLACE(bot_name, 'BLOCKED-REFERRER:', '') AS label,
+          COUNT(*)::int                              AS hits,
+          MAX(created_at)                            AS last_seen,
+          COUNT(DISTINCT ip)::int                    AS unique_ips
+        FROM traffic_logs
+        WHERE bot_name LIKE 'BLOCKED-REFERRER:%'
+          AND status_code = 403
+          AND created_at >= NOW() - ${interval}::interval
+        GROUP BY bot_name
+        ORDER BY hits DESC
+        LIMIT 50
+      `);
+
       res.json({
         window:       windowParam,
         totalHits:    (totals as any)?.total_hits  ?? 0,
@@ -16240,6 +16066,11 @@ wnsp.io | t.me/troglodytememe`,
           countriesProbing: ((threatSummary as any).rows as any[])[0]?.countries_probing ?? 0,
           uniqueIps:        ((threatSummary as any).rows as any[])[0]?.unique_ips       ?? 0,
         },
+        blockedReferrers: ((blockedReferrers as any).rows as any[]).map((r: any) => ({
+          label: r.label, hits: r.hits,
+          lastSeen: r.last_seen, uniqueIps: r.unique_ips,
+        })),
+        blockedHits: ((blockedReferrers as any).rows as any[]).reduce((sum: number, r: any) => sum + (r.hits ?? 0), 0),
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -16529,5 +16360,6 @@ wnsp.io | t.me/troglodytememe`,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
+  installLegacyWalletBoundaries(app);
   return httpServer;
 }

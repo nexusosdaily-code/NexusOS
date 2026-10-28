@@ -1,7 +1,10 @@
 import { db } from "./db";
-import { eq, and, or, gte, lte, desc, isNull, sql } from "drizzle-orm";
+import { eq, and, or, gte, lte, desc, isNull, sql, inArray } from "drizzle-orm";
+import { notifySessionRevoked, notifyUserSessionsRevoked } from "./session-lifecycle";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
+import { createFounderSessionToken, isFounderAccount, isFounderBtcSession } from "./founder-access";
+import { isUserOutgoingLocked, WALLET_LOCK_MESSAGE } from "./founder-wallet-lock";
 import {
   users, sessions, auditLogs, wallets, transactions,
   versionRegistry, apiKeys, rateLimits, friendships, uploadedFiles, secureDocuments,
@@ -46,8 +49,9 @@ export interface IStorage {
   updateUserDefaultBtcAddress(userId: string, btcAddress: string): Promise<void>;
 
   // Session operations
-  createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<Session>;
+  createSession(userId: string, ipAddress?: string, userAgent?: string, method?: "standard" | "founder_btc"): Promise<Session>;
   getSessionByToken(token: string): Promise<Session | undefined>;
+  getActiveSocketSessions(ids: string[]): Promise<Array<Pick<Session, "id" | "userId" | "expiresAt">>>;
   deleteSession(sessionId: string): Promise<void>;
   deleteUserSessions(userId: string): Promise<void>;
   cleanExpiredSessions(): Promise<number>;
@@ -174,6 +178,7 @@ export interface IStorage {
   saveTelegramVideo(video: InsertTelegramVideo): Promise<TelegramVideo>;
   getTelegramVideos(limit?: number): Promise<TelegramVideo[]>;
   getTelegramVideo(id: number): Promise<TelegramVideo | undefined>;
+  getPublishedTelegramVideo(id: number): Promise<TelegramVideo | undefined>;
   getTelegramVideoByFileUniqueId(fileUniqueId: string): Promise<TelegramVideo | undefined>;
 
   // Governance operations
@@ -312,8 +317,8 @@ export class DatabaseStorage implements IStorage {
   // SESSION OPERATIONS
   // ============================================
 
-  async createSession(userId: string, ipAddress?: string, userAgent?: string): Promise<Session> {
-    const token = randomUUID() + randomUUID();
+  async createSession(userId: string, ipAddress?: string, userAgent?: string, method: "standard" | "founder_btc" = "standard"): Promise<Session> {
+    const token = method === "founder_btc" ? createFounderSessionToken() : randomUUID() + randomUUID();
     const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
     
     const result = await db.insert(sessions).values({
@@ -332,15 +337,34 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(sessions)
       .where(and(eq(sessions.token, token), gte(sessions.expiresAt, now)))
       .limit(1);
-    return result[0];
+    const session = result[0];
+    if (session) {
+      const user = await this.getUser(session.userId);
+      if (isFounderAccount(user) && !isFounderBtcSession(session.token)) {
+        await this.deleteSession(session.id);
+        return undefined;
+      }
+    }
+    return session;
   }
 
   async deleteSession(sessionId: string): Promise<void> {
     await db.delete(sessions).where(eq(sessions.id, sessionId));
+    notifySessionRevoked(sessionId);
   }
 
   async deleteUserSessions(userId: string): Promise<void> {
     await db.delete(sessions).where(eq(sessions.userId, userId));
+    notifyUserSessionsRevoked(userId);
+  }
+
+  async getActiveSocketSessions(ids: string[]): Promise<Array<Pick<Session, "id" | "userId" | "expiresAt">>> {
+    if (!ids.length) return [];
+    const rows = await db.select({ session: sessions, username: users.username })
+      .from(sessions).innerJoin(users, eq(sessions.userId, users.id))
+      .where(and(inArray(sessions.id, ids), gte(sessions.expiresAt, new Date()), eq(users.isActive, true)));
+    return rows.filter(row => !isFounderAccount({ username: row.username }) || isFounderBtcSession(row.session.token))
+      .map(({ session }) => ({ id: session.id, userId: session.userId, expiresAt: session.expiresAt }));
   }
 
   async cleanExpiredSessions(): Promise<number> {
@@ -395,10 +419,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateWalletBalance(walletId: string, newBalance: string): Promise<Wallet> {
+    const [current] = await db.select().from(wallets).where(eq(wallets.id,walletId)).limit(1);
+    const locked = current && await isUserOutgoingLocked(current.userId);
     const result = await db.update(wallets)
       .set({ balance: newBalance, updatedAt: new Date() })
-      .where(eq(wallets.id, walletId))
+      .where(and(eq(wallets.id, walletId), locked ? sql`${wallets.balance} <= ${newBalance}::numeric` : sql`true`))
       .returning();
+    if (locked && !result.length) throw new Error(WALLET_LOCK_MESSAGE);
     return result[0];
   }
 
@@ -1011,18 +1038,19 @@ export class DatabaseStorage implements IStorage {
     const viewer = await db.select().from(streamViewers)
       .where(and(
         eq(streamViewers.streamId, streamId),
-        eq(streamViewers.viewerId, viewerId)
-      ))
-      .limit(1);
+        eq(streamViewers.viewerId, viewerId),
+        isNull(streamViewers.leftAt)
+      ));
     
-    if (viewer[0]) {
-      const joinedAt = new Date(viewer[0].joinedAt);
+    // Ignore historical visits; close all still-active legacy duplicate rows.
+    for (const row of viewer) {
+      const joinedAt = new Date(row.joinedAt);
       const leftAt = new Date();
       const watchDuration = Math.floor((leftAt.getTime() - joinedAt.getTime()) / 1000);
       
       await db.update(streamViewers)
         .set({ leftAt, watchDuration })
-        .where(eq(streamViewers.id, viewer[0].id));
+        .where(and(eq(streamViewers.id, row.id), isNull(streamViewers.leftAt)));
     }
     
     const viewerCount = await this.getStreamViewerCount(streamId);
@@ -1320,6 +1348,13 @@ export class DatabaseStorage implements IStorage {
 
   async getTelegramVideo(id: number): Promise<TelegramVideo | undefined> {
     const [video] = await db.select().from(telegramVideos).where(eq(telegramVideos.id, id));
+    return video;
+  }
+
+  async getPublishedTelegramVideo(id: number): Promise<TelegramVideo | undefined> {
+    const [video] = await db.select().from(telegramVideos).where(
+      and(eq(telegramVideos.id, id), eq(telegramVideos.isPublished, true))
+    );
     return video;
   }
 

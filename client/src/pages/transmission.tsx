@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "wouter";
 import { getAuthHeaders } from "@/lib/queryClient";
+import P2PFileExchange from "@/components/p2p-file-exchange";
 import {
   Radio, Waves, Zap, ArrowLeft, Play, Pause, RotateCcw,
   Signal, Activity, Send, CheckCircle, Circle, FileText,
@@ -51,7 +52,6 @@ interface TransmissionReport {
 }
 
 export default function TransmissionPage() {
-  const token = localStorage.getItem("auth_token") || "";
   const authHeaders = getAuthHeaders();
 
   const [content, setContent] = useState("");
@@ -215,11 +215,8 @@ export default function TransmissionPage() {
     if (!file) return;
     event.target.value = "";
 
-    const isBinary =
-      file.type.startsWith("video/") ||
-      file.type.startsWith("audio/") ||
-      file.type.startsWith("image/") ||
-      /\.(mp4|webm|mov|avi|mkv|gif|png|jpg|jpeg|pdf|zip|gz)$/i.test(file.name);
+    // Unknown formats are bytes, never decoded as text or restricted by MIME.
+    const isBinary = !/\.(txt|md|csv|json|xml|yaml|yml|log)$/i.test(file.name);
 
     if (isBinary) {
       if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
@@ -231,7 +228,7 @@ export default function TransmissionPage() {
       setContent("");
       setVideoUploadResult(null);
       addLog(`Binary file loaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB · ${file.type || "unknown type"})`, 'success');
-      addLog(`Use "Transmit Video" to broadcast via P2P spectral channel`, 'info');
+      addLog(`Open P2P Send / Receive to choose a recipient or an online broadcast`, 'info');
       return;
     }
 
@@ -251,58 +248,8 @@ export default function TransmissionPage() {
 
   const transmitVideo = async () => {
     if (!videoFile) return;
-    setIsUploadingVideo(true);
-    setVideoUploadResult(null);
-    const psi = realSpectral?.psi_channel ?? "Ψ(0,0,H)";
-    addLog(`▶ Video transmission started: "${documentName}"`, 'info');
-    addLog(`Computing spectral channel from title · binary P2P upload`, 'info');
-    try {
-      const form = new FormData();
-      form.append("file", videoFile);
-      form.append("title", documentName);
-      form.append("description", `P2P spectral transmission via ${psi}`);
-      const res = await fetch("/api/spectral-workspace/video", {
-        method: "POST",
-        headers: { Authorization: authHeaders.Authorization ?? "" },
-        body: form,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setVideoUploadResult(data);
-        const resolvedPsi = data.spectral?.psi_channel ?? data.record?.psiChannel ?? psi;
-        const resolvedNm  = data.spectral?.wavelength_mid_nm ?? parseFloat(data.record?.wavelengthNm ?? "550");
-        addLog(`✅ Video transmitted: ${resolvedPsi} · λ=${resolvedNm.toFixed(2)}nm`, 'success');
-        addLog(`Spectral DB record: ${data.record?.id ?? "stored"}`, 'success');
-        sendBusSignal("TRANSMIT_START", resolvedPsi, false).catch(() => {});
-        // Persist transmission report to DB, then log a peer receipt for the video
-        saveReportToDb({
-          documentName,
-          transmissionType: "video",
-          psiChannel: resolvedPsi,
-          wavelengthNm: resolvedNm,
-          frequencyHz: data.spectral?.frequency_hz ?? null,
-          band: data.record?.band ?? null,
-          videoId: data.videoId ?? null,
-          spectralRecordId: data.record?.id ?? null,
-          totalChars: 0,
-          wordCount: 0,
-          ordinalUnits: data.ordinal?.units ?? null,
-          ordinalNxt: data.ordinal?.nxt ?? null,
-          rawSummary: { mimeType: videoFile.type, fileSize: videoFile.size, filename: videoFile.name },
-        });
-        // Log confirmed receipt — the uploader is the first peer to hold the payload
-        if (data.videoId) {
-          logReceipt(data.videoId, "video", videoFile.name, resolvedPsi, videoFile.size);
-        }
-      } else {
-        const err = await res.json().catch(() => ({ error: "Upload failed" }));
-        addLog(`Upload error: ${err.error}`, 'warning');
-      }
-    } catch (e: any) {
-      addLog(`Transmission error: ${e.message}`, 'warning');
-    } finally {
-      setIsUploadingVideo(false);
-    }
+    setActiveTab("p2p");
+    addLog(`File selected for peer delivery. Choose an address or broadcast; recipient confirmation is required.`, "info");
   };
 
   const startTransmission = () => {
@@ -586,9 +533,12 @@ export default function TransmissionPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-slate-800/50 border border-slate-700 p-1">
+          <TabsList className="bg-slate-800/50 border border-slate-700 p-1 flex-wrap h-auto">
             <TabsTrigger value="compose" className="data-[state=active]:bg-cyan-600" data-testid="tab-compose">
               <FileText className="w-4 h-4 mr-1.5" /> Compose
+            </TabsTrigger>
+            <TabsTrigger value="p2p" data-testid="tab-p2p" className="data-[state=active]:bg-cyan-600">
+              <Download className="w-4 h-4 mr-2" /> P2P Send / Receive
             </TabsTrigger>
             <TabsTrigger value="transmit" className="data-[state=active]:bg-green-600" data-testid="tab-transmit">
               <Send className="w-4 h-4 mr-1.5" /> Transmit
@@ -604,6 +554,10 @@ export default function TransmissionPage() {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="p2p" forceMount hidden={activeTab !== "p2p"}>
+            <P2PFileExchange initialFile={videoFile} />
+          </TabsContent>
+
           {/* ── COMPOSE ───────────────────────────────────────────────────── */}
           <TabsContent value="compose" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -613,7 +567,7 @@ export default function TransmissionPage() {
                     <FileText className="w-4 h-4" /> Document
                   </h2>
                   <div className="flex gap-2">
-                    <input ref={fileInputRef} type="file" accept=".txt,.md,.csv,.json,.xml,.html,video/*,.mp4,.webm,.mov,.avi,.mkv,.gif" onChange={handleFileUpload} className="hidden" />
+                    <input ref={fileInputRef} type="file" onChange={handleFileUpload} className="hidden" />
                     <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="border-cyan-500/50 text-cyan-400 h-7 text-xs" data-testid="button-upload">
                       <Upload className="w-3 h-3 mr-1" /> Upload
                     </Button>
@@ -630,19 +584,21 @@ export default function TransmissionPage() {
                 {isVideoMode && videoPreviewUrl ? (
                   <div data-testid="video-preview-panel">
                     <Label className="text-gray-400 text-xs flex items-center gap-1.5 mb-2">
-                      <Film className="w-3 h-3" /> Video Preview
+                      <Film className="w-3 h-3" /> File Preview
                     </Label>
                     <div className="rounded-lg overflow-hidden bg-black border border-cyan-500/30 mb-3">
-                      {videoFile?.type === "image/gif" || videoFile?.name.endsWith(".gif") ? (
+                      {/^image\/(png|jpeg|webp|gif)$/.test(videoFile?.type ?? "") ? (
                         <img src={videoPreviewUrl} alt={documentName} className="w-full max-h-64 object-contain" />
-                      ) : (
+                      ) : videoFile?.type.startsWith("video/") ? (
                         <video
                           src={videoPreviewUrl}
                           controls
                           className="w-full max-h-64"
                           data-testid="video-player"
                         />
-                      )}
+                      ) : videoFile?.type.startsWith("audio/") ? (
+                        <audio src={videoPreviewUrl} controls className="w-full" />
+                      ) : <p className="p-6 text-sm text-slate-300">File ready for peer transfer. This format is download-only.</p>}
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs mb-3">
                       <div className="bg-slate-800/70 rounded p-2">
@@ -673,7 +629,7 @@ export default function TransmissionPage() {
                         {isUploadingVideo ? (
                           <><Radio className="w-4 h-4 mr-2 animate-spin" /> Transmitting…</>
                         ) : (
-                          <><Send className="w-4 h-4 mr-2" /> Transmit Video via P2P</>
+                          <><Send className="w-4 h-4 mr-2" /> Choose P2P Recipient / Broadcast</>
                         )}
                       </Button>
                     )}

@@ -1,22 +1,23 @@
 import { Link } from "wouter";
 import { ChevronLeft, ChevronRight, Home } from "lucide-react";
+import { RESEARCH_EVIDENCE } from "@shared/research-evidence";
 
 const ALL_ACTS = [
   { n: 1,  title: "Theory of Compression States", sub: "Λ=hf/c²",                href: "/oscillating-quanta" },
   { n: 2,  title: "The Universal ONE",             sub: "f₀ derives Λ",            href: "/universal-one" },
-  { n: 3,  title: "Unified Compression Theory",    sub: "4 forces=1 Λ",            href: "/unified-compression-theory" },
+  { n: 3,  title: "Unified Compression Theory",    sub: "Proposed force mapping",  href: "/unified-compression-theory" },
   { n: 4,  title: "The Mechanism",                 sub: "ΔE=hf₀(2ⁿ²−2ⁿ¹)",        href: "/matter-protocol" },
-  { n: 5,  title: "The Address",                   sub: "∀ Λ : ∃! Ψ",             href: "/universal-address" },
+  { n: 5,  title: "The Address",                   sub: "Finite Ψ namespace",      href: "/universal-address" },
   { n: 6,  title: "The Catalogue",                 sub: "n=log₂(mc²/E₀)",          href: "/element-catalogue" },
   { n: 7,  title: "The Trap",                      sub: "Ψ(+k̂)⊗Ψ(−k̂)",          href: "/standing-wave-trap" },
-  { n: 8,  title: "The Lossless Channel",          sub: "α=0, C=ZPE floor",        href: "/lossless-channel" },
+  { n: 8,  title: "The Lossless Channel",          sub: "Proposed low-loss link",  href: "/lossless-channel" },
   { n: 9,  title: "The Cavity",                    sub: "WGM resonance, r_c",      href: "/resonance-cavity" },
   { n: 10, title: "The Exchange",                  sub: "Ω_R=2g",                  href: "/polariton-exchange" },
   { n: 11, title: "The Emitter",                   sub: "F_p=(3/4π²)(λ/n)³(Q/V)", href: "/the-emitter" },
   { n: 12, title: "The Network",                   sub: "ω(k)=ω₀−2J·cos(ka)",     href: "/the-network" },
   { n: 13, title: "The Observer",                  sub: "χ=g²/Δ",                  href: "/the-observer" },
   { n: 14, title: "The Memory",                    sub: "T₂≤2T₁",                  href: "/the-memory" },
-  { n: 15, title: "The Void",                      sub: "n_ZPE=264.71",            href: "/cosmic-lattice" },
+  { n: 15, title: "The Void",                      sub: "Cosmological hypothesis", href: "/cosmic-lattice" },
   { n: 16, title: "The Entangler",                 sub: "|Φ⁺⟩=(|00⟩+|11⟩)/√2",   href: "/the-entangler" },
   { n: 17, title: "The Field",                     sub: "[â,â†]=1",                href: "/the-field" },
   { n: 18, title: "The Coherent State",            sub: "â|α⟩=α|α⟩",             href: "/the-coherent-state" },
@@ -29,6 +30,7 @@ interface Props { current: number }
 export function ActSequenceNav({ current }: Props) {
   const prev = ALL_ACTS.find(a => a.n === current - 1);
   const next = ALL_ACTS.find(a => a.n === current + 1);
+  const evidence = RESEARCH_EVIDENCE.find(a => a.act === current);
 
   return (
     <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 p-4 space-y-2">
@@ -60,7 +62,8 @@ export function ActSequenceNav({ current }: Props) {
 
         {/* ⌂ Hub */}
         <div className="flex">
-          <Link href="/"
+          <Link href="/wnsp"
+            aria-label="WNSP research hub"
             className="flex flex-col items-center justify-center gap-1 rounded-lg border border-slate-700
                        bg-slate-900 hover:border-slate-500 hover:bg-slate-800 transition-colors p-2.5 w-full group">
             <Home className="w-4 h-4 text-slate-400 group-hover:text-white" />
@@ -90,6 +93,15 @@ export function ActSequenceNav({ current }: Props) {
         </div>
 
       </div>
+      {evidence && (
+        <aside aria-label={`Act ${current} evidence status`} className="border-t border-slate-700 pt-3 space-y-2 text-xs leading-relaxed text-slate-300">
+          <p className="font-semibold text-amber-300">Current scientific interpretation — research is not hardware validation</p>
+          <p><strong>Established basis:</strong> {evidence.established}</p>
+          <p><strong>NexusOS proposal:</strong> {evidence.proposal}</p>
+          <p><strong>Evidence limit:</strong> {evidence.limitation}</p>
+          <p className="text-slate-400">Original numbered disclosures and proposed deductions remain research claims, not independent experimental proof. Our working VM is software, not a photonic chip.</p>
+        </aside>
+      )}
     </div>
   );
 }

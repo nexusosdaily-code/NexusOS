@@ -1,3 +1,4 @@
+import { walletRequest } from "@/lib/wallet-request";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getAuthHeaders } from "@/lib/queryClient";
@@ -64,7 +65,7 @@ export default function ReceivePage() {
 
   const invoiceMutation = useMutation({
     mutationFn: async (sats: number) => {
-      const r = await fetch("/api/lightning/invoice", {
+      const r = await walletRequest("/api/lightning/invoice", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ amountSats: sats, memo: "NexusOS receive" }),

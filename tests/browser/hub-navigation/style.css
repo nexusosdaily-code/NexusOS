@@ -1,0 +1,9 @@
+@import "../../../client/src/index.css";
+/* The real component is outside this isolated Vite root. Include its utilities. */
+@source "../../../client/src/pages/hub.tsx";
+
+/* Scale rem-based application typography (and its spacing), not a screenshot
+   or device pixel ratio. No layout/focus fixes belong in this fixture. */
+html[data-text-size="200"] {
+  font-size: 200%;
+}

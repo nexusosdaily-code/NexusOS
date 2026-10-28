@@ -6,6 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import LiveCameraSwitchControl from "@/components/live-camera-switch-control";
+import { switchLiveCamera } from "@/lib/switch-live-camera";
+import { acceptMediaCandidate, mediaDiagnostic as formatMediaDiagnostic, newMediaEvidence, type MediaNegotiationEvidence } from "@/lib/live-media-diagnostics";
 import { 
   Video, VideoOff, Mic, MicOff, Monitor, Camera, 
   Radio, Power, Users, Clock, Settings, 
@@ -23,7 +26,7 @@ interface StreamSettings {
 interface VideoStreamingProps {
   streamId: string;
   mode: "broadcaster" | "viewer";
-  token: string;
+  initialSource?: StreamSettings["source"];
   streamTitle?: string;
   onEnd?: () => void;
   onViewerCountChange?: (count: number) => void;
@@ -44,7 +47,7 @@ const QUALITY_PRESETS = {
 export function VideoStreaming({
   streamId,
   mode,
-  token,
+  initialSource = "camera",
   streamTitle = "Live Stream",
   onEnd,
   onViewerCountChange,
@@ -61,12 +64,20 @@ export function VideoStreaming({
     quality: "720p",
     bitrate: 2500,
     frameRate: 30,
-    source: "camera",
+    source: initialSource,
     recordingEnabled: false,
   });
   const [connectionStatus, setConnectionStatus] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [receiveStatus, setReceiveStatus] = useState<"waiting" | "connecting" | "playing" | "failed">("waiting");
+  const [receiveError, setReceiveError] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [mediaDiagnostic, setMediaDiagnostic] = useState("Waiting for a video connection");
+  const [switchingCamera, setSwitchingCamera] = useState(false);
+  const [cameraSwitchError, setCameraSwitchError] = useState<string | null>(null);
+  const switchingCameraRef = useRef(false);
+  const cameraFacingRef = useRef<"user" | "environment">("user");
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -78,8 +89,24 @@ export function VideoStreaming({
   const recordedChunksRef = useRef<Blob[]>([]);
   const websocketRef = useRef<WebSocket | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const pendingIceRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
+  const remoteDescriptionReadyRef = useRef<Set<string>>(new Set());
+  const mediaEvidenceRef = useRef(new WeakMap<RTCPeerConnection, MediaNegotiationEvidence>());
+  const incomingMediaRef = useRef<MediaStream | null>(null);
   const streamStartTimeRef = useRef<number | null>(null);
   const durationIntervalRef = useRef<number | null>(null);
+  const onEndRef = useRef(onEnd);
+  onEndRef.current = onEnd;
+  const endedRef = useRef(false);
+  const mountedRef = useRef(true);
+  const captureGenerationRef = useRef(0);
+  const capturePendingRef = useRef(false);
+  const notifyEnd = () => {
+    if (!endedRef.current && mountedRef.current) {
+      endedRef.current = true;
+      onEndRef.current?.();
+    }
+  };
 
   const getMediaConstraints = useCallback(() => {
     const { width, height } = QUALITY_PRESETS[settings.quality];
@@ -88,16 +115,23 @@ export function VideoStreaming({
         width: { ideal: width },
         height: { ideal: height },
         frameRate: { ideal: settings.frameRate },
+        facingMode: { ideal: "user" },
       },
       audio: true,
     };
   }, [settings.quality, settings.frameRate]);
 
   const startCameraStream = useCallback(async () => {
+    const generation = captureGenerationRef.current;
     try {
       setCameraError(null);
       const stream = await navigator.mediaDevices.getUserMedia(getMediaConstraints());
+      if (!mountedRef.current || generation !== captureGenerationRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return null;
+      }
       cameraStreamRef.current = stream;
+      cameraFacingRef.current = stream.getVideoTracks()[0]?.getSettings().facingMode === "environment" ? "environment" : "user";
       return stream;
     } catch (error: any) {
       console.error("Failed to get camera stream:", error);
@@ -119,6 +153,7 @@ export function VideoStreaming({
   }, [getMediaConstraints]);
 
   const startScreenStream = useCallback(async () => {
+    const generation = captureGenerationRef.current;
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
@@ -127,6 +162,10 @@ export function VideoStreaming({
         },
         audio: true,
       });
+      if (!mountedRef.current || generation !== captureGenerationRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return null;
+      }
       screenStreamRef.current = stream;
       
       stream.getVideoTracks()[0].onended = () => {
@@ -141,6 +180,7 @@ export function VideoStreaming({
       return stream;
     } catch (error) {
       console.error("Failed to get screen stream:", error);
+      setCameraError("Screen sharing was denied or unavailable. Please allow screen access and try again.");
       return null;
     }
   }, [settings.quality, settings.frameRate, settings.source]);
@@ -174,7 +214,7 @@ export function VideoStreaming({
 
   const connectWebSocket = useCallback(() => {
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws/streaming?token=${token}&streamId=${streamId}&role=${mode}`;
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/streaming?streamId=${encodeURIComponent(streamId)}&role=${mode}`;
     
     const ws = new WebSocket(wsUrl);
     websocketRef.current = ws;
@@ -191,7 +231,12 @@ export function VideoStreaming({
       }
     };
     
-    ws.onmessage = async (event) => {
+    // WebSocket dispatch does not await async handlers. Keep SDP operations in
+    // order; mobile peers can trickle ICE while setRemoteDescription is pending.
+    let signaling = Promise.resolve();
+    ws.onmessage = (event) => {
+      signaling = signaling.then(async () => {
+      if (websocketRef.current !== ws || ws.readyState !== WebSocket.OPEN || !mountedRef.current) return;
       const message = JSON.parse(event.data);
       
       switch (message.type) {
@@ -215,12 +260,14 @@ export function VideoStreaming({
           if (pc) {
             pc.close();
             peerConnectionsRef.current.delete(message.viewerId);
+            pendingIceRef.current.delete(message.viewerId);
+            remoteDescriptionReadyRef.current.delete(message.viewerId);
           }
           break;
           
         case "broadcaster-ready":
           if (mode === "viewer") {
-            setIsLive(true);
+            setReceiveStatus("connecting");
           }
           break;
           
@@ -234,17 +281,27 @@ export function VideoStreaming({
           if (mode === "broadcaster") {
             const peerConnection = peerConnectionsRef.current.get(message.fromUserId);
             if (peerConnection) {
+              evidenceFor(peerConnection).phase = "applying answer";
               await peerConnection.setRemoteDescription(new RTCSessionDescription(message.payload));
+              if (!peerIsActive(message.fromUserId, peerConnection)) return;
+              evidenceFor(peerConnection).phase = "answer applied";
+              await flushIce(message.fromUserId, peerConnection);
             }
           }
           break;
           
         case "ice-candidate":
-          const targetPc = mode === "broadcaster" 
-            ? peerConnectionsRef.current.get(message.fromUserId)
-            : peerConnectionsRef.current.get("broadcaster");
-          if (targetPc && message.payload) {
-            await targetPc.addIceCandidate(new RTCIceCandidate(message.payload));
+          const peerKey = mode === "broadcaster" ? message.fromUserId : "broadcaster";
+          const targetPc = peerConnectionsRef.current.get(peerKey);
+          if (message.payload) {
+            if (targetPc && remoteDescriptionReadyRef.current.has(peerKey)) {
+              await acceptMediaCandidate(targetPc, message.payload, evidenceFor(targetPc));
+            } else {
+              const pending = pendingIceRef.current.get(peerKey) ?? [];
+              if (pending.length >= 128) throw new Error("Too many pending media candidates");
+              pending.push(message.payload);
+              pendingIceRef.current.set(peerKey, pending);
+            }
           }
           break;
           
@@ -256,6 +313,11 @@ export function VideoStreaming({
           handleStreamEnded(message.reason);
           break;
       }
+      }).catch(() => {
+        if (websocketRef.current !== ws || !mountedRef.current) return;
+        setReceiveError("The video connection could not be negotiated. Leave and rejoin the broadcast.");
+        setReceiveStatus("failed");
+      });
     };
     
     ws.onerror = (error) => {
@@ -265,17 +327,53 @@ export function VideoStreaming({
     
     ws.onclose = () => {
       setConnectionStatus("disconnected");
+      // Revoked sessions/invitations must terminate the media path, not merely
+      // stop signaling while an already-negotiated RTC connection keeps playing.
+      stopAllStreams();
+      if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (videoRef.current) videoRef.current.srcObject = null;
+      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+      setIsLive(false);
+      notifyEnd();
       console.log("Disconnected from streaming WebSocket");
     };
     
     return ws;
-  }, [token, streamId, mode, onViewerCountChange]);
+  }, [streamId, mode, onViewerCountChange]);
+
+  const evidenceFor = (pc: RTCPeerConnection) => {
+    let evidence = mediaEvidenceRef.current.get(pc);
+    if (!evidence) {
+      evidence = newMediaEvidence();
+      mediaEvidenceRef.current.set(pc, evidence);
+    }
+    return evidence;
+  };
+
+  const peerIsActive = (key: string, pc: RTCPeerConnection) =>
+    mountedRef.current && peerConnectionsRef.current.get(key) === pc &&
+    websocketRef.current?.readyState === WebSocket.OPEN;
+
+  const flushIce = async (key: string, pc: RTCPeerConnection) => {
+    remoteDescriptionReadyRef.current.add(key);
+    const pending = pendingIceRef.current.get(key) ?? [];
+    pendingIceRef.current.delete(key);
+    for (const candidate of pending) {
+      if (!peerIsActive(key, pc)) return;
+      await acceptMediaCandidate(pc, candidate, evidenceFor(pc));
+    }
+  };
 
   const createPeerConnectionForViewer = async (viewerId: string) => {
+    peerConnectionsRef.current.get(viewerId)?.close();
+    remoteDescriptionReadyRef.current.delete(viewerId);
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     peerConnectionsRef.current.set(viewerId, pc);
     
     pc.onicecandidate = (event) => {
+      if (!peerIsActive(viewerId, pc)) return;
+      if (event.candidate?.candidate) evidenceFor(pc).localCandidates++;
       if (event.candidate && websocketRef.current?.readyState === WebSocket.OPEN) {
         websocketRef.current.send(JSON.stringify({
           type: "ice-candidate",
@@ -292,8 +390,13 @@ export function VideoStreaming({
       });
     }
     
+    evidenceFor(pc).phase = "creating offer";
     const offer = await pc.createOffer();
+    if (!peerIsActive(viewerId, pc)) return;
+    evidenceFor(pc).phase = "setting local offer";
     await pc.setLocalDescription(offer);
+    if (!peerIsActive(viewerId, pc)) return;
+    evidenceFor(pc).phase = "awaiting answer";
     
     websocketRef.current?.send(JSON.stringify({
       type: "offer",
@@ -304,10 +407,16 @@ export function VideoStreaming({
   };
 
   const handleOffer = async (message: any) => {
+    peerConnectionsRef.current.get("broadcaster")?.close();
+    remoteDescriptionReadyRef.current.delete("broadcaster");
+    setReceiveStatus("connecting");
+    setReceiveError(null);
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     peerConnectionsRef.current.set("broadcaster", pc);
     
     pc.onicecandidate = (event) => {
+      if (!peerIsActive("broadcaster", pc)) return;
+      if (event.candidate?.candidate) evidenceFor(pc).localCandidates++;
       if (event.candidate && websocketRef.current?.readyState === WebSocket.OPEN) {
         websocketRef.current.send(JSON.stringify({
           type: "ice-candidate",
@@ -318,15 +427,42 @@ export function VideoStreaming({
     };
     
     pc.ontrack = (event) => {
+      if (!mountedRef.current || peerConnectionsRef.current.get("broadcaster") !== pc) return;
+      // Safari may deliver streamless tracks. Retain both audio and video rather
+      // than replacing srcObject with an absent event.streams[0].
+      const media = incomingMediaRef.current ?? new MediaStream();
+      incomingMediaRef.current = media;
+      if (!media.getTracks().some(track => track.id === event.track.id)) media.addTrack(event.track);
       if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = event.streams[0];
+        remoteVideoRef.current.srcObject = media;
+        // Muted autoplay is permitted on mobile; sound is an explicit gesture.
+        void remoteVideoRef.current.play()?.catch(() => {
+          if (mountedRef.current) setReceiveError("Tap Play video to start playback.");
+        });
       }
-      setIsLive(true);
+    };
+    pc.onconnectionstatechange = () => {
+      if (peerConnectionsRef.current.get("broadcaster") !== pc) return;
+      if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+        setIsLive(false);
+        setReceiveStatus("failed");
+        setReceiveError("Video cannot reach this device. Try both devices on the same Wi-Fi, then leave and rejoin. Some networks require a relay that is not configured yet.");
+      }
     };
     
+    evidenceFor(pc).phase = "applying offer";
     await pc.setRemoteDescription(new RTCSessionDescription(message.payload));
+    if (!peerIsActive("broadcaster", pc)) return;
+    evidenceFor(pc).phase = "offer applied";
+    await flushIce("broadcaster", pc);
+    if (!peerIsActive("broadcaster", pc)) return;
+    evidenceFor(pc).phase = "creating answer";
     const answer = await pc.createAnswer();
+    if (!peerIsActive("broadcaster", pc)) return;
+    evidenceFor(pc).phase = "setting local answer";
     await pc.setLocalDescription(answer);
+    if (!peerIsActive("broadcaster", pc)) return;
+    evidenceFor(pc).phase = "answer sent";
     
     websocketRef.current?.send(JSON.stringify({
       type: "answer",
@@ -348,50 +484,83 @@ export function VideoStreaming({
       console.log("Broadcaster disconnected");
     }
     
-    onEnd?.();
+    notifyEnd();
   };
 
   const handleStartStream = async () => {
-    setConnectionStatus("connecting");
-    setCameraError(null);
-    
-    if (settings.source === "camera" || settings.source === "both") {
-      const camStream = await startCameraStream();
-      // If camera is required and failed — abort with clear error shown in UI
-      if (!camStream && settings.source === "camera") {
-        setConnectionStatus("disconnected");
-        return; // cameraError state is already set by startCameraStream
+    if (capturePendingRef.current) return;
+    capturePendingRef.current = true;
+    try {
+      const generation = captureGenerationRef.current;
+      endedRef.current = false;
+      setConnectionStatus("connecting");
+      setCameraError(null);
+
+      if (settings.source === "camera" || settings.source === "both") {
+        const camStream = await startCameraStream();
+        if (!mountedRef.current || generation !== captureGenerationRef.current) return;
+        // If camera is required and failed — abort with clear error shown in UI
+        if (!camStream && settings.source === "camera") {
+          setConnectionStatus("disconnected");
+          return; // cameraError state is already set by startCameraStream
+        }
       }
-    }
-    if (settings.source === "screen" || settings.source === "both") {
-      const screenStream = await startScreenStream();
-      if (!screenStream && settings.source === "screen") {
+      if (settings.source === "screen" || settings.source === "both") {
+        const screenStream = await startScreenStream();
+        if (!mountedRef.current || generation !== captureGenerationRef.current) return;
+        if (!screenStream && settings.source === "screen") {
+          setConnectionStatus("disconnected");
+          return;
+        }
+      }
+
+      // Verify we have at least one track before going live
+      combineStreams();
+      if (!combinedStreamRef.current || combinedStreamRef.current.getTracks().length === 0) {
+        setCameraError("Could not start any media stream. Please check your camera/screen share permissions.");
         setConnectionStatus("disconnected");
         return;
       }
-    }
 
-    // Verify we have at least one track before going live
-    combineStreams();
-    if (!combinedStreamRef.current || combinedStreamRef.current.getTracks().length === 0) {
-      setCameraError("Could not start any media stream. Please check your camera/screen share permissions.");
-      setConnectionStatus("disconnected");
-      return;
-    }
-
-    connectWebSocket();
-    
-    setIsLive(true);
-    streamStartTimeRef.current = Date.now();
-    
-    durationIntervalRef.current = window.setInterval(() => {
-      if (streamStartTimeRef.current) {
-        setDuration(Math.floor((Date.now() - streamStartTimeRef.current) / 1000));
+      // Creating a channel leaves it pending. Publish it only after capture
+      // succeeds, before advertising LIVE or opening RTC signaling.
+      const started = await fetch(`/api/streams/${encodeURIComponent(streamId)}/start`, {
+        method: "POST", credentials: "include",
+      });
+      if (!started.ok) throw new Error(`Could not start broadcast (${started.status}). Please try again.`);
+      if (!mountedRef.current || generation !== captureGenerationRef.current) {
+        // An end/unmount may race the server's start response. Do not leave a
+        // channel advertised as live after its capture has already been stopped.
+        await fetch(`/api/streams/${encodeURIComponent(streamId)}/end`, {
+          method: "POST", credentials: "include",
+        }).catch(() => {});
+        return;
       }
-    }, 1000);
 
-    if (settings.recordingEnabled) {
-      startRecording();
+      connectWebSocket();
+
+      setIsLive(true);
+      streamStartTimeRef.current = Date.now();
+
+      durationIntervalRef.current = window.setInterval(() => {
+        if (streamStartTimeRef.current) {
+          setDuration(Math.floor((Date.now() - streamStartTimeRef.current) / 1000));
+        }
+      }, 1000);
+
+      if (settings.recordingEnabled) {
+        startRecording();
+      }
+    } catch (error) {
+      stopAllStreams();
+      websocketRef.current?.close();
+      setIsLive(false);
+      setConnectionStatus("disconnected");
+      if (mountedRef.current) {
+        setCameraError(error instanceof Error ? error.message : "Could not start broadcast. Please try again.");
+      }
+    } finally {
+      capturePendingRef.current = false;
     }
   };
 
@@ -415,7 +584,7 @@ export function VideoStreaming({
     }
     
     setIsLive(false);
-    onEnd?.();
+    notifyEnd();
   }, [streamId, isRecording, onEnd, mode]);
 
   const handleLeaveStream = useCallback(() => {
@@ -428,16 +597,29 @@ export function VideoStreaming({
     stopAllStreams();
     websocketRef.current?.close();
     setIsLive(false);
-    onEnd?.();
+    notifyEnd();
   }, [streamId, onEnd]);
 
   const stopAllStreams = () => {
+    captureGenerationRef.current++;
+    if (durationIntervalRef.current !== null) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+    streamStartTimeRef.current = null;
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
+    setIsRecording(false);
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     cameraStreamRef.current?.getTracks().forEach(track => track.stop());
     screenStreamRef.current?.getTracks().forEach(track => track.stop());
     combinedStreamRef.current?.getTracks().forEach(track => track.stop());
     
     peerConnectionsRef.current.forEach(pc => pc.close());
     peerConnectionsRef.current.clear();
+    pendingIceRef.current.clear();
+    remoteDescriptionReadyRef.current.clear();
+    incomingMediaRef.current = null;
     
     cameraStreamRef.current = null;
     screenStreamRef.current = null;
@@ -451,6 +633,32 @@ export function VideoStreaming({
         videoTrack.enabled = !videoTrack.enabled;
         setIsVideoEnabled(videoTrack.enabled);
       }
+    }
+  };
+
+  const handleSwitchCamera = async () => {
+    if (switchingCameraRef.current || mode !== "broadcaster" || !isLive ||
+        settings.source !== "camera" || mediaRecorderRef.current?.state === "recording") return;
+    const camera = cameraStreamRef.current, combined = combinedStreamRef.current;
+    if (!camera || !combined) return;
+    switchingCameraRef.current = true;
+    setSwitchingCamera(true);
+    setCameraSwitchError(null);
+    const generation = captureGenerationRef.current;
+    const isCurrent = () => mountedRef.current && generation === captureGenerationRef.current;
+    try {
+      const { video } = getMediaConstraints();
+      const facing = await switchLiveCamera({
+        camera, combined, peers: peerConnectionsRef.current,
+        constraints: video, facing: cameraFacingRef.current, isCurrent,
+        publishCamera: stream => { cameraStreamRef.current = stream; },
+      });
+      if (isCurrent()) cameraFacingRef.current = facing;
+    } catch (error) {
+      if (isCurrent()) setCameraSwitchError(error instanceof Error ? error.message : "Could not switch cameras.");
+    } finally {
+      switchingCameraRef.current = false;
+      if (mountedRef.current) setSwitchingCamera(false);
     }
   };
 
@@ -546,11 +754,14 @@ export function VideoStreaming({
   };
 
   useEffect(() => {
+    mountedRef.current = true;
+    endedRef.current = false;
     if (mode === "viewer") {
       connectWebSocket();
     }
     
     return () => {
+      mountedRef.current = false;
       if (mode === "viewer" && websocketRef.current?.readyState === WebSocket.OPEN) {
         websocketRef.current.send(JSON.stringify({
           type: "leave-stream",
@@ -564,6 +775,43 @@ export function VideoStreaming({
       }
     };
   }, [mode, streamId, connectWebSocket]);
+
+  useEffect(() => {
+    if (mode !== "viewer" || receiveStatus === "playing" || receiveStatus === "failed") return;
+    const timeout = window.setTimeout(() => {
+      setReceiveStatus("failed");
+      setReceiveError("No video has arrived. Leave and rejoin; if it still fails, try both devices on the same Wi-Fi. This connection currently has no relay fallback.");
+    }, 20_000);
+    return () => window.clearTimeout(timeout);
+  }, [mode, streamId, receiveStatus]);
+
+  useEffect(() => {
+    let active = true;
+    let reading = false;
+    const sample = async () => {
+      if (reading) return;
+      reading = true;
+      try {
+        const summaries: string[] = [];
+        for (const [key, pc] of peerConnectionsRef.current) {
+          if (!pc.getStats) continue;
+          const stats = await pc.getStats();
+          if (active && peerConnectionsRef.current.get(key) === pc) {
+            summaries.push(formatMediaDiagnostic(pc, stats, evidenceFor(pc), mode === "viewer"));
+          }
+        }
+        if (active && summaries.length) {
+          setMediaDiagnostic(summaries.map((summary, index) =>
+            mode === "viewer" ? summary : `Receiver ${index + 1}: ${summary}`).join("\n"));
+        }
+      } catch {
+        // A closing peer can reject its last stats sample. Never expose SDP,
+        // network addresses, candidate pairs or private identities here.
+      } finally { reading = false; }
+    };
+    const interval = window.setInterval(() => { void sample(); }, 2_000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, [mode, streamId]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -653,9 +901,36 @@ export function VideoStreaming({
             ref={remoteVideoRef}
             autoPlay
             playsInline
+            muted={!soundEnabled}
+            onPlaying={() => {
+              setReceiveStatus("playing");
+              setReceiveError(null);
+              setIsLive(true);
+            }}
             className="w-full h-full object-contain"
             data-testid="video-viewer"
           />
+        )}
+        {mode === "viewer" && receiveStatus === "playing" && (
+          <Button
+            className="absolute bottom-4 left-4 z-20"
+            data-testid="button-stream-sound"
+            onClick={() => {
+              const video = remoteVideoRef.current;
+              if (!video) return;
+              const enabled = !soundEnabled;
+              video.muted = !enabled;
+              setSoundEnabled(enabled);
+              void video.play()?.catch(() => setReceiveError("Tap Play video to resume playback."));
+            }}
+          >
+            {soundEnabled ? "Mute sound" : "Enable sound"}
+          </Button>
+        )}
+        {(mode === "viewer" || isLive) && (
+          <p className="absolute bottom-16 left-4 right-4 z-20 rounded bg-black/70 px-3 py-2 text-xs text-white pointer-events-none whitespace-pre-line max-h-32 overflow-y-auto" data-testid="stream-media-diagnostic">
+            {mediaDiagnostic}
+          </p>
         )}
         
         {!isLive && mode === "broadcaster" && (
@@ -789,14 +1064,19 @@ export function VideoStreaming({
           </div>
         )}
         
-        {!isLive && mode === "viewer" && (
+        {mode === "viewer" && (receiveStatus !== "playing" || receiveError) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80">
             <div className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-700 flex items-center justify-center animate-pulse">
                 <Radio className="w-8 h-8 text-purple-400" />
               </div>
-              <p className="text-white text-lg mb-2">Waiting for stream...</p>
-              <p className="text-slate-400 text-sm">The broadcaster will start shortly</p>
+              <p className="text-white text-lg mb-2" data-testid="stream-receive-status">
+                {receiveError ?? (receiveStatus === "connecting" ? "Connecting video..." : "Waiting for video...")}
+              </p>
+              <p className="text-slate-400 text-sm">A live room does not confirm video delivery.</p>
+              <Button className="mt-4" data-testid="button-play-stream" onClick={() => {
+                void remoteVideoRef.current?.play()?.catch(() => setReceiveError("Playback is unavailable. Leave and rejoin the broadcast."));
+              }}>Play video</Button>
             </div>
           </div>
         )}
@@ -838,7 +1118,7 @@ export function VideoStreaming({
 
       {isLive && (
         <div className="bg-slate-800 py-4 px-4">
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <Button
               onClick={toggleAudio}
               data-testid="button-toggle-audio"
@@ -851,6 +1131,7 @@ export function VideoStreaming({
             
             <Button
               onClick={toggleVideo}
+              disabled={switchingCamera}
               data-testid="button-toggle-video"
               className={`w-12 h-12 rounded-full ${
                 isVideoEnabled ? "bg-slate-700 hover:bg-slate-600" : "bg-red-600 hover:bg-red-700"
@@ -861,8 +1142,18 @@ export function VideoStreaming({
             
             {mode === "broadcaster" && (
               <>
+                {settings.source === "camera" && (
+                  <LiveCameraSwitchControl
+                    onSwitch={handleSwitchCamera}
+                    switching={switchingCamera}
+                    disabled={!isLive}
+                    error={cameraSwitchError}
+                    recording={isRecording}
+                  />
+                )}
                 <Button
                   onClick={isRecording ? stopRecording : startRecording}
+                  disabled={switchingCamera}
                   data-testid="button-toggle-recording"
                   className={`w-12 h-12 rounded-full ${
                     isRecording ? "bg-red-600 hover:bg-red-700 animate-pulse" : "bg-slate-700 hover:bg-slate-600"

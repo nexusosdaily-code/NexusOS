@@ -101,11 +101,11 @@ Signed under the NexusOS AGPL-3.0 open-source license.`);
 
   const { data: auth } = useQuery<any>({
     queryKey: ["/api/auth/me"],
-    queryFn: async () => { const r = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${localStorage.getItem("auth_token")}` } }); if (!r.ok) return null; return r.json(); },
+    queryFn: async () => { const r = await fetch("/api/auth/me", { credentials: "include" }); if (!r.ok) return null; return r.json(); },
   });
   const { data: physics } = useQuery<any>({
     queryKey: ["/api/physics/my"],
-    queryFn: async () => { const r = await fetch("/api/physics/my", { headers: { Authorization: `Bearer ${localStorage.getItem("auth_token")}` } }); if (!r.ok) return null; return r.json(); },
+    queryFn: async () => { const r = await fetch("/api/physics/my", { credentials: "include" }); if (!r.ok) return null; return r.json(); },
     enabled: !!auth,
   });
 

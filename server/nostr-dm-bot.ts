@@ -248,7 +248,7 @@ Thank you for reaching out. Your message has been received.
 NexusOS is not a blockchain — it's a physics engine. We're writing the OS for photonic computing hardware (~2032).
 
 • WavelengthScript — native language of photonic processors
-• WNSP Protocol — 25,600 orthogonal channels from Maxwell's equations
+• WNSP Protocol — 51,200 orthogonal channels from Maxwell's equations
 • NXWV Rune — live on Bitcoin (952596:379 · 21T supply · fully sealed)
 • Physics fees from E=hf and Λ=hf/c²
 
@@ -282,7 +282,7 @@ At 2nm, electrons tunnel through transistor gates. TSMC is at 3nm. The math clos
 
 NexusOS is already written in the language of that hardware:
 • 'A' → 480.6nm (E=hf) instead of 65 (arbitrary 1963 ASCII)
-• 25,600 orthogonal channels (WDM × OAM × polarisation)
+• 51,200 orthogonal channels (WDM × OAM × polarisation)
 • Transaction fees from Λ=hf/c² — photon compression mass
 • WavelengthScript runs in software today, natively on photonic ASICs in 2032
 

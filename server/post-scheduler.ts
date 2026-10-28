@@ -9,11 +9,13 @@ import { db } from "./db";
 import { scheduledPosts } from "../shared/schema";
 import { and, eq, lte } from "drizzle-orm";
 import { fireEventBroadcast } from "./nxt-campaign-agent";
+import { canDispatchScheduledPromotion, promotionsArePaused } from "../shared/hardware-readiness";
 
 const TAG = "[PostScheduler]";
 let _timer: ReturnType<typeof setInterval> | null = null;
 
 export async function runSchedulerTick() {
+  if (promotionsArePaused()) return;
   try {
     const now = new Date();
     const due = await db
@@ -26,6 +28,7 @@ export async function runSchedulerTick() {
     console.log(`${TAG} ${due.length} post(s) due — firing`);
 
     for (const post of due) {
+      if (!canDispatchScheduledPromotion(post.scheduledAt)) continue;
       // Mark as sending immediately to avoid double-fire
       await db
         .update(scheduledPosts)
@@ -61,6 +64,7 @@ export async function runSchedulerTick() {
 }
 
 export function startPostScheduler() {
+  if (promotionsArePaused()) return;
   if (_timer) return;
   _timer = setInterval(runSchedulerTick, 60_000);
   console.log(`${TAG} Started — checking every 60s`);

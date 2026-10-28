@@ -69,6 +69,49 @@ patentability, native photonic execution or universal interoperability.
 The [website transparency record](https://wnsp.io/research-transparency)
 is intended to use the same positioning; website changes require publication separately.
 
+## P2P, Wave Vault and live broadcasting — 28 October 2026
+
+The current implementation includes:
+
+- **P2P file sharing** by registered wave-channel address, recipient selection
+  through the directory, transfer acceptance/acknowledgement and broadcast mute.
+- **Wave Vault** private whole-file storage, virtual folders, an incoming
+  **Shared with me** view and explicit, revocable read grants. Original bytes
+  are stored in private App Storage; PostgreSQL indexes the files and grants.
+  Knowing a wave coordinate alone does not grant access.
+- **Spectral Broadcast** public or privately invited live rooms, linked from
+  P2P and Wave Vault. Sign-in and server-side authorization remain required.
+  Camera-only broadcasters can switch front/rear video while keeping the room
+  and microphone; switching is unavailable during recording or Screen/Both mode.
+- A public **[live streaming guide](https://wnsp.io/live-guide)** explaining
+  sender/receiver steps, permissions, sound controls and compatibility limits.
+  Source updates and website publication are separate operations.
+
+**Physical-device evidence reported by the project owner on 28 October 2026:**
+Wave Vault sharing was successfully tested in both directions between iPhone
+and Samsung, with an additional iPad sharing test. Live iPhone Chrome → Samsung
+Chrome delivered visible video and audible voice/TV sound on the same Wi-Fi.
+Live **iPhone Safari → iPad Safari** was also confirmed; audio and front/rear
+camera switching were not separately confirmed for that test.
+
+These are specific working-software results, not universal compatibility,
+physical-photonic transmission or guaranteed emergency delivery. The earlier
+Safari-to-Samsung failure remains unresolved. Live media uses direct WebRTC
+without a TURN relay fallback. Wave Vault is server-stored private sharing,
+not direct WebRTC file delivery or end-to-end encryption. Files and live rooms
+have separate permissions; revocation cannot erase already downloaded copies.
+
+**Sats commerce remains gated:** listings and buyer-acceptance settlement code
+exist, but new P2P purchases and tips remain disabled pending the wider financial
+audit. This update does not authorize moving real funds or clearing that gate.
+
+Details and reproducible checks:
+[P2P file exchange](./docs/p2p-file-exchange.md) ·
+[Wave Vault](./docs/wave-vault.md) ·
+[Live access and sats commerce](./docs/p2p-live-commerce.md) ·
+[Native live-video verification](./docs/live-video-browser-verification.md) ·
+[Shared sats writer audit](./docs/shared-sats-writer-audit.md).
+
 ## Current software scope and multilingual transparency
 
 The development workspace now includes **23 curated language/script presets**
@@ -90,9 +133,10 @@ unsupported; other source-language encoding previews must not be described as
 complete compilers or runtimes.
 
 **Release boundary:** These statements describe implemented and tested
-development-workspace capabilities. This documentation update does not sync
-their complete implementation source to GitHub, publish packages, deploy the
-website or establish that the public website contains the latest changes.
+development-workspace capabilities. Check the source branch and pull request
+for implementation changes; documentation alone does not establish what has
+merged into `main`, publish packages, deploy the website or establish that the
+public website contains the latest changes.
 Existing legacy coordinates, account identities and ledger addresses are not
 reassigned by the opt-in Unicode profile.
 

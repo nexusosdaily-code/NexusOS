@@ -8,12 +8,23 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { trackEvent } from "@/lib/analytics";
 
 function CopyBtn({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
+  const contentCategory = text.startsWith("npm ") ? "npm_install" : text.startsWith("pip ") ? "python_install" : "api_example";
   return (
     <button
-      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); }}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          trackEvent("developer_copy_code", { surface: "developer", content_category: contentCategory, outcome: "success" });
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1800);
+        } catch {
+          trackEvent("developer_copy_code", { surface: "developer", content_category: contentCategory, outcome: "failure" });
+        }
+      }}
       className="p-1.5 rounded text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-all"
     >
       {copied ? <CheckCircle className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -79,7 +90,7 @@ export default function DeveloperPage() {
             <Link href="/docs"><span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Docs</span></Link>
             <a href="https://www.npmjs.com/package/nexusos-ce-encoder" target="_blank" rel="noreferrer"><span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Packages</span></a>
             <Link href="/developer-matrix"><span className="text-slate-400 hover:text-white transition-colors cursor-pointer">Matrix</span></Link>
-            <Link href="/auth">
+             <Link href="/auth" onClick={() => trackEvent("developer_cta", { surface: "developer", action: "get_api_key" })}>
               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition-all">
                 <Key className="w-3 h-3" /> Get API Key
               </button>
@@ -109,7 +120,7 @@ export default function DeveloperPage() {
           </p>
 
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link href="/auth">
+             <Link href="/auth" onClick={() => trackEvent("developer_cta", { surface: "developer", action: "get_api_key" })}>
               <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold transition-all shadow-lg shadow-cyan-900/30">
                 <Key className="w-4 h-4" /> Get API Key — 5,000 sats
               </button>
@@ -155,7 +166,7 @@ export default function DeveloperPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-slate-400 font-mono">Node.js / TypeScript</span>
-                  <a href="https://www.npmjs.com/package/nexusos-ce-encoder" target="_blank" rel="noreferrer"
+                  <a onClick={() => trackEvent("developer_link", { surface: "developer", action: "visit_package" })} href="https://www.npmjs.com/package/nexusos-ce-encoder" target="_blank" rel="noreferrer"
                     className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300">
                     npm <ExternalLink className="w-3 h-3" />
                   </a>
@@ -165,7 +176,7 @@ export default function DeveloperPage() {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-slate-400 font-mono">Python</span>
-                  <a href="https://github.com/nexusosdaily-code/NexusOS/tree/main/packages/ce-encoder-py"
+                   <a onClick={() => trackEvent("developer_link", { surface: "developer", action: "visit_repository" })} href="https://github.com/nexusosdaily-code/NexusOS/tree/main/packages/ce-encoder-py"
                     target="_blank" rel="noreferrer"
                     className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300">
                     GitHub <ExternalLink className="w-3 h-3" />
@@ -324,8 +335,8 @@ const result = ceEncode("hello");
         <div className="max-w-6xl mx-auto px-4 flex items-center justify-between text-[11px] text-slate-600 flex-wrap gap-3">
           <span>NexusOS · WNSP Protocol · AGPL-3.0</span>
           <div className="flex items-center gap-4">
-            <a href="https://www.npmjs.com/package/nexusos-ce-encoder" target="_blank" rel="noreferrer" className="hover:text-slate-400">npm</a>
-            <a href="https://github.com/nexusosdaily-code/NexusOS" target="_blank" rel="noreferrer" className="hover:text-slate-400">GitHub</a>
+            <a onClick={() => trackEvent("developer_link", { surface: "developer", action: "visit_package" })} href="https://www.npmjs.com/package/nexusos-ce-encoder" target="_blank" rel="noreferrer" className="hover:text-slate-400">npm</a>
+            <a onClick={() => trackEvent("developer_link", { surface: "developer", action: "visit_repository" })} href="https://github.com/nexusosdaily-code/NexusOS" target="_blank" rel="noreferrer" className="hover:text-slate-400">GitHub</a>
             <Link href="/hardware-spec"><span className="hover:text-slate-400 cursor-pointer">Hardware Spec</span></Link>
             <Link href="/oscillating-quanta"><span className="hover:text-slate-400 cursor-pointer">First Principles</span></Link>
           </div>

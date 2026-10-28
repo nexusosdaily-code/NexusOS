@@ -1,3 +1,4 @@
+import { walletRequest } from "@/lib/wallet-request";
 import { useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAuthHeaders } from "@/lib/queryClient";
@@ -75,7 +76,7 @@ export default function LpPoolsPage() {
 
   const addMut = useMutation({
     mutationFn: async () => {
-      const r = await fetch("/api/lp/add", {
+      const r = await walletRequest("/api/lp/add", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ poolId: activePool, amountA: Math.floor(parseFloat(amtA)), amountB: Math.floor(parseFloat(amtB)) }),
@@ -95,7 +96,7 @@ export default function LpPoolsPage() {
 
   const removeMut = useMutation({
     mutationFn: async () => {
-      const r = await fetch("/api/lp/remove", {
+      const r = await walletRequest("/api/lp/remove", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ poolId: activePool, lpTokens: Math.floor(parseFloat(removeLp)) }),
@@ -115,7 +116,7 @@ export default function LpPoolsPage() {
 
   const swapMut = useMutation({
     mutationFn: async () => {
-      const r = await fetch("/api/lp/swap", {
+      const r = await walletRequest("/api/lp/swap", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ poolId: activePool, tokenIn: swapDir, amountIn: Math.floor(parseFloat(swapAmt)) }),
@@ -134,7 +135,7 @@ export default function LpPoolsPage() {
 
   const seedMut = useMutation({
     mutationFn: async ({ poolId, amountA, amountB }: { poolId: string; amountA: number; amountB: number }) => {
-      const r = await fetch("/api/lp/add", {
+      const r = await walletRequest("/api/lp/add", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ poolId, amountA, amountB }),

@@ -1,3 +1,4 @@
+import { HARDWARE_REVIEW_HOLD, promotionsArePaused } from "../../shared/hardware-readiness";
 /**
  * NexusOS — July 2026 Development Update
  * Fires to Telegram channel + Nostr relay network.
@@ -102,6 +103,7 @@ wnsp.io
 #NexusOS #WNSP #Bitcoin #NXT #PhotonicComputing #Physics #WavelengthScript #Nostr`;
 
 async function main() {
+  if (promotionsArePaused()) throw new Error(HARDWARE_REVIEW_HOLD.reason);
   console.log("🚀 NexusOS July 2026 Update — firing to Telegram + Nostr\n");
 
   // ── Telegram ────────────────────────────────────────────────────────────────

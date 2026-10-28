@@ -236,7 +236,7 @@ export default function SpectralLibrary() {
           <div className="flex items-center gap-2 text-[10px]" style={{ color: "#4ade80" }}>
             <Check size={10} />
             <span>{parseInt(deleteResult.ordinalReclaimedNxtUnits ?? "0").toLocaleString()} NXT units → Treasury</span>
-            <button onClick={() => setDeleteResult(null)} className="text-white/20 hover:text-white/40">✕</button>
+            <button onClick={() => setDeleteResult(null)} className="text-white/20 hover:text-white/40" aria-label="Dismiss notification">✕</button>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { Link } from "wouter";
+import { ProjectDirection } from "@/components/project-direction";
 import {
   Zap, Cpu, Radio, Waves, Shield, Code2, FlaskConical,
   Network, ArrowRight, ExternalLink, BookOpen, Rocket,
@@ -121,7 +122,7 @@ function SpectralTuner() {
 
       <div className="px-5 pb-4 pt-1">
         <p className="text-[10px] text-white/20 font-mono leading-relaxed">
-          Algorithm: CE_TABLE[charCode % 128] · 128 bands · 380–780 nm · 3.125 nm/band · 51,200 orthogonal Ψ channels
+          Algorithm: CE_TABLE[charCode % 128] · 128 entries · 3.125 nm spacing · 51,200 nominal coordinate labels, not measured optical capacity
           · same output as <code className="text-white/40">nexusos-ce-encoder</code> on npm
         </p>
       </div>
@@ -133,12 +134,12 @@ function SpectralTuner() {
 export default function WnspLandingPage() {
   usePageMeta({
     title: "WNSP — Wavelength-Native Spectral Protocol",
-    description: "WNSP replaces cryptographic hashing with electromagnetic wave physics. Maxwell equation validation, wavelength-based addressing, physics-derived fees (E=hf), and 51,200 orthogonal communication channels.",
+    description: "WNSP spectral encoding and addressing software, with proposed photonic interfaces. Cryptographic security remains necessary; physical interoperability requires demonstration.",
     canonical: "https://wnsp.io/wnsp",
     ogTitle: "WNSP — Wavelength-Native Spectral Protocol",
     ogDescription: "Physics-native communication: wavelength addressing, Maxwell validation, E=hf fees, 51,200 Ψ channels. WNSP-CE v1.0, WNSP-SE v1.0, WNSP-URI v1.0.",
     twitterTitle: "WNSP — Wavelength-Native Spectral Protocol",
-    twitterDescription: "Replace hashing with physics. Wavelength addressing, Maxwell validation, photon energy fees. 51,200 orthogonal channels.",
+    twitterDescription: "Explore spectral representation and protocol research. Configured labels are not measured optical capacity or a replacement for cryptographic security.",
   });
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -173,23 +174,25 @@ export default function WnspLandingPage() {
             </span>
           </h1>
           <p className="text-white/50 text-sm max-w-xl mx-auto leading-relaxed">
-            WNSP replaces software-defined addressing with physics-derived channel allocation.
-            Every character maps to a unique electromagnetic coordinate. The coordinate system
-            runs as a software layer on top of today's internet.
-            The hardware campaign funds running it on light instead of copper.
+            WNSP models spectral encoding and addressing as software on existing networks.
+            Character projections can collide and are not a universal physical address.
+            Existing photonic systems already communicate; WNSP integration across devices
+            requires supported interfaces and measured interoperability tests.
           </p>
         </div>
+
+        <ProjectDirection />
 
         {/* Spectral Tuner */}
         <div>
           <div className="mb-4">
             <div className="text-[10px] font-mono uppercase tracking-wider text-white/30 mb-1">Interactive Demo</div>
-            <h2 className="text-lg font-bold text-white">Type anything. Watch it become light.</h2>
+            <h2 className="text-lg font-bold text-white">Explore character-to-spectral-coordinate encoding.</h2>
             <p className="text-white/40 text-xs mt-1 leading-relaxed">
-              Each character is encoded to a unique wavelength (λ), frequency (f), photon energy (E),
-              and Ψ channel address — deterministically, using the published CE algorithm.
-              This is the same encoding that will execute as a physical wavelength selection
-              in a photonic waveguide when the SNIC hardware exists.
+              Supported characters receive deterministic wavelength labels and calculated frequency and
+              photon-energy values. The legacy modulo projection can alias other inputs.
+              These software values are not measured light emissions; implementing them on optical
+              hardware requires sources, detectors, agreed mappings and compatibility tests.
             </p>
           </div>
           <SpectralTuner />
@@ -202,16 +205,17 @@ export default function WnspLandingPage() {
           <div className="space-y-3 text-sm text-white/60 leading-relaxed">
             <p>
               <span className="text-white/80 font-medium">Today (software stage):</span> WNSP is a coordination
-              layer that runs <em>on top of</em> TCP/IP. Every character you type above is encoded to a real
-              electromagnetic coordinate using Maxwell-derived physics. The routing, the VM, the compiler — all
-              of it executes on conventional silicon, over the conventional internet. This is intentional.
-              The architecture is written for the destination hardware, not the bridge hardware.
+              layer that runs <em>on top of</em> TCP/IP. The character-to-coordinate assignment is a software
+              convention; physical equations calculate quantities associated with its wavelength labels.
+              Routing, the VM and compiler execute on conventional computers over existing networks.
+              WavelengthScript provides the language component; the proposed combination is not a claim
+              to have invented colour alphabets, optical encoding or photonic programming.
             </p>
             <p>
-              <span className="text-white/80 font-medium">Hardware stage (what the campaign funds):</span> When
-              the SNIC (Spectral Network Interface Card) exists, that same CE lookup stops being a RAM table
-              scan and becomes a physical wavelength selection in a photonic waveguide. No rewrite required —
-              the instruction set already speaks in wavelengths.
+              <span className="text-white/80 font-medium">Hardware stage (research objective):</span> A proposed
+              SNIC would need to translate agreed software coordinates into supported optical operations.
+              Device-specific adapters, compiler changes and calibration may be necessary. Native execution
+              and direct optical exchange need separate experiments; neither is guaranteed by the mapping.
             </p>
             <p>
               <span className="text-white/80 font-medium">The 51,200 Ψ channels</span> (256 WDM × 50 OAM ×
@@ -339,11 +343,11 @@ export default function WnspLandingPage() {
         <div className="rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-cyan-500/10 to-violet-900/10 p-7 text-center space-y-4">
           <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/60">Infrastructure Campaign — Phase 1</div>
           <h2 className="text-xl font-bold text-white leading-snug">
-            The software is proven.<br />
+            Explore the working software.<br />
             <span className="text-cyan-300">The hardware campaign is open.</span>
           </h2>
           <p className="text-white/50 text-sm max-w-md mx-auto leading-relaxed">
-            Phase 1 funds the SNIC — the first physical node capable of wavelength addressing.
+            Phase 1 supports the proposed SNIC research programme, not a demonstrated optical node.
             Backers receive NXT tokens, a physics-signed spectral contract, and their name
             permanently recorded on-chain.
           </p>

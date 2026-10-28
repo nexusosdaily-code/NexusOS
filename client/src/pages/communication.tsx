@@ -81,11 +81,10 @@ export default function CommunicationPage() {
 
   // ── WebSocket live delivery ───────────────────────────────────────────────
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) return;
+    if (!user) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/signaling?token=${token}`);
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/signaling`);
     wsRef.current = ws;
 
     ws.onopen = () => setWsConnected(true);
@@ -117,7 +116,7 @@ export default function CommunicationPage() {
     };
 
     return () => { ws.close(); wsRef.current = null; };
-  }, [qc]);
+  }, [qc, user]);
 
   const spectralPreview = quickSpectral(compose);
 
@@ -152,17 +151,22 @@ export default function CommunicationPage() {
   }, {});
 
   // Send message mutation
+  const sendRetry = useRef<{ recipientId: string; content: string; key: string } | null>(null);
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
+      const recipientId = selectedContact!.id;
+      if (sendRetry.current?.recipientId !== recipientId || sendRetry.current.content !== content)
+        sendRetry.current = { recipientId, content, key: crypto.randomUUID() };
       const res = await fetch("/api/messages/send", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ recipientId: selectedContact!.id, content }),
+        body: JSON.stringify({ recipientId, content, idempotencyKey: sendRetry.current.key }),
       });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
     onSuccess: () => {
+      sendRetry.current = null;
       setCompose("");
       // WS delivers instantly when connected; only poll-invalidate as fallback
       if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {

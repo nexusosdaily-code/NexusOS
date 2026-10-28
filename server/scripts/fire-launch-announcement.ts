@@ -1,3 +1,4 @@
+import { HARDWARE_REVIEW_HOLD, promotionsArePaused } from "../../shared/hardware-readiness";
 /**
  * One-shot launch announcement for WNSP•BTC
  * Run: npx tsx server/scripts/fire-launch-announcement.ts
@@ -39,6 +40,7 @@ const launchMsgNostr =
   `#WNSPBTC #Bitcoin #Runes #NexusOS #Nostr`;
 
 async function main() {
+  if (promotionsArePaused()) throw new Error(HARDWARE_REVIEW_HOLD.reason);
   // ── Telegram channel ──────────────────────────────────────────────────────
   const token     = process.env.TELEGRAM_BOT_TOKEN;
   const channelId = process.env.TELEGRAM_CHANNEL_ID;

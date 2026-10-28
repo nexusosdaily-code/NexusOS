@@ -307,7 +307,7 @@ export default function EtchRunePage() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/marketplace">
-            <button className="text-slate-400 hover:text-white transition-colors">
+            <button className="text-slate-400 hover:text-white transition-colors" aria-label="Back to Marketplace">
               <ArrowLeft className="w-5 h-5" />
             </button>
           </Link>

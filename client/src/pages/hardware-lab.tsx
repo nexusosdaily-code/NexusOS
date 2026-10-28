@@ -1066,7 +1066,7 @@ export default function HardwareLabPage() {
               { label: "CE Encoder", status: "Live", color: "#16a34a" },
               { label: "WASCII Table", status: "51,200 channels", color: "#2563eb" },
               { label: "Pi Script", status: "Ready to download", color: "#ca8a04" },
-              { label: "Hardware", status: "Tier 1 in 3–4 months", color: "#7c3aed" },
+              { label: "Hardware", status: "PROTO-001 Tested · 27 Jul 2026", color: "#10b981" },
             ].map(s => (
               <div key={s.label} className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border" style={{ borderColor: s.color + "44", background: s.color + "11" }}>
                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />

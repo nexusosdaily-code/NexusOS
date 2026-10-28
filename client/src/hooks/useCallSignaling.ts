@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 interface CallUser {
@@ -30,6 +31,7 @@ interface UseCallSignalingResult {
 }
 
 export function useCallSignaling(): UseCallSignalingResult {
+  const { isAuthenticated } = useAuth();
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
@@ -37,11 +39,10 @@ export function useCallSignaling(): UseCallSignalingResult {
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws/signaling?token=${token}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/signaling`;
     
     const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
@@ -86,21 +87,19 @@ export function useCallSignaling(): UseCallSignalingResult {
         ws.close();
       }
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const initiateCall = useCallback(async (
     receiverId: string, 
     receiverUsername: string, 
     type: "video" | "voice"
   ) => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) throw new Error("Not authenticated");
+    if (!isAuthenticated) throw new Error("Not authenticated");
     
     const response = await fetch("/api/calls/initiate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ receiverId, type }),
     });
@@ -122,7 +121,7 @@ export function useCallSignaling(): UseCallSignalingResult {
       otherUser: { id: receiverId, username: receiverUsername },
       isIncoming: false,
     });
-  }, []);
+  }, [isAuthenticated]);
 
   const acceptCall = useCallback(() => {
     if (!incomingCall || !socketRef.current) return;

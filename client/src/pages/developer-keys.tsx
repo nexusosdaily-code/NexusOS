@@ -1,3 +1,4 @@
+import { walletRequest } from "@/lib/wallet-request";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -120,7 +121,6 @@ export default function DeveloperKeysPage() {
 
 function DeveloperKeysInner() {
   const { user } = useAuth();
-  const token = localStorage.getItem("auth_token") ?? "";
   const { toast } = useToast();
   const qc = useQueryClient();
   const [newKeyName, setNewKeyName] = useState("");
@@ -130,28 +130,28 @@ function DeveloperKeysInner() {
   const { data, isLoading } = useQuery<any>({
     queryKey: ["/api/keys"],
     queryFn: () =>
-      fetch("/api/keys", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch("/api/keys", { credentials: "include" }).then(r => r.json()),
     refetchInterval: 15_000,
   });
 
   const { data: physics } = useQuery<any>({
     queryKey: ["/api/physics/my"],
     queryFn: () =>
-      fetch("/api/physics/my", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch("/api/physics/my", { credentials: "include" }).then(r => r.json()),
   });
 
   const { data: lnBal } = useQuery<{ satsBalance: number }>({
     queryKey: ["/api/lightning/balance"],
-    enabled: !!token,
+    enabled: !!user,
     staleTime: 15_000,
   });
   const mySats = lnBal?.satsBalance ?? 0;
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/keys", {
+      const res = await walletRequest("/api/keys", {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newKeyName.trim(), permissions: newPerms }),
       });
       if (!res.ok) {
@@ -173,7 +173,7 @@ function DeveloperKeysInner() {
     mutationFn: async (keyId: string) => {
       const res = await fetch(`/api/keys/${keyId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Revoke failed");
       return res.json();

@@ -1,13 +1,18 @@
 import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import cookieParser from "cookie-parser";
-import crypto from "crypto";
+import { browserSessionRequestGuard } from "./browser-session-policy";
 import { registerRoutes } from "./routes";
+import { privateTrustInputBoundary, privateTrustInputError } from "./private-trust-boundary";
+import { waveVaultInputBoundary, waveVaultInputError } from "./wave-vault-boundary";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { spawn, execSync, ChildProcess } from "child_process";
+import { execSync } from "child_process";
+import { SpectralProcess } from "./spectral-process";
 import { seedGenesisBlock } from "./genesis";
 import { seedGenesisUser, seedReplitAIAccount, seedBlockedEntities } from "./genesis_user";
+import { sealConstitution, isTransientDbError } from "./constitution_seal";
+import { bootState, handleSealError } from "./seal-boot-guard";
 import { startBlockchainAuditor } from "./blockchain_auditor";
 import { seedGenesisNode } from "./genesis_node";
 import { startKernelAgents } from "./kernel_agents";
@@ -15,52 +20,32 @@ import { startSocialBroadcastAgent } from "./social_broadcast_agent";
 import { startTelegramBot } from "./telegram-bot";
 import { startNostrDmBot } from "./nostr-dm-bot";
 import { startNxtCampaignAgent } from "./nxt-campaign-agent";
+import { HARDWARE_REVIEW_HOLD, promotionsArePaused } from "../shared/hardware-readiness";
 import { startPostScheduler } from "./post-scheduler";
 import { startTgNostrBridge } from "./telegram-nostr-bridge";
 import { startWnspBtcEtcher } from "./wnsp-btc-rune-etcher";
+import { sealConstitutionWithRetry } from "./seal-retry";
+import { assertPatchedNodeRuntime } from "./runtime-security";
+import { browserContentSecurityPolicy } from "./browser-policy";
+import { requestDiagnostics, requestErrorHandler } from "./http-diagnostics";
+import { createApiResponseLogger } from "./api-response-logger";
 
+// Fail before listeners, Python processes or background jobs start.
+assertPatchedNodeRuntime(process.versions.node);
+console.info(`[Runtime security] Node.js ${process.versions.node}; OpenSSL ${process.versions.openssl}`);
 const app = express();
 const httpServer = createServer(app);
 
-let flaskProcess: ChildProcess | null = null;
-
-function killPort(port: number) {
-  try { execSync(`fuser -k ${port}/tcp 2>/dev/null || true`); } catch {}
-  try { execSync(`pkill -9 -f "spectral_api" 2>/dev/null || true`); } catch {}
+const spectralProcess = new SpectralProcess();
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  await spectralProcess.stop();
+  process.exit(0);
 }
-
-function startFlaskAPI() {
-  if (process.env.NODE_ENV === "production") return;
-
-  // Kill anything still holding port 5001 before we try to bind
-  killPort(5001);
-
-  console.log("Starting Spectral API server on port 5001...");
-
-  flaskProcess = spawn("uv", ["run", "python", "spectral_api.py"], {
-    stdio: ["ignore", "pipe", "pipe"],
-    detached: false,
-  });
-
-  flaskProcess.stdout?.on("data", (data) => { process.stdout.write(data); });
-  flaskProcess.stderr?.on("data", (data) => { process.stderr.write(data); });
-  flaskProcess.on("error", (err) => { console.error("Failed to start Flask API:", err.message); });
-  flaskProcess.on("exit", (code) => {
-    if (code !== 0 && code !== null) console.error(`Flask API exited with code ${code}`);
-  });
-}
-
-function cleanupFlask() {
-  if (flaskProcess && !flaskProcess.killed) {
-    try { flaskProcess.kill("SIGKILL"); } catch {}
-    flaskProcess = null;
-  }
-  try { execSync(`pkill -9 -f "spectral_api" 2>/dev/null || true`); } catch {}
-}
-
-process.on("SIGINT",  () => { cleanupFlask(); process.exit(0); });
-process.on("SIGTERM", () => { cleanupFlask(); process.exit(0); });
-process.on("exit",    () => { cleanupFlask(); });
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 // ── Global crash guards ────────────────────────────────────────────────────
 // Without these, a single unhandled rejection in any background agent kills
@@ -72,7 +57,8 @@ process.on("unhandledRejection", (reason) => {
   console.error("[CRASH GUARD] Unhandled rejection — server staying up:", reason);
 });
 
-startFlaskAPI();
+// Required by the existing encode, upload and agent-bus routes in BOTH modes.
+spectralProcess.start();
 
 declare module "http" {
   interface IncomingMessage {
@@ -81,23 +67,20 @@ declare module "http" {
 }
 
 // Gzip all responses — halves JS/HTML transfer sizes on mobile
+// Observe completions even when a guard, parser or file server handles a request.
+app.use(requestDiagnostics);
 app.use(compression());
 app.use(cookieParser());
+app.use(browserSessionRequestGuard);
 
 import { trafficLoggerMiddleware } from "./traffic-logger";
-app.use(trafficLoggerMiddleware);
 import { startGeoIpEnricher } from "./geoip-enricher";
 
 import { honeypotMiddleware } from "./honeypot";
-app.use(honeypotMiddleware);
 
 // Security headers — remove fingerprinting, add comprehensive protections
 app.disable("x-powered-by");
 app.use((req, res, next) => {
-  // Request tracing — every request gets a unique ID for forensic correlation
-  const requestId = crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  res.setHeader("X-Request-ID", requestId);
-
   // Prevent MIME sniffing
   res.setHeader("X-Content-Type-Options", "nosniff");
 
@@ -119,37 +102,16 @@ app.use((req, res, next) => {
   // Block Adobe Flash / PDF cross-domain policy files
   res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
 
-  // Content Security Policy — tightened per environment
-  // Dev:  unsafe-eval allowed (Vite HMR source maps); ws: allowed (Vite HMR websocket)
-  // Prod: unsafe-eval removed; ws: removed (HTTPS only, no plaintext WebSocket needed)
-  const isProd = process.env.NODE_ENV === "production";
-  const scriptSrc = isProd
-    ? "script-src 'self' 'unsafe-inline'"
-    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
-  const connectSrc = isProd
-    ? "connect-src 'self' wss: https:"
-    : "connect-src 'self' ws: wss: https:";
-
-  res.setHeader(
-    "Content-Security-Policy",
-    [
-      "default-src 'self'",
-      scriptSrc,
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' data: https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https:",
-      "media-src 'self' blob:",
-      connectSrc,
-      "worker-src 'self' blob:",
-      "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; ")
-  );
+  res.setHeader("Content-Security-Policy",
+    browserContentSecurityPolicy(process.env.NODE_ENV === "production"));
 
   next();
 });
+
+// Refused requests must receive the same security headers as normal requests.
+// The traffic guard also inspects encoded private paths before static serving.
+app.use(trafficLoggerMiddleware);
+app.use(honeypotMiddleware);
 
 // ── Attack-extension block ────────────────────────────────────────────────────
 // Return 404 immediately for file extensions that do not exist in NexusOS.
@@ -262,7 +224,14 @@ app.get("/.well-known/apple-app-site-association", (_req, res) => {
 // that the uptime monitor records as outages on every deploy.
 // Fix: answer / with 200 during the startup window, then hand off to static.
 let serverReady = false;
-app.get("/health", (_req, res) => res.json({ status: "ok", ready: serverReady, ts: Date.now() }));
+app.get("/health", (_req, res) => res.json({
+  status:   bootState.degraded || !spectralProcess.ready ? "degraded" : "ok",
+  ready:    serverReady,
+  degraded: bootState.degraded,
+  spectralReady: spectralProcess.ready,
+  ...(bootState.sealError ? { sealError: bootState.sealError } : {}),
+  ts: Date.now(),
+}));
 app.get("/", (req, res, next) => {
   if (!serverReady) return res.status(200).send("ok");
   next();
@@ -310,7 +279,9 @@ if (process.env.NODE_ENV !== "production") {
     const provided = (req.body?.key || "").trim();
     if (!DEV_KEY || provided === DEV_KEY) {
       res.cookie(COOKIE, DEV_KEY, { httpOnly: true, sameSite: "strict" });
-      res.redirect(302, req.query.next?.toString() || "/");
+      const raw = req.query.next?.toString() ?? "";
+      const safePath = /^\/[^/\\]/.test(raw) ? raw : "/";
+      res.redirect(302, safePath);
     } else {
       res.status(401).send(lockScreen("Invalid access key."));
     }
@@ -329,11 +300,13 @@ if (process.env.NODE_ENV !== "production") {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+app.use("/api/private-trusts", ...privateTrustInputBoundary, privateTrustInputError);
+app.use("/api/wave-vault", ...waveVaultInputBoundary, waveVaultInputError);
 app.use(
   express.json({
     limit: "10mb",
     verify: (req, _res, buf) => {
-      req.rawBody = buf;
+      if (!req.url?.startsWith("/api/private-trusts")) req.rawBody = buf;
     },
   }),
 );
@@ -362,34 +335,14 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+// Private file requests retain requestDiagnostics' status/timing/request IDs,
+// but must never enter the legacy path/JSON response logger.
+app.use(createApiResponseLogger(log));
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
-});
-
-// ── One-time schema fixes + data restoration ─────────────────────────────────
+// Development schema bootstrap only. Production changes belong to an explicit
+// maintenance operation, never to the application lifecycle.
 async function runStartupMigrations() {
+  if (process.env.NODE_ENV !== "development") return;
   try {
     const { pool } = await import("./db");
 
@@ -415,42 +368,9 @@ async function runStartupMigrations() {
       END $$;
     `);
 
-    // 3. Restore UncJuddy's 17,001,000,000 sats lost to integer overflow bug.
-    //    Logic: his expected balance = total_deposited − confirmed_stakes.
-    //    We only apply the credit if his balance is still at the post-loss value (≤ 2B)
-    //    to avoid double-crediting on subsequent restarts.
-    await pool.query(`
-      DO $$ DECLARE
-        v_user_id varchar;
-        v_current bigint;
-        v_staked  bigint;
-        v_expected bigint;
-        v_restore  bigint;
-      BEGIN
-        SELECT id INTO v_user_id FROM users WHERE username = 'UncJuddy' LIMIT 1;
-        IF v_user_id IS NULL THEN RETURN; END IF;
-
-        SELECT sats_balance INTO v_current FROM lightning_wallets WHERE user_id = v_user_id;
-        SELECT COALESCE(SUM(amount_sats),0) INTO v_staked FROM sats_stakes
-          WHERE user_id = v_user_id AND status = 'active';
-
-        -- Expected balance = total_deposited - confirmed_staked amount
-        SELECT COALESCE(total_deposited,0) - v_staked INTO v_expected
-          FROM lightning_wallets WHERE user_id = v_user_id;
-
-        v_restore := v_expected - v_current;
-
-        -- Only credit if there is a meaningful shortfall (> 1M sats) and
-        -- the balance hasn't already been restored (guard against re-runs)
-        IF v_restore > 1000000 THEN
-          UPDATE lightning_wallets
-            SET sats_balance = v_expected, updated_at = NOW()
-            WHERE user_id = v_user_id;
-          RAISE NOTICE 'UncJuddy sats restored: % sats credited (balance % → %)',
-            v_restore, v_current, v_expected;
-        END IF;
-      END $$;
-    `);
+    // Historical overflow and phantom-deposit repairs are NOT replayed here.
+    // Existing corrected balances stay intact. Any further correction requires
+    // the separately approved maintenance process in scripts/correct-lightning-balance.ts.
 
     // 4. Create WNUSD positions table if not exists
     await pool.query(`
@@ -504,6 +424,7 @@ async function runStartupMigrations() {
       );
       CREATE INDEX IF NOT EXISTS btc_address_book_user_idx ON btc_address_book(user_id);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_btc_address text;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS p2p_broadcast_muted boolean NOT NULL DEFAULT false;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_btc_address_set_at timestamp;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS lightning_address text;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS sweep_btc_address text;
@@ -515,25 +436,12 @@ async function runStartupMigrations() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS nostr_pubkey text UNIQUE;
     `);
 
-    // 7c. Withdrawal security flag + fix corrupted balances
+    // 7c. Withdrawal security flag (development schema only)
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS withdrawals_blocked BOOLEAN NOT NULL DEFAULT false;
     `);
-    // Fix Dsmart's balance: phantom NXT→sats swap + repeated Blink sync bug inflated
-    // total_deposited to 500B sats. Real Blink wallet only ever held 49,961 sats.
-    // Residual real balance after legitimate small swaps = 961 sats.
-    await pool.query(`
-      UPDATE lightning_wallets
-      SET sats_balance   = 961,
-          total_deposited = 49961,
-          total_withdrawn = 0,
-          updated_at      = now()
-      WHERE user_id = 'da62b876-4f10-4fbb-a979-f23b3032cc80';
-    `);
-    // Ensure all users are unblocked (withdrawals_blocked defaults false)
-    await pool.query(`
-      UPDATE users SET withdrawals_blocked = false WHERE withdrawals_blocked = true;
-    `);
+    // Existing withdrawal restrictions are persistent administrative decisions.
+    // Never clear them as part of startup.
 
     // 8. NXT Airdrop campaigns + claims
     await pool.query(`
@@ -689,9 +597,24 @@ async function runStartupMigrations() {
       ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS contract_name     TEXT;
       ALTER TABLE contract_executions ADD COLUMN IF NOT EXISTS contract_slug     TEXT;
       CREATE INDEX IF NOT EXISTS idx_ce_slug ON contract_executions(contract_slug) WHERE contract_slug IS NOT NULL;
+
+      -- Dynamic blocks: one-click blocks added from Telegram probe alerts
+      CREATE TABLE IF NOT EXISTS dynamic_blocks (
+        id       SERIAL PRIMARY KEY,
+        field    TEXT NOT NULL,
+        value    TEXT NOT NULL,
+        label    TEXT NOT NULL DEFAULT 'Dynamic-Block',
+        added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS dynamic_blocks_field_idx ON dynamic_blocks (field);
     `);
 
     console.log("[MIGRATION] Startup schema migrations complete.");
+    // Pre-populate the dynamic block snapshot so blocks saved before this
+    // restart are enforced immediately rather than waiting for the first hit.
+    import("./traffic-logger").then(({ invalidateDynamicBlockCache }) => {
+      invalidateDynamicBlockCache();
+    }).catch(() => {});
   } catch (err: any) {
     console.error("[MIGRATION] Startup migration error:", err.message);
   }
@@ -743,20 +666,18 @@ async function runStartupMigrations() {
     }).catch(() => {})
   ).catch(() => {});
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    if (!res.headersSent) res.status(status).json({ message });
-    if (status >= 500) console.error("[Server Error]", err.message);
-  });
-
   // Static serving must come after routes so the catch-all doesn't swallow API calls
+  // Unknown API requests must never masquerade as successful HTML responses.
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ error: "API endpoint not found." });
+  });
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
+  app.use(requestErrorHandler);
 
   // ── Step 3: Mark ready — full app now serving ─────────────────────────────
   serverReady = true;
@@ -767,7 +688,77 @@ async function runStartupMigrations() {
     // Wave 1 — 2s: core chain/genesis
     await delay(2_000);
     seedGenesisUser().catch((e) => console.error("[GENESIS USER] Boot error:", e));
-    seedGenesisBlock().catch(() => {});
+    // sealConstitution runs AFTER seedGenesisBlock to avoid block-number races.
+    // Wrapped with retry logic for transient DB connectivity errors that are
+    // common on first boot in production (DNS not yet ready, pool cold-start).
+    seedGenesisBlock()
+      .then(() => sealConstitutionWithRetry())
+      .then((sealed) => {
+        if (sealed === true) {
+          console.log("[CONSTITUTION] Fresh seal written to chain — boot complete.");
+        }
+        // false = already existed, which is the normal path on restarts
+      })
+      .catch((e: any) => {
+        // Mark boot degraded + emit [FATAL] log (never silent)
+        handleSealError(e);
+
+        // Background recovery — the DB may still be warming up after the fast
+        // retry window (10 × 8 s = 80 s).  Try every 30 s for up to 5 minutes
+        // before alerting the founder.  This prevents spurious BOOT ALERT
+        // messages when the Replit internal PostgreSQL host ("helium") takes
+        // longer than 80 s to become reachable on a cold boot.
+        const BACKGROUND_ATTEMPTS  = 10;  // 10 × 30 s = 5 min
+        const BACKGROUND_DELAY_MS  = 30_000;
+
+        (async () => {
+          let recovered = false;
+          for (let attempt = 1; attempt <= BACKGROUND_ATTEMPTS; attempt++) {
+            await new Promise<void>((r) => setTimeout(r, BACKGROUND_DELAY_MS));
+            try {
+              await sealConstitution();
+              // Healed — clear the degraded flag so /health goes green
+              bootState.degraded  = false;
+              bootState.sealError = null;
+              console.log(
+                `[CONSTITUTION] 🟢 Background recovery succeeded (attempt ${attempt}/${BACKGROUND_ATTEMPTS}) — server healthy.`,
+              );
+              recovered = true;
+              break;
+            } catch (bgErr: any) {
+              const bgMsg: string = bgErr?.message ?? String(bgErr);
+              if (!isTransientDbError(bgMsg)) {
+                // Permanent error (schema missing, etc.) — no point retrying
+                console.error(
+                  `[CONSTITUTION] Background recovery hit a permanent error — aborting: ${bgMsg.slice(0, 200)}`,
+                );
+                break;
+              }
+              console.warn(
+                `[CONSTITUTION] Background recovery attempt ${attempt}/${BACKGROUND_ATTEMPTS} failed (transient): ${bgMsg.slice(0, 120)}`,
+              );
+            }
+          }
+
+          if (!recovered) {
+            // Still degraded after 5 minutes — this is a genuine outage.
+            // Alert the founder now.
+            const token = process.env.TELEGRAM_BOT_TOKEN;
+            if (token) {
+              const msg = e?.message ?? String(e);
+              fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: "-1002572762871",
+                  parse_mode: "HTML",
+                  text: `🚨 <b>NexusOS BOOT ALERT</b>\n<b>sealConstitution() FATAL failure</b>\n\nServer is running DEGRADED — constitution block was NOT written.\n/health returns <code>degraded: true</code> until fixed.\n\n<b>Error:</b> ${msg.slice(0, 300)}`,
+                }),
+              }).catch(() => {});
+            }
+          }
+        })();
+      });
     seedGenesisNode().catch((e) => console.error("[GENESIS NODE] Error:", e));
     seedReplitAIAccount().catch((e) => console.error("[GENESIS] Replit AI seed error:", e));
     seedBlockedEntities().catch((e) => console.error("[GENESIS] Blocked entities error:", e));
@@ -816,7 +807,14 @@ async function runStartupMigrations() {
     _safe("SocialBroadcast",  () => startSocialBroadcastAgent());
     if (process.env.NODE_ENV === "production") _safe("TelegramBot", () => startTelegramBot());
     _safe("NostrDmBot",       () => startNostrDmBot());
-    _safe("NxtCampaign",      () => startNxtCampaignAgent());
+    // Engineering hold takes precedence over legacy campaign configuration.
+    if (promotionsArePaused()) {
+      console.log(`[NxtCampaign] Paused — ${HARDWARE_REVIEW_HOLD.reason}`);
+    } else if (process.env.CAMPAIGN_ENABLED === "true") {
+      _safe("NxtCampaign",    () => startNxtCampaignAgent());
+    } else {
+      console.log("[NxtCampaign] Disabled by configuration");
+    }
     _safe("PostScheduler",    () => startPostScheduler());
     _safe("TgNostrBridge",    () => startTgNostrBridge());
     _safe("WnspBtcEtcher",    () => startWnspBtcEtcher());

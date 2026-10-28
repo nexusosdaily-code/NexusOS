@@ -306,6 +306,8 @@ export async function processRuneOrders(): Promise<void> {
   console.log(`[Rune Processor] ${pending.length} pending order(s) — attempting auto-fulfil…`);
 
   for (const order of pending) {
+    const { isUserOutgoingLocked } = await import("./founder-wallet-lock");
+    if (await isUserOutgoingLocked(order.userId)) continue;
     if (!order.btcAddress || !order.runeAmount) continue;
     if (order.direction !== "nxt_to_rune") continue;
 

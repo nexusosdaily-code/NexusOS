@@ -6,7 +6,7 @@
  *  - CE formula uses % 128 to match canonical encoder (nexusos-ce-encoder)
  *  - txId is deterministic — derived from spectral fingerprint, not Math.random()
  *  - WDM channel = floor((λ_nm - 380) / 3.125) clamped 0–255
- *  - OAM = sum(charCodes) % 50  (per 25,600-channel Hilbert space spec)
+ *  - OAM = sum(charCodes) % 50  (per 51,200-channel Hilbert space spec)
  *  - previousWavelengthHash derived from prior block's fingerprint, not a string template
  *  - verifyHardwareAnchor uses consistent nm units throughout
  *  - commitBlock performs real chain coherence validation before stamping isValidated
@@ -14,13 +14,11 @@
  */
 
 // ── Physics constants (CODATA 2018 / SI exact) ────────────────────────────────
-const H = 6.62607015e-34;   // Planck constant  J·s
-const C = 299_792_458;       // Speed of light   m/s
+import { H_PLANCK as H, C_LIGHT as C, CE_TABLE, ledgerWdm } from "@shared/wnsp-model";
 const EV = 1.602176634e-19; // eV per joule
 
 // ── CE 128-band lookup table — canonical, matches nexusos-ce-encoder npm/PyPI ─
 // CE_TABLE[i] = 380 + (i / 128) * 400  nm  →  3.125 nm per band
-const CE_TABLE: number[] = Array.from({ length: 128 }, (_, i) => 380 + (i / 128) * 400);
 
 // ── Band helpers ──────────────────────────────────────────────────────────────
 export function getBandName(nm: number): string {
@@ -44,7 +42,7 @@ export function getBandColor(nm: number): string {
 
 // ── Ψ channel derivation ──────────────────────────────────────────────────────
 function wdm(nm: number): number {
-  return Math.min(255, Math.max(0, Math.floor((nm - 380) / 3.125)));
+  return ledgerWdm(nm);
 }
 function oam(text: string): number {
   return [...text].reduce((s, c) => s + c.charCodeAt(0), 0) % 50;
@@ -224,13 +222,14 @@ export class LambdaStateMachine {
    * All units in nm for clarity.
    */
   public verifyHardwareAnchor(blockIndex: number, readingNm: number): boolean {
+    if (!Number.isFinite(readingNm) || readingNm < 380 || readingNm > 780) return false;
     const block = this.ledgerChain.find(b => b.blockIndex === blockIndex);
     if (!block) return false;
     const deviationNm = Math.abs(readingNm - block.blockWavelengthAnchor);
     const pass = deviationNm <= this.toleranceNm;
     block.isValidated = pass;
     block.validationNote = pass
-      ? `Hardware verified — Δλ=${deviationNm.toFixed(3)}nm`
+      ? `Wavelength reading within tolerance — Δλ=${deviationNm.toFixed(3)}nm (not system certification)`
       : `Hardware FAIL — Δλ=${deviationNm.toFixed(3)}nm exceeds ±${this.toleranceNm}nm`;
     return pass;
   }

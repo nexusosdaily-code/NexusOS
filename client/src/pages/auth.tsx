@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link, useLocation } from "wouter";
 import { Sparkles, Lock, User, ArrowLeft, Zap, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { trackEvent } from "@/lib/analytics";
 
 async function nostrSignIn(): Promise<{ signedEvent: any } | null> {
   const w = window as any;
@@ -43,24 +44,21 @@ export default function AuthPage() {
   const [registerData, setRegisterData]   = useState({ username: "", password: "", email: "", btcAddress: "" });
   const [registerLoading, setRegisterLoading] = useState(false);
   const [showRecovery, setShowRecovery]   = useState(false);
-  const [recoveryData, setRecoveryData] = useState({ username: "Nexus", newPassword: "", recoveryKey: "" });
+  const [recoveryData, setRecoveryData] = useState({ username: "", newPassword: "", recoveryKey: "" });
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [showLoginPwd, setShowLoginPwd]     = useState(false);
   const [showNewPwd, setShowNewPwd]         = useState(false);
   const [showWif, setShowWif]               = useState(false);
   const [wifKey, setWifKey]                 = useState("");
-  const [showWifLogin, setShowWifLogin]     = useState(false);
+  const [showWifLogin, setShowWifLogin]     = useState(true);
   const [wifLoginLoading, setWifLoginLoading] = useState(false);
   const [showWifInput, setShowWifInput]     = useState(false);
-  const [nsecKey, setNsecKey]               = useState("");
-  const [showNsecLogin, setShowNsecLogin]   = useState(false);
-  const [nsecLoginLoading, setNsecLoginLoading] = useState(false);
-  const [showNsecInput, setShowNsecInput]   = useState(false);
 
   const handleWifLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!wifKey.trim()) return;
     setWifLoginLoading(true);
+    trackEvent("auth_attempt", { surface: "auth", method: "wif", action: "login" });
     try {
       const res = await fetch("/api/auth/wif-login", {
         method: "POST",
@@ -71,38 +69,21 @@ export default function AuthPage() {
       if (!res.ok) throw new Error(data.error || "Login failed");
       // Cookie is set server-side (httpOnly) — no localStorage needed
       toast({ title: "Signed in as Nexus", description: "Welcome back." });
+      trackEvent("auth_result", { surface: "auth", method: "wif", action: "login", outcome: "success" });
       sessionStorage.removeItem("auth_redirect");
       window.location.href = redirectTo;
     } catch (err: any) {
+      trackEvent("auth_result", { surface: "auth", method: "wif", action: "login", outcome: "failure" });
       toast({ title: "Login failed", description: err.message, variant: "destructive" });
-    } finally { setWifLoginLoading(false); }
-  };
-
-  const handleNsecLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nsecKey.trim()) return;
-    setNsecLoginLoading(true);
-    try {
-      const res = await fetch("/api/auth/nsec-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nsecKey: nsecKey.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Login failed");
-      // Cookie is set server-side (httpOnly) — no localStorage needed
-      toast({ title: "Signed in as Nexus", description: "Welcome back." });
-      sessionStorage.removeItem("auth_redirect");
-      window.location.href = redirectTo;
-    } catch (err: any) {
-      toast({ title: "Login failed", description: err.message, variant: "destructive" });
-    } finally { setNsecLoginLoading(false); }
+    } finally { setWifKey(""); setWifLoginLoading(false); }
   };
 
   const handleNostrLogin = async () => {
     if (nostrLoading) return;
     const w = window as any;
     if (!w.nostr) {
+      trackEvent("auth_attempt", { surface: "auth", method: "nostr", action: "login" });
+      trackEvent("auth_result", { surface: "auth", method: "nostr", action: "login", outcome: "failure", failure_reason: "extension_missing" });
       toast({
         title: "No Nostr extension found",
         description: "Install Alby (getalby.com) or nos2x to sign in with Nostr.",
@@ -111,6 +92,7 @@ export default function AuthPage() {
       return;
     }
     setNostrLoading(true);
+    trackEvent("auth_attempt", { surface: "auth", method: "nostr", action: "login" });
     try {
       const payload = await nostrSignIn();
       if (!payload) throw new Error("Signing cancelled");
@@ -124,11 +106,13 @@ export default function AuthPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Nostr login failed");
 
-      localStorage.setItem("auth_token", data.token);
+      localStorage.removeItem("auth_token");
       toast({ title: "⚡ Nostr login successful", description: data.message });
+      trackEvent("auth_result", { surface: "auth", method: "nostr", action: "login", outcome: "success" });
       sessionStorage.removeItem("auth_redirect");
       window.location.replace(redirectTo);
     } catch (e: any) {
+      trackEvent("auth_result", { surface: "auth", method: "nostr", action: "login", outcome: "failure" });
       toast({ title: "Nostr login failed", description: e.message, variant: "destructive" });
     } finally {
       setNostrLoading(false);
@@ -140,6 +124,7 @@ export default function AuthPage() {
     if (inFlight.current) return;
     inFlight.current = true;
     setIsLoading(true);
+    trackEvent("auth_attempt", { surface: "auth", method: "password", action: "login" });
     try {
       const response = await fetch("/api/auth/login", {
         method:  "POST",
@@ -150,11 +135,13 @@ export default function AuthPage() {
       try { data = await response.json(); }
       catch { throw new Error("Server is starting up — please wait a moment and try again."); }
       if (!response.ok) throw new Error(data.error || data.details?.[0]?.message || "Invalid credentials");
-      localStorage.setItem("auth_token", data.token);
+      localStorage.removeItem("auth_token");
       toast({ title: "Login successful", description: `Welcome back, ${data.user.username}!` });
+      trackEvent("auth_result", { surface: "auth", method: "password", action: "login", outcome: "success" });
       sessionStorage.removeItem("auth_redirect");
       window.location.replace(redirectTo);
     } catch (error: any) {
+      trackEvent("auth_result", { surface: "auth", method: "password", action: "login", outcome: "failure" });
       toast({ title: "Login failed", description: error.message, variant: "destructive" });
     } finally {
       inFlight.current = false;
@@ -169,6 +156,7 @@ export default function AuthPage() {
       toast({ title: "Password too short", description: "Must be at least 8 characters.", variant: "destructive" }); return;
     }
     setRegisterLoading(true);
+    trackEvent("auth_attempt", { surface: "auth", method: "password", action: "register" });
     try {
       const res  = await fetch("/api/auth/register", {
         method:  "POST",
@@ -182,11 +170,13 @@ export default function AuthPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.details?.[0]?.message || "Registration failed");
-      localStorage.setItem("auth_token", data.token);
+      localStorage.removeItem("auth_token");
       toast({ title: "Welcome to NexusOS!", description: `Account created for ${data.user.username}. Your spectral wallet is ready.` });
+      trackEvent("auth_result", { surface: "auth", method: "password", action: "register", outcome: "success" });
       sessionStorage.removeItem("auth_redirect");
       window.location.replace(redirectTo);
     } catch (err: any) {
+      trackEvent("auth_result", { surface: "auth", method: "password", action: "register", outcome: "failure" });
       toast({ title: "Registration failed", description: err.message, variant: "destructive" });
     } finally {
       setRegisterLoading(false);
@@ -321,17 +311,20 @@ export default function AuthPage() {
                   <Zap className="w-3.5 h-3.5" />
                   {showWifLogin ? "▲ Hide wallet login" : "Sign in with Wallet Key (BTC WIF)"}
                 </button>
+                <p className="text-xs text-orange-200/80 text-center">
+                  Founder access is BTC-secret only. Password, Nostr-key and password-recovery access for Nexus are retired.
+                </p>
                 {showWifLogin && (
                   <form onSubmit={handleWifLogin} className="space-y-2">
                     <div className="relative">
-                      <textarea
+                      <input
                         id="wif-key-textarea"
+                        type={showWifInput ? "text" : "password"}
                         aria-label="Bitcoin WIF wallet key"
                         value={wifKey}
                         onChange={e => setWifKey(e.target.value)}
                         placeholder="Paste your BTC WIF key"
-                        rows={2}
-                        className={`w-full rounded-md bg-slate-800/50 border border-orange-500/30 text-sm font-mono p-2 pr-10 resize-none text-white placeholder-gray-600 focus:outline-none focus:border-orange-400 ${showWifInput ? "blur-sm select-none" : ""}`}
+                        className="w-full rounded-md bg-slate-800/50 border border-orange-500/30 text-sm font-mono p-2 pr-10 text-white placeholder-gray-600 focus:outline-none focus:border-orange-400"
                         autoComplete="off"
                         autoCorrect="off"
                         autoCapitalize="none"
@@ -340,9 +333,9 @@ export default function AuthPage() {
                       />
                       <button type="button" tabIndex={-1}
                         onClick={() => setShowWifInput(v => !v)}
-                        aria-label={showWifInput ? "Show key" : "Hide key"}
+                        aria-label={showWifInput ? "Hide key" : "Show key"}
                         className="absolute right-2 top-2 text-gray-500 hover:text-gray-300">
-                        {showWifInput ? <Eye className="w-4 h-4" aria-hidden="true" /> : <EyeOff className="w-4 h-4" aria-hidden="true" />}
+                        {showWifInput ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
                     <Button type="submit" disabled={wifLoginLoading || !wifKey.trim()}
@@ -352,42 +345,6 @@ export default function AuthPage() {
                   </form>
                 )}
 
-                {/* Nostr nsec login */}
-                <button type="button" onClick={() => setShowNsecLogin(v => !v)}
-                  className="w-full text-xs text-purple-500/70 hover:text-purple-400 transition-colors flex items-center justify-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {showNsecLogin ? "▲ Hide Nostr login" : "Sign in with Nostr Key (nsec)"}
-                </button>
-                {showNsecLogin && (
-                  <form onSubmit={handleNsecLogin} className="space-y-2">
-                    <div className="relative">
-                      <textarea
-                        id="nsec-key-textarea"
-                        aria-label="Nostr nsec private key"
-                        value={nsecKey}
-                        onChange={e => setNsecKey(e.target.value)}
-                        placeholder="Paste your nsec key"
-                        rows={2}
-                        className={`w-full rounded-md bg-slate-800/50 border border-purple-500/30 text-sm font-mono p-2 pr-10 resize-none text-white placeholder-gray-600 focus:outline-none focus:border-purple-400 ${showNsecInput ? "blur-sm select-none" : ""}`}
-                        autoComplete="off"
-                        autoCorrect="off"
-                        autoCapitalize="none"
-                        spellCheck={false}
-                        inputMode="url"
-                      />
-                      <button type="button" tabIndex={-1}
-                        onClick={() => setShowNsecInput(v => !v)}
-                        aria-label={showNsecInput ? "Show key" : "Hide key"}
-                        className="absolute right-2 top-2 text-gray-500 hover:text-gray-300">
-                        {showNsecInput ? <Eye className="w-4 h-4" aria-hidden="true" /> : <EyeOff className="w-4 h-4" aria-hidden="true" />}
-                      </button>
-                    </div>
-                    <Button type="submit" disabled={nsecLoginLoading || !nsecKey.trim()}
-                      className="w-full bg-purple-700 hover:bg-purple-600 text-white font-semibold">
-                      {nsecLoginLoading ? "Signing in…" : "Sign in as Nexus (Nostr)"}
-                    </Button>
-                  </form>
-                )}
               </div>
 
               {showRecovery && (

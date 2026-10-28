@@ -18,6 +18,9 @@ import {
   FileText, Github, MessageCircle, Rss, Bitcoin, Twitter,
   Clock, Calendar, Trash2, Play, CheckCircle2, XCircle, AlertCircle,
 } from "lucide-react";
+import { amountBucket, trackEvent } from "@/lib/analytics";
+import { promotionsArePaused } from "@shared/hardware-readiness";
+import { HardwareFundingHold } from "@/components/hardware-readiness";
 
 function wlToRgb(nm: number): string {
   let r = 0, g = 0, b = 0;
@@ -188,7 +191,7 @@ const ROADMAP = [
     items: [
       "Orbital Solar Array photonic feed",
       "Schumann resonance (7.83 Hz) planetary sync",
-      "555 THz first oscillation energy extraction",
+      "555 THz reference-frequency experiments with supplied energy",
       "K1 Energy Market live trading",
       "NexusOS public company listing — NXT as traded asset",
     ],
@@ -543,6 +546,10 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function CrowdfundPage() {
+  return promotionsArePaused() ? <HardwareFundingHold /> : <CrowdfundContent />;
+}
+
+function CrowdfundContent() {
   usePageMeta({
     title: "Crowdfund NexusOS — Hardware Founder & NXT Supporter Tiers",
     description: "Fund the PHR-1 resonator, SNIC photonic NIC, and WavelengthScript compiler. Hardware Founder slots (25 units), NXT Supporter packs, and Spectral Bundles. Physics-based computing starts here.",
@@ -566,18 +573,18 @@ export default function CrowdfundPage() {
   const { toast } = useToast();
 
   const zapMut = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (submittedGoalSats: number) => {
       const r = await fetch("/api/crowdfund/zap-goal", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({ goalSats: parseInt(zapGoalSats), phase: "Phase 1 — PHR-1 Hardware Prototype" }),
+        body: JSON.stringify({ goalSats: submittedGoalSats, phase: "Phase 1 — PHR-1 Hardware Prototype" }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Failed");
       return j;
     },
-    onSuccess: (d) => { setZapResult(d); toast({ title: "⚡ Zap Goal published!", description: `Live on ${d.relays?.length ?? 0} Nostr relays` }); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+     onSuccess: (d, submittedGoalSats) => { trackEvent("crowdfund_goal_publish", { surface: "crowdfund", outcome: "success", amount_bucket: amountBucket(submittedGoalSats) }); setZapResult(d); toast({ title: "⚡ Zap Goal published!", description: `Live on ${d.relays?.length ?? 0} Nostr relays` }); },
+     onError: (e: any, submittedGoalSats) => { trackEvent("crowdfund_goal_publish", { surface: "crowdfund", outcome: "failure", amount_bucket: amountBucket(submittedGoalSats) }); toast({ title: "Error", description: e.message, variant: "destructive" }); },
   });
 
   const promoMut = useMutation({
@@ -645,7 +652,7 @@ export default function CrowdfundPage() {
     },
     {
       q: "What is the money actually funding?",
-      a: "100% of R&D funding goes to communication hardware development: the PHR-1 resonator prototype, 144-turn bifilar coil manufacturing, Syncbox Controller firmware, ZERO-G state testing, and the Spectral Relay Mesh network nodes. The Orbital Treasury distributes funds across 5 buckets: 35% maintenance, 25% deliverables, 20% research, 10% agent rewards, 10% Nexus Charitable Trust.",
+      a: "100% of R&D funding goes to communication hardware development: PHR-1 resonator production (PROTO-001 already manufactured & tested by Coiltek SA — 2026-07-27, 3 units, 100% PASS), Syncbox Controller firmware, ZERO-G state testing, and the Spectral Relay Mesh network nodes. The Orbital Treasury distributes funds across 5 buckets: 35% maintenance, 25% deliverables, 20% research, 10% agent rewards, 10% Nexus Charitable Trust.",
     },
     {
       q: "What is NXT and how does it work?",
@@ -661,7 +668,7 @@ export default function CrowdfundPage() {
     },
     {
       q: "What is the PHR-1 hardware unit?",
-      a: "PHR-1 is the first physical resonator implementing the ZERO-G state — gravitational de-correlation through phase alignment of a 144-turn bifilar coil. It is the first hardware layer of the Lambda Gate Substrate. Hardware Founders receive a unit in the first production batch of 25.",
+      a: "PHR-1 is the first physical resonator implementing the ZERO-G state — gravitational de-correlation through phase alignment of a bifilar toroid coil. PROTO-001 (NEX-0589-PROTO-001) was manufactured by Coiltek Pty Ltd (SA, Australia) and 100% electrically tested on 2026-07-27: 3 units, L_avg = 62.2 μH, DCR_avg ≈ 295 mΩ, all PASS. Hardware Founders receive a unit in the first production batch of 25.",
     },
     {
       q: "Is this real working software today?",
@@ -697,7 +704,7 @@ export default function CrowdfundPage() {
 
       {/* ── GEYSER LIVE BANNER ── */}
       <section className="pt-24 pb-0 px-4 max-w-3xl mx-auto">
-        <a href="https://geyser.fund/project/nexusos" target="_blank" rel="noreferrer"
+        <a onClick={() => trackEvent("crowdfund_cta", { surface: "crowdfund", action: "visit_geyser" })} href="https://geyser.fund/project/nexusos" target="_blank" rel="noreferrer"
           data-testid="banner-geyser-live"
           className="flex items-center gap-4 rounded-2xl border border-amber-500/40 bg-amber-500/6 p-5 mb-4 hover:border-amber-500/70 transition-all group">
           <span className="text-3xl">🌊</span>
@@ -776,7 +783,7 @@ export default function CrowdfundPage() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button size="sm" onClick={() => zapMut.mutate()} disabled={zapMut.isPending}
+             <Button size="sm" onClick={() => zapMut.mutate(parseInt(zapGoalSats) || 0)} disabled={zapMut.isPending}
               className="flex-1 bg-purple-600 hover:bg-purple-500 text-white text-xs h-8"
               data-testid="button-publish-zap-goal">
               <Zap size={12} className="mr-1" /> {zapMut.isPending ? "Publishing…" : "Publish Zap Goal to Nostr"}
@@ -941,7 +948,7 @@ export default function CrowdfundPage() {
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-black/20 border border-cyan-500/10 mb-4">
             <Waves size={12} className="text-cyan-500 flex-shrink-0" />
             <p className="text-[10px] text-white/35 leading-relaxed">
-              <strong className="text-cyan-400/80">51,200 orthogonal channels.</strong> This architecture runs on silicon today — migrates to photonic hardware ~2032. Zero rewrite needed because NexusOS is already written in the language of the destination hardware.
+              <strong className="text-cyan-400/80">51,200 nominal coordinate labels.</strong> The software runs on conventional computers. Photonic integration requires device-specific interfaces, instruction mapping and testing; neither unchanged-code migration nor a hardware delivery date is guaranteed.
             </p>
           </div>
           <div className="flex gap-2">
@@ -973,7 +980,7 @@ export default function CrowdfundPage() {
             </button>
           </div>
           <p className="text-[11px] text-white/40 mb-3">Bitcoin Lightning crowdfund — 5% platform fee + 0.2% Lightning routing. No fiat processing fees when paying with sats.</p>
-          <a href="https://geyser.fund/project/nexusos" target="_blank" rel="noreferrer"
+          <a onClick={() => trackEvent("crowdfund_cta", { surface: "crowdfund", action: "visit_geyser" })} href="https://geyser.fund/project/nexusos" target="_blank" rel="noreferrer"
             className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs mb-3"
             data-testid="link-geyser-campaign">
             <ExternalLink size={12} /> Back NexusOS on Geyser →
@@ -1003,9 +1010,9 @@ export default function CrowdfundPage() {
         {(() => {
           const TWEETS = [
             { label: "Hardware CTA",       text: "Fund the PHR-1 resonator — the first physical implementation of ZERO-G state.\n\n🔬 Physics-based OS · Λ=hf/c²\n🌈 NXWV Rune 952596:379 sealed on Bitcoin\n📄 Full disclosure: wnsp.io/wnsp-paper\n\nDonate: wnsp.io/crowdfund\n\n@wnsptech #NexusOS #Bitcoin #Lightning #Photonics" },
-            { label: "Science angle",      text: "NexusOS replaces cryptographic hashing with Maxwell equation validation.\n\n51,200 orthogonal Ψ channels · 21B NXWV Rune · AGPL-3.0\n\nBuilding the OS of a Kardashev Type I civilisation.\n\nwnsp.io/crowdfund\n\n@wnsptech #Physics #Bitcoin #OpenSource #Photonics" },
+            { label: "Science angle",      text: "NexusOS develops spectral software and proposed photonic interfaces. Cryptographic security remains necessary.\n\n51,200 nominal coordinate labels, not measured optical capacity. Hardware integration remains research.\n\nwnsp.io/research-transparency\n\n@wnsptech #Physics #Bitcoin #OpenSource #Photonics" },
             { label: "Founder tier",       text: "25 Hardware Founder slots open.\n\n100,000 sats → PHR-1 resonator unit + 100,000 Nexus Shares (Class A).\n\nFirst production batch. Hardware advisory seat.\n\nwnsp.io/crowdfund\n\n@wnsptech #NexusOS #Bitcoin #Hardware #Lightning" },
-            { label: "Viral hook",         text: "What if communication ran on physics, not software policy?\n\n51,200 orthogonal light channels. No DNS. No IP. Just wavelengths.\n\n@wnsptech — NexusOS. wnsp.io\n\n#Photonics #Bitcoin #NexusOS" },
+            { label: "Viral hook",         text: "Explore spectral software and photonic research with NexusOS.\n\nWorking software on existing networks; optical interoperability and hardware performance still need demonstration.\n\nwnsp.io/research-transparency\n\n#Photonics #Bitcoin #NexusOS" },
             { label: "P2P transmission",   text: "Send data across a P2P network using wavelength addresses — no cloud, no DNS.\n\nEncode → Ψ channel → Spectral Receipt → Permanent on-chain ordinal.\n\nTry it: wnsp.io/transmission\n\n@wnsptech #NexusOS #P2P #WNSP #Photonics #Bitcoin" },
             { label: "Blockchain owner",   text: OWNER_TWEET },
           ];
@@ -1361,23 +1368,23 @@ export default function CrowdfundPage() {
           <StatPill label="Kernel Agents" value={String(agentCount)} color="#a78bfa" />
         </div>
         <p className="text-center text-xs text-gray-600 mt-6">
-          Block #4 "angry birds" 25MB · Ψ(211, 35, H) · 534.51 nm · The physics is already proven
+          Software ledger records demonstrate application behaviour, not independently validated photonic hardware or new physics.
         </p>
       </section>
 
       {/* ── THE HARDWARE ── */}
       <section className="px-6 py-20 max-w-5xl mx-auto">
         <p className="text-center text-xs text-gray-500 uppercase tracking-widest mb-4">What your shares fund</p>
-        <h2 className="text-3xl font-bold text-center mb-4">Communication hardware built on a new physics</h2>
+        <h2 className="text-3xl font-bold text-center mb-4">Proposed photonic communication hardware</h2>
         <p className="text-center text-sm text-gray-500 mb-12 max-w-2xl mx-auto">
-          NexusOS replaces the software-only layer with physical hardware that speaks the language of light.
-          Your shares fund the research, manufacturing, and deployment of this hardware.
+          Funding supports research into physical interfaces for the software models.
+          Designs and targets are not delivered hardware; technical results and deployment are not guaranteed.
         </p>
         <div className="grid md:grid-cols-2 gap-8">
           {[
             { icon: Radio, color: "#f87171", title: "PHR-1 Resonator (Phase 1)", desc: "144-turn bifilar coil achieving the ZERO-G state — gravitational de-correlation through phase alignment. First hardware layer of the Lambda Gate Substrate. 25 units in the first production batch." },
             { icon: Waves, color: "#fbbf24", title: "Syncbox Controller", desc: "PHR-1 hardware interface implementing the ZERO-G state achievement sequence. Phase control, frequency pulsing, impedance matching, CZC filtering, and ALP sensing. Demonstrated gravity de-correlation." },
-            { icon: Globe, color: "#a78bfa", title: "Spectral Relay Mesh (Phase 2)", desc: "10 physical network nodes emitting at their CE→SE wavelength. No DNS. No IP. Node name = physics address. Peer-to-peer communication over visible light spectrum." },
+            { icon: Globe, color: "#a78bfa", title: "Spectral Relay Mesh (proposed)", desc: "A proposed ten-node optical experiment. Source, detector, routing and mode compatibility need testing. The current software uses existing network infrastructure; a spectral name does not remove resolution or access-control requirements." },
             { icon: TrendingUp, color: "#60a5fa", title: "K1 Energy Market (Phase 3)", desc: "Live trading of orbital solar, fusion photonic, and planetary resonance energy. The economic layer of a Kardashev Type I civilisation. Shareholders participate in the K1 Energy Market." },
           ].map(item => (
             <div key={item.title} className="flex gap-4 p-5 rounded-xl border border-white/10 bg-white/5">
@@ -1439,7 +1446,7 @@ export default function CrowdfundPage() {
                 { name: "OAM Modulator Array", spec: "50 orbital-angular-momentum modes · Spatial Light Modulator core", purpose: "Encodes logical states in photon angular momentum — orthogonal to polarisation" },
                 { name: "WDM Multiplexer (256 ch)", spec: "380–780 nm · 1.56 nm channel spacing · DWDM-class isolation", purpose: "Routes 256 independent wavelength channels on a single waveguide simultaneously" },
                 { name: "Silicon Photonic Waveguide Chip", spec: "Si/SiN current · InP next · pure photonic final · fab: IMEC/GlobalFoundries", purpose: "Carries photons between gates — no electron flow, no tunneling noise" },
-                { name: "Tunable Laser Source (555 THz)", spec: "534–560 nm range · <1 MHz linewidth · single-mode fibre output", purpose: "Reference oscillator at first oscillation frequency (555 THz / 534.51 nm)" },
+                { name: "Tunable Laser Source (555 THz)", spec: "Proposed 534–560 nm range · <1 MHz linewidth target · single-mode fibre output", purpose: "Selected reference oscillator: 555 THz corresponds to approximately 540 nm, not an observed cosmic first frequency" },
                 { name: "Optical Spectrum Analyser", spec: "380–780 nm · 0.02 nm resolution · real-time WDM channel monitoring", purpose: "Verifies channel allocation and inter-channel isolation across the spectrum" },
               ].map(item => (
                 <div key={item.name} className="p-4 rounded-lg border border-white/10 bg-white/5">
@@ -1461,7 +1468,7 @@ export default function CrowdfundPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 { name: "Spectral Relay Node (×10)", spec: "Free-space optical · CE→SE addressed · 380–780 nm TX/RX", purpose: "Physical P2P network nodes — emitting at their CE→SE wavelength, no DNS" },
-                { name: "OAM Channel Allocator Hardware", spec: "Ψ(wdm, oam, pol, dir) · 51,200 orthogonal channels · deterministic allocation", purpose: "Maps software Ψ channels to physical photon modes in the field" },
+                { name: "OAM Channel Allocator Hardware", spec: "Proposed Ψ(wdm, oam, pol, dir) mapping · 51,200 nominal labels", purpose: "Investigate physical mode mapping; independence, loss and crosstalk require device measurements" },
                 { name: "Free-Space Optical Transceiver", spec: "Sub-mm beam steering · polarisation-maintaining · <1 ns latency", purpose: "Point-to-point optical link for node-to-node communication on the mesh" },
                 { name: "Schumann Resonance Detector", spec: "7.83 Hz ± 0.5 Hz · ELF antenna · K1 sync reference", purpose: "Locks planetary resonance sync for K1 orchestration timing reference" },
                 { name: "Vector Network Analyser (VNA)", spec: "1 Hz–6 GHz · S-parameter measurement · impedance spectroscopy", purpose: "Characterises impedance matching across the full resonator assembly" },
