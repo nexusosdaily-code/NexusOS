@@ -30,6 +30,8 @@ byte length. It parses the catalogue as data with TypeScript, never imports
 application code, sends campaigns, starts the server or connects to a database.
 It checks ordered, unique, contiguous full claims, index numbers and anchors,
 catalogue coverage and index titles, plus disclosure metadata and nonempty bodies.
+Route, basis and other metadata paragraphs (including indented or wrapped
+metadata), comments and section markers cannot stand in for a disclosure body.
 Original full-claim titles sometimes differ from index summaries; those historical
 titles are intentionally not rewritten or required to equal summaries.
 

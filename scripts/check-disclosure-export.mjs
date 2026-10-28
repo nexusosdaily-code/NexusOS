@@ -50,8 +50,15 @@ export function validateDisclosureSources(register, catalogue) {
     // Stop before the next section, so an appendix cannot supply missing prose.
     const block = register.slice(heading.index + heading[0].length,
       full[i + 1]?.index ?? register.length).split(/^## /m)[0];
-    const prose = block.split("\n").filter(line => line.trim() &&
-      !/^(?:\*\*[^*]+\*\*:|---|\*AGPL|\*Repository)/.test(line));
+    // Metadata is a whole paragraph, including wrapped continuation lines.
+    // Whitespace, headings, fences, separators and footer/link-only blocks are
+    // not substantive disclosure prose either.
+    const prose = block.replace(/<!--[\s\S]*?-->/g, "").split(/\n\s*\n/)
+      .map(paragraph => paragraph.trim())
+      .filter(paragraph => paragraph &&
+        !/^\*\*[^*]+\*\*\s*:/.test(paragraph) &&
+        !/^\*\*(?:Title|First disclosed|Route|Basis)\*\*/i.test(paragraph) &&
+        !/^(?:#{1,6}\s|[-*_]{3,}(?:\s|$)|```|~~~|>|[-*+]\s|\*AGPL|\*Repository|\[)/.test(paragraph));
     if (!/^\*\*Title\*\*: .+/m.test(block) ||
         !/^\*\*First disclosed\*\*: \d{4}-\d{2}-\d{2}/m.test(block) ||
         !prose.length) problems.push(`claim ${heading[1]} lacks disclosure metadata or body`);

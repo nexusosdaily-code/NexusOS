@@ -13,6 +13,15 @@ const register = readFileSync("PRIOR_ART.md", "utf8");
 const catalogue = readFileSync("server/prior-art-campaign.ts", "utf8");
 const truncated = register.slice(0, register.indexOf("### Claim 36"));
 const treeSha = "a".repeat(40);
+function metadataOnlyClaim(number: number, indented = false) {
+  const pattern = new RegExp(`^### Claim ${number}\\n([\\s\\S]*?)(?=^### Claim |^## |$(?![\\s\\S]))`, "m");
+  return register.replace(pattern, section => {
+    const metadata = section.split("\n").filter(line => /^\*\*[^*]+\*\*:/.test(line));
+    return `### Claim ${number}\n` + metadata.map(line => indented ? `  ${line}` : line).join("\n") +
+      (indented ? "\n  metadata continuation, not a disclosure paragraph\n" : "\n") +
+      "\n---\n\n";
+  });
+}
 function remoteFixture(text = register) {
   const blobs: Record<string, any> = {};
   const tree = [text, catalogue].map((source, i) => {
@@ -49,6 +58,31 @@ describe("isolated pre-PR disclosure export", () => {
     for (const source of ["", "export const PRIOR_ART_CLAIMS = []", "export const PRIOR_ART_CLAIMS = load()",
       "export const PRIOR_ART_CLAIMS = [", catalogue.replace(/,\n\] as const/, ',\n"extra",\n] as const')]) {
       expect(() => validateDisclosureSources(register, source)).toThrow();
+    }
+  });
+
+  it.each([
+    [1, false], [39, false], [1, true], [39, true],
+  ])("rejects metadata-only claim %i (indented=%s) through both tree paths", async (number, indented) => {
+    const source = metadataOnlyClaim(number, indented);
+    expect(source).toContain(number === 1 ? "**Route**:" : "**Basis**:");
+    const cwd = mkdtempSync(join(tmpdir(), "metadata-only-disclosure-"));
+    const git = (...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+    try {
+      git("init", "-q");
+      mkdirSync(join(cwd, "server"));
+      writeFileSync(join(cwd, "PRIOR_ART.md"), source);
+      writeFileSync(join(cwd, "server/prior-art-campaign.ts"), catalogue);
+      git("add", ".");
+      const tree = git("write-tree");
+      const message = `claim ${number} lacks disclosure metadata or body`;
+      expect(() => checkLocalDisclosureTree(tree, cwd)).toThrow(message);
+      const createPR = vi.fn();
+      await expect(beforeDisclosurePR(treeSha, remoteFixture(source).request, createPR))
+        .rejects.toThrow(message);
+      expect(createPR).not.toHaveBeenCalled();
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
     }
   });
 
