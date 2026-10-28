@@ -1,0 +1,88 @@
+name: P2P and Wave Vault checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# No publication, payment release, secrets, OIDC or write-capable checkout.
+permissions:
+  contents: read
+
+concurrency:
+  group: p2p-wave-vault-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  WNSP_PUBLISH_BUILD: "1"
+  DATABASE_URL: postgresql://isolated_fixture:isolated_fixture@127.0.0.1:1/forbidden
+
+jobs:
+  build:
+    name: Types and isolated release build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - name: Translate registry proxy URLs without changing locked packages
+        run: node scripts/prepare-public-ci-lock.mjs
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check:types
+      # Includes server/client tests (two workers), client/server bundles,
+      # bundle budget, Wave Vault navigation, preloads and startup guards.
+      # Do not duplicate these with test:all or another Vite build.
+      - run: npm run build
+
+  safeguards:
+    name: Disposable PostgreSQL and native browser safeguards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - name: Translate registry proxy URLs without changing locked packages
+        run: node scripts/prepare-public-ci-lock.mjs
+      - run: npm ci --no-audit --no-fund
+      - name: Install disposable database tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y postgresql-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+          # Fixtures run initdb/pg_ctl as the unprivileged runner, over
+          # temporary Unix sockets only. Never start the app or a DB service.
+      - name: Install matching browser engines and host libraries
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium firefox webkit
+      - name: Locate native Chromium
+        run: |
+          node --input-type=module -e 'import { chromium } from "playwright-core"; import { appendFileSync } from "node:fs"; appendFileSync(process.env.GITHUB_ENV, `WNSP_TEST_CHROMIUM_PATH=${chromium.executablePath()}\n`);'
+      # Run configs serially: fixtures include intentionally overlapping PG
+      # port numbers, but each owns a new socket directory and cleans it up.
+      - name: P2P and wallet safety fixtures
+        run: node_modules/.bin/node node_modules/vitest/vitest.mjs run --config vitest.p2p-security.config.ts --reporter=verbose --reporter=json --outputFile=generated-artifacts/ci/p2p.json
+      - name: Wave Vault storage, ACL and independent receiver fixtures
+        if: ${{ !cancelled() }}
+        run: node_modules/.bin/node node_modules/vitest/vitest.mjs run --config vitest.wave-vault-security.config.ts --reporter=verbose --reporter=json --outputFile=generated-artifacts/ci/wave-vault.json
+      - name: Independent native live-video fixtures
+        if: ${{ !cancelled() }}
+        run: npm run test:browser-live-video -- --reporter=verbose --reporter=json --outputFile=generated-artifacts/ci/live-video.json
+      - name: Report passes, failures and skips separately
+        if: ${{ always() }}
+        run: node scripts/summarize-safeguards.mjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: isolated-safeguard-results
+          path: generated-artifacts/ci/*.json
+          if-no-files-found: warn
+          retention-days: 7
