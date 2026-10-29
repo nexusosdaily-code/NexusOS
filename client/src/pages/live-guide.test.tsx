@@ -20,7 +20,9 @@ describe("public live streaming guide", () => {
     expect(screen.getByText(/iPhone broadcaster using Chrome and a Samsung receiver using Chrome, both on the same Wi-Fi/i)).toBeTruthy();
     expect(screen.getByText(/actual live video and heard both the broadcaster’s voice and TV sound/i)).toBeTruthy();
     expect(screen.getByText(/The user also confirmed live broadcasting from iPhone Safari to iPad Safari/i)).toBeTruthy();
-    expect(screen.getByText(/earlier Safari broadcaster to Samsung Chrome failure remains unresolved/i)).toBeTruthy();
+    expect(screen.getByText(/Earlier connection attempts are historical observations, not the current result/i)).toBeTruthy();
+    expect(within(screen.getByTestId("passed-private-device-tests")).getAllByText("PASS · live video and audio")).toHaveLength(4);
+    expect(screen.queryByText(/earlier Safari broadcaster to Samsung Chrome failure remains unresolved/i)).toBeNull();
     expect(screen.getByText(/Audio and front\/rear camera switching were not separately reported/i)).toBeTruthy();
     expect(screen.getByText(/Camera \(not Screen or Both for the first mobile test\)/i)).toBeTruthy();
     expect(screen.getByText(/Browse directory or enter the recipient’s exact registered wave address/i)).toBeTruthy();
