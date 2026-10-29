@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { LivePrivacyNotice } from "@/components/LivePrivacyNotice";
 import { NativeCollectionDisclosure } from "@/components/NativeCollectionDisclosure";
 import { LiveDeviceTestDisclosure } from "@/components/LiveDeviceTestDisclosure";
 import { ArrowLeft, ArrowRight, AudioLines, CircleHelp, Radio, Signal, ShieldAlert, Smartphone, Video } from "lucide-react";
@@ -8,7 +9,7 @@ const steps = [
   {
     number: "01",
     title: "Prepare two accounts",
-    body: "Sign in on the broadcaster and receiver using separate accounts. Each account needs a registered wave address. For the confirmed setup below, the sender used an iPhone running Chrome and the receiver used Samsung Chrome on the same Wi-Fi.",
+    body: "Sign in on the broadcaster and receiver using separate accounts. Each account needs a registered wave address. Confirmed tests used iPhone Chrome and Samsung Chrome, both on shared Wi-Fi and across separate networks with one endpoint on mobile data and the other on home Wi-Fi.",
   },
   {
     number: "02",
@@ -28,7 +29,7 @@ const steps = [
   {
     number: "05",
     title: "Verify delivery, then end",
-    body: "Confirm the receiver says connected and that decoded video frames and received KB are increasing. Room membership or a connected label by itself is not proof of media delivery. End the broadcast when finished. To remove access, manage and revoke live invitations through P2P manage invites.",
+    body: "Confirm the receiver says connected and that decoded video frames and received KB are increasing. Room membership or a connected label by itself is not proof of media delivery. When finished, the broadcaster selects the red End broadcast button at the top of the video. This stops capture and ends the room for everyone. A receiver selects Leave to disconnect only themselves. Before going live, Cancel broadcast closes the setup. If room closure cannot be confirmed, follow the warning and check My streams. To remove access, manage and revoke live invitations through P2P manage invites.",
   },
 ];
 
@@ -80,6 +81,9 @@ export default function LiveGuidePage() {
             <p className="mt-3 text-sm leading-relaxed text-[#405b4b]">
               The user confirmed an iPhone broadcaster using Chrome and a Samsung receiver using Chrome, both on the same Wi-Fi. The receiver got actual live video and heard both the broadcaster’s voice and TV sound. This confirms that specific direction and setup only.
             </p>
+            <p className="mt-3 text-sm leading-relaxed text-[#405b4b]" data-testid="cross-network-test-disclosure">
+              On 29 October 2026, physical-device tests passed with live video and audio, confirmed by the participants: Samsung/iPhone in both reported directions across mobile data and Wi-Fi, plus iPhone/iPad setups. See the dated passed-test summary below.
+            </p>
             <p className="mt-3 text-sm leading-relaxed text-[#405b4b]">
               The user also confirmed live broadcasting from iPhone Safari to iPad Safari. Audio and front/rear camera switching were not separately reported for this test.
             </p>
@@ -108,6 +112,7 @@ export default function LiveGuidePage() {
         </section>
 
         <NativeCollectionDisclosure />
+        <LivePrivacyNotice className="mt-9 rounded-2xl border border-[#d6d4c9] bg-[#f8f7f1] p-5 text-[#405b4b] sm:p-6" />
 
         <section className="mt-9 grid gap-4 md:grid-cols-2">
           <article className="rounded-2xl border border-[#d6d4c9] bg-[#f8f7f1] p-5 sm:p-6">
@@ -122,6 +127,9 @@ export default function LiveGuidePage() {
             <div className="flex items-center gap-2"><AudioLines className="h-4 w-4 text-[#59816d]" /><h2 className="font-[var(--font-display)] text-xl font-semibold text-[#2d4038]">What can still fail</h2></div>
             <ul className="mt-3 space-y-2 text-sm leading-relaxed text-[#68756b]">
               <li>This setup uses direct WebRTC media and has no TURN relay. A direct connection can fail, including on the same Wi-Fi.</li>
+              <li>If the connection fails, choose <strong>Retry broadcast connection</strong>. This rechecks access and closes pending private-call invitations without turning on your camera or microphone. Leave an active private call first. <strong>Play video</strong> retries playback only; it cannot establish a missing network route.</li>
+              <li>For a private two-way call, both people must explicitly choose a Join option. An invitation or camera-access check alone does not join the call.</li>
+              <li>Historical note: an earlier iPhone-to-Samsung connection attempt failed; subsequent retests passed with live video and audio. This is not the current test status or evidence of an established recurring fault.</li>
               <li>There is no guaranteed emergency delivery or background delivery. Keep the broadcaster in the foreground.</li>
               <li>The limit of 50 invitations is not a guarantee of 50 simultaneous video viewers. Actual capacity depends on device and network resources.</li>
               <li>Mobile screen capture has not been verified; start with Camera.</li>

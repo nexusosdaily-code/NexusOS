@@ -59,7 +59,7 @@ const EXACT_PUBLIC_PATHS = new Set<string>([
   "/crowdfund", "/indiegogo", "/campaign", "/evidence",
   "/nxt-campaign",
   // Video / media
-  "/videos",
+  "/videos", "/live-guide", "/live-guide/",
   // Developer docs
   "/docs", "/developer", "/developer-matrix",
   "/research-presentation",

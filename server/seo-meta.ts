@@ -326,7 +326,15 @@ export const ROUTE_META: Record<string, PageMeta> = {
     canonical: `${BASE}/live-guide`,
     ogType: "article",
     bodyHtml: `<h1>How to go live with Spectral Broadcast</h1>
-      <p>Physical tests confirmed 28 October 2026: iPhone Chrome broadcasting live video and audio to Samsung Chrome on the same Wi-Fi; and user-confirmed live broadcasting from iPhone Safari to iPad Safari. Audio and front/rear camera switching were not separately reported for the Safari-to-Safari test. The earlier Safari-to-Samsung failure remains unresolved, not all Safari combinations. This is not universal browser compatibility.</p>
+      <h2>Passed live video-and-audio call tests — 29 October 2026</h2>
+      <p>All four physical-device tests passed with live video and audio, confirmed by the participants. Privately supplied screenshots and recordings support these real-device results, not an independent certification. Arrows describe the reported test direction, not separately measured media flow in each direction.</p>
+      <ul>
+        <li>PASS · live video and audio: Samsung Chrome → iPhone Chrome. Samsung on mobile data; iPhone on Wi-Fi.</li>
+        <li>PASS · live video and audio: iPhone Chrome → Samsung Chrome. iPhone on Wi-Fi; Samsung on mobile data.</li>
+        <li>PASS · live video and audio: iPhone → iPad. iPad provided a hotspot to the iPhone. Browser pairing was not independently established.</li>
+        <li>PASS · live video and audio: iPad → iPhone. iPad on Wi-Fi; iPhone on mobile data. Browser pairing was not independently established.</li>
+      </ul>
+      <p>Earlier broadcasts confirmed 28 October 2026 included iPhone Chrome to Samsung Chrome with live video and audio on the same Wi-Fi, and iPhone Safari to iPad Safari. Audio and front/rear camera switching were not separately reported for that earlier Safari-to-Safari broadcast test. Historical note: an earlier iPhone-to-Samsung connection attempt failed; subsequent retests passed with live video and audio. That earlier attempt is not the current test status or evidence of an established recurring fault.</p>
       <ol><li>Sign in on each device using separate accounts and registered wave addresses.</li>
       <li>Open Live broadcasts from Wave Vault, or Start a stream from P2P. Choose Go Live, enter a title and use Camera for the first mobile test.</li>
       <li>Choose private access. Add your recipient through Browse directory or their exact registered wave address, then create the room.</li>
@@ -335,7 +343,8 @@ export const ROUTE_META: Record<string, PageMeta> = {
       <li>Video starts muted. Select Enable sound for audio or Play video if playback requires a gesture. Confirm connected transport and increasing received video frames.</li></ol>
       <p>During a camera-only broadcast, the broadcaster can use Switch camera to change between front and rear cameras while retaining the microphone and room. A brief picture pause is possible. Stop recording before switching; this control is not available in Screen or Both mode. Physical camera-switching compatibility still requires device testing.</p>
       <p>Wave Vault file grants and live-room invitations are separate permissions. Live broadcasts are not automatically filed or recorded. End the broadcast when finished; manage live invitations through P2P.</p>
-      <p>Direct WebRTC connections have no TURN relay fallback and can fail even on the same Wi-Fi. Mobile screen sharing, Safari compatibility, reverse-direction live video and different-network delivery remain unverified. No guaranteed emergency or background delivery.</p>
+      <p>If delivery fails, select Retry broadcast connection when available, or leave and rejoin. Direct WebRTC connections have no TURN relay fallback and can fail even on the same Wi-Fi. These passed setups do not guarantee every browser, carrier or network. Mobile screen sharing, physical camera switching and the selected network route were not separately established. No guaranteed emergency or background delivery.</p>
+      <p>Private footage, participant images, names, addresses and other personal details are not included in this disclosure. A working call is not proof of operator-inaccessible confidentiality or zero tracking. Platform access is free; mobile-data and internet-provider charges may apply. Participants may record what they receive.</p>
       <a href="${BASE}/streaming">Open Spectral Broadcast</a>`,
   },
   "/": {
