@@ -29,7 +29,7 @@ describe.skipIf(process.env.WNSP_LIVE_VIDEO_BROWSER_TEST !== "1")("isolated nati
   });
   beforeAll(async () => {
     bundle = await liveVideoBundle();
-    const options = { executablePath: "/repl/tools/bin/chromium", headless: true,
+    const options = { executablePath: process.env.WNSP_TEST_CHROMIUM_PATH || "/repl/tools/bin/chromium", headless: true,
       args: ["--no-sandbox", "--disable-dev-shm-usage", "--use-fake-device-for-media-stream",
         "--use-fake-ui-for-media-stream",
         "--auto-select-tab-capture-source-by-title=Live video fixture", "--allow-http-screen-capture"] };
@@ -498,7 +498,7 @@ describe.skipIf(process.env.WNSP_LIVE_VIDEO_BROWSER_TEST !== "1")("isolated nati
   it("reports native camera permission denial without starting signaling, capture or timers", async () => {
     // Fake-UI launch flags override explicit denials. Use a separate native
     // browser without that flag so denial is enforced by Chromium itself.
-    const deniedBrowser = await chromium.launch({ executablePath: "/repl/tools/bin/chromium", headless: true,
+    const deniedBrowser = await chromium.launch({ executablePath: process.env.WNSP_TEST_CHROMIUM_PATH || "/repl/tools/bin/chromium", headless: true,
       args: ["--no-sandbox", "--disable-dev-shm-usage", "--use-fake-device-for-media-stream"] });
     const deniedPage = await pageFor(deniedBrowser, "owner");
     owner = deniedPage;
