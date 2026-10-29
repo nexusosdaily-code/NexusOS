@@ -86,7 +86,7 @@ export default function LiveGuidePage() {
           </article>
           <aside className="rounded-2xl border border-[#e0c9a7] bg-[#f5eedf] p-5 sm:p-6">
             <div className="flex items-center gap-2 text-[#88673b]"><CircleHelp className="h-4 w-4" /><h2 className="text-xs font-bold uppercase tracking-[.14em]">Not a compatibility promise</h2></div>
-            <p className="mt-3 text-xs leading-relaxed text-[#766345]">Safari-to-Safari worked in the reported iPhone-to-iPad test. The earlier Safari broadcaster to Samsung Chrome failure remains unresolved; it is not evidence that all Safari combinations fail.</p>
+            <p className="mt-3 text-xs leading-relaxed text-[#766345]">Safari-to-Safari worked in the reported iPhone-to-iPad broadcast test. The newer private-call tests passed with live video and audio in their listed setups. These passes do not establish every browser or network combination.</p>
           </aside>
         </section>
 
@@ -147,7 +147,7 @@ export default function LiveGuidePage() {
         <section className="mt-4 rounded-2xl border border-[#c9d4c7] bg-[#e7ece3] p-5 sm:p-6" aria-label="Known and unresolved results">
           <div className="flex items-start gap-3"><ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-[#8a7048]" /><div>
             <h2 className="font-[var(--font-display)] text-lg font-semibold text-[#394d40]">Known result versus open questions</h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#68756b]">Confirmed in the reported setups: iPhone Chrome to Samsung Chrome broadcasting on shared Wi-Fi with audible voice and TV sound; Samsung/iPhone private video calling in both reported directions between mobile data and Wi-Fi; iPhone/iPad private video calling over an iPad hotspot and from iPad Wi-Fi to iPhone mobile data; and the earlier iPhone Safari to iPad Safari broadcast. Unresolved: the earlier intermittent failures, untested browser/network combinations, and independently verified private-call audio and physical camera switching. See the dated test summary for evidence limits; no cause is assumed for earlier failures.</p>
+            <p className="mt-2 text-sm leading-relaxed text-[#68756b]">Passed with live video and audio, confirmed by the participants: Samsung/iPhone private calling in both reported directions between mobile data and Wi-Fi; iPhone/iPad over an iPad hotspot; and iPad Wi-Fi to iPhone mobile data. Earlier successful broadcasts also remain confirmed. Physical camera switching and other browser/network combinations are separate, unverified capabilities—not failed parts of these passed tests. Earlier connection attempts are historical observations, not the current result.</p>
           </div></div>
         </section>
 
