@@ -44,3 +44,9 @@ describe("public live streaming guide", () => {
     expect(within(screen.getByRole("contentinfo")).getByRole("link", { name: /Go to Live broadcasts/i }).getAttribute("href")).toBe("/streaming");
   });
 });
+
+it("discloses the native recipient library on the public guide", () => {
+  render(<LiveGuidePage />);
+  expect(screen.getByRole("heading", { name: "WavelengthScript in live broadcasting" })).toBeTruthy();
+  expect(screen.getByTestId("native-collection-disclosure").textContent).toContain("WLS-COLLECTION/1");
+});
