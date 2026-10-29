@@ -71,6 +71,19 @@ is intended to use the same positioning; website changes require publication sep
 
 ## P2P, Wave Vault and live broadcasting — 28 October 2026
 
+### WavelengthScript recipient collection pilot — 29 October 2026
+
+Private broadcast recipient preparation now uses executable `WLS-COLLECTION/1`
+programs for unique add, remove and count; the library also provides indexed
+lookup. Directory and manual selections use the same bounded implementation.
+The engine and primitive operations remain TypeScript: this is the first
+focused native-library pilot, not a whole-project dependency rewrite.
+
+See [implementation, limits and reproducible tests](docs/wavelengthscript-recipient-pilot.md).
+The public live guide contains the corresponding disclosure. Coordinates do
+not replace authentication or encryption. Operator-inaccessible privacy remains
+unresolved; privacy review and remediation precede further language expansion.
+
 The current implementation includes:
 
 - **P2P file sharing** by registered wave-channel address, recipient selection

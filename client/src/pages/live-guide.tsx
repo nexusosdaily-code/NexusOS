@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { NativeCollectionDisclosure } from "@/components/NativeCollectionDisclosure";
 import { ArrowLeft, ArrowRight, AudioLines, CircleHelp, Radio, Signal, ShieldAlert, Smartphone, Video } from "lucide-react";
 
 const steps = [
@@ -102,6 +103,8 @@ export default function LiveGuidePage() {
             ))}
           </ol>
         </section>
+
+        <NativeCollectionDisclosure />
 
         <section className="mt-9 grid gap-4 md:grid-cols-2">
           <article className="rounded-2xl border border-[#d6d4c9] bg-[#f8f7f1] p-5 sm:p-6">

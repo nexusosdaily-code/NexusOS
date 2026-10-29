@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import VideoStreaming from "@/components/VideoStreaming";
 import WaveRecipientPicker from "@/components/wave-recipient-picker";
+import { MAX_SELECTED_RECIPIENTS, recipientCount, updateRecipientSelection } from "@shared/wls-recipient-collections";
 import { BroadcastInviteError, createBroadcastRoom, inviteBroadcastGuests, type BroadcastType } from "@/lib/spectral-broadcast";
 import {
   Radio, Eye, Plus, ArrowLeft, Users, Clock,
@@ -140,7 +141,14 @@ export default function StreamingPage() {
   const [desc,   setDesc]   = useState("");
   const [pub,    setPub]    = useState(false);
   const [streamType, setStreamType] = useState<BroadcastType>("camera");
-  const [inviteAddresses, setInviteAddresses] = useState<string[]>([]);
+  const [inviteAddresses, setInviteAddressesState] = useState<string[]>([]);
+  // A synchronous snapshot prevents batched selections from overwriting each
+  // other; every reset below also updates it before the next selection event.
+  const inviteSelection = useRef<string[]>([]);
+  const setInviteAddresses = (addresses: string[]) => {
+    inviteSelection.current = addresses;
+    setInviteAddressesState(addresses);
+  };
   const [inviteAddress, setInviteAddress] = useState("");
   const [pendingInvite, setPendingInvite] = useState<{ id: string; title: string; addresses: string[]; invited: string[] } | null>(null);
   const [inviteError, setInviteError] = useState("");
@@ -352,10 +360,19 @@ export default function StreamingPage() {
     }
   }
 
+  const changeRecipient = (action: "add" | "remove", address: string) => {
+    try {
+      const next = updateRecipientSelection(inviteSelection.current, action, address);
+      setInviteAddresses(next);
+      setInviteError("");
+      return true;
+    } catch (error) {
+      setInviteError(error instanceof Error ? error.message : "Could not update recipients.");
+      return false;
+    }
+  };
   const addExactRecipient = () => {
-    const address = inviteAddress.trim();
-    if (address && !inviteAddresses.includes(address)) setInviteAddresses(current => [...current, address]);
-    setInviteAddress("");
+    if (changeRecipient("add", inviteAddress)) setInviteAddress("");
   };
 
   const savePendingInvite = (ownerId: string | undefined, value: { id: string; title: string; addresses: string[]; invited: string[] } | null) => {
@@ -714,7 +731,7 @@ export default function StreamingPage() {
                   <div className="text-[8px] text-white/20">Visible to all nodes on the network</div>
                 </div>
                 <button
-                  onClick={() => { setPub(p => { const next = !p; if (next) setInviteAddresses([]); return next; }); setInviteError(""); }}
+                  onClick={() => { const next = !pub; setPub(next); if (next) setInviteAddresses([]); setInviteError(""); }}
                   className={`w-10 h-5 rounded-full transition-all relative ${pub ? "bg-emerald-500/40 border border-emerald-400/40" : "bg-white/10 border border-white/10"}`}
                   data-testid="switch-public"
                 >
@@ -731,12 +748,13 @@ export default function StreamingPage() {
 
               {!pub && <div className="space-y-3 rounded-lg border border-emerald-300/10 bg-emerald-300/[0.025] p-3">
                 <div><div className="text-[10px] font-bold text-emerald-200/80">Invite viewers before capture</div><p className="mt-1 text-[8px] leading-relaxed text-white/30">The room stays private. Grants are applied before camera or screen capture can begin.</p></div>
-                <WaveRecipientPicker isAuthenticated={!!user} accountKey={user?.id} onSelect={address => setInviteAddresses(current => current.includes(address) ? current : [...current, address])} />
+                <WaveRecipientPicker isAuthenticated={!!user} accountKey={user?.id} onSelect={address => { changeRecipient("add", address); }} />
+                <p className="text-[10px] text-white/50" data-testid="broadcast-recipient-count">{recipientCount(inviteAddresses)} / {MAX_SELECTED_RECIPIENTS} recipients selected</p>
                 <div className="flex gap-2">
                   <input value={inviteAddress} onChange={event => setInviteAddress(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); addExactRecipient(); } }} placeholder="Or enter an exact wave address" className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[10px] text-white outline-none focus:border-white/25" data-testid="input-broadcast-address" />
                   <button type="button" onClick={addExactRecipient} disabled={!inviteAddress.trim()} className="rounded-lg border border-white/10 px-3 text-[9px] text-white/70 disabled:opacity-40">Add</button>
                 </div>
-                {inviteAddresses.length > 0 && <ul className="space-y-1">{inviteAddresses.map(address => <li key={address} className="flex items-center justify-between gap-2 rounded bg-black/25 px-2 py-1.5 text-[9px] text-white/70"><span className="min-w-0 break-all font-mono">{address}</span><button type="button" onClick={() => setInviteAddresses(list => list.filter(item => item !== address))} className="shrink-0 text-white/40 hover:text-white" aria-label={`Remove ${address}`}>Remove</button></li>)}</ul>}
+                {inviteAddresses.length > 0 && <ul className="space-y-1">{inviteAddresses.map(address => <li key={address} className="flex items-center justify-between gap-2 rounded bg-black/25 px-2 py-1.5 text-[9px] text-white/70"><span className="min-w-0 break-all font-mono">{address}</span><button type="button" onClick={() => { changeRecipient("remove", address); }} className="shrink-0 text-white/40 hover:text-white" aria-label={`Remove ${address}`}>Remove</button></li>)}</ul>}
               </div>}
 
               {pendingInvite && <div role="alert" className="rounded-lg border border-amber-300/25 bg-amber-300/5 p-3 text-[9px] text-amber-100/80" data-testid="broadcast-invite-retry">
