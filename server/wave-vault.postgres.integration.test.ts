@@ -266,8 +266,9 @@ describe("private wave filing with real isolated PostgreSQL",()=>{
   });
   for(const engine of [chromium,firefox,webkit]){
   it(`${engine.name()}: refreshes an already-open independent receiver after grant and restored-page revoke`,async(test)=>{
-    const executablePath=engine===chromium&&existsSync("/repl/tools/bin/chromium")
-      ?"/repl/tools/bin/chromium":engine.executablePath();
+    const executablePath=engine===chromium
+      ?process.env.WNSP_TEST_CHROMIUM_PATH||(existsSync("/repl/tools/bin/chromium")?"/repl/tools/bin/chromium":engine.executablePath())
+      :engine.executablePath();
     if(!existsSync(executablePath)){
       const reason=`UNAVAILABLE ${engine.name()}: missing ${executablePath}. Install matching engines with node node_modules/playwright-core/cli.js install ${engine.name()}; lifecycle NOT verified.`;
       process.stderr.write(reason+"\n");
@@ -360,7 +361,7 @@ describe("private wave filing with real isolated PostgreSQL",()=>{
   },60_000);
   }
   it("handles real browser upload/download, sharing and account-switch privacy",async()=>{
-    const browser=await chromium.launch({executablePath:"/repl/tools/bin/chromium",headless:true,args:["--no-sandbox"]});
+    const browser=await chromium.launch({executablePath:process.env.WNSP_TEST_CHROMIUM_PATH||"/repl/tools/bin/chromium",headless:true,args:["--no-sandbox"]});
     try {
       const context=await browser.newContext({viewport:{width:402,height:874},acceptDownloads:true});
       const page=await context.newPage(),runtimeErrors:string[]=[];
