@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { NativeCollectionDisclosure } from "@/components/NativeCollectionDisclosure";
+import { LiveDeviceTestDisclosure } from "@/components/LiveDeviceTestDisclosure";
 import { ArrowLeft, ArrowRight, AudioLines, CircleHelp, Radio, Signal, ShieldAlert, Smartphone, Video } from "lucide-react";
 
 const steps = [
@@ -54,7 +55,7 @@ export default function LiveGuidePage() {
           <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full border border-[#92aa98]/45 sm:h-96 sm:w-96" />
           <div aria-hidden="true" className="pointer-events-none absolute right-10 top-14 h-32 w-32 rounded-full border border-[#92aa98]/35" />
           <div className="relative max-w-3xl">
-            <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#527767]">Field guide · updated 28 October 2026</p>
+            <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#527767]">Field guide · updated 29 October 2026</p>
             <h1 className="mt-4 font-[var(--font-display)] text-4xl font-semibold leading-[1.02] tracking-[-.045em] text-[#244038] sm:text-6xl">A real live test,<br />step by step.</h1>
             <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#566b5d] sm:text-base">
               This is a practical starting point for sending live camera video and sound to another signed-in account. The confirmed device results are specific, not a promise of universal browser or network support.
@@ -88,6 +89,8 @@ export default function LiveGuidePage() {
             <p className="mt-3 text-xs leading-relaxed text-[#766345]">Safari-to-Safari worked in the reported iPhone-to-iPad test. The earlier Safari broadcaster to Samsung Chrome failure remains unresolved; it is not evidence that all Safari combinations fail.</p>
           </aside>
         </section>
+
+        <LiveDeviceTestDisclosure />
 
         <section className="mt-9" aria-labelledby="steps-title">
           <div className="mb-4 flex items-end justify-between gap-3">
@@ -144,7 +147,7 @@ export default function LiveGuidePage() {
         <section className="mt-4 rounded-2xl border border-[#c9d4c7] bg-[#e7ece3] p-5 sm:p-6" aria-label="Known and unresolved results">
           <div className="flex items-start gap-3"><ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-[#8a7048]" /><div>
             <h2 className="font-[var(--font-display)] text-lg font-semibold text-[#394d40]">Known result versus open questions</h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#68756b]">Confirmed: iPhone Chrome to Samsung Chrome on the same Wi-Fi, with live video and audible voice and TV sound; and user-reported live broadcasting from iPhone Safari to iPad Safari. Unresolved: the earlier Safari-to-Samsung failure cause, reverse directions, and connections across different networks. Audio and camera switching were not separately confirmed for the Safari-to-Safari test. No cause is assumed for the unresolved cases.</p>
+            <p className="mt-2 text-sm leading-relaxed text-[#68756b]">Confirmed in the reported setups: iPhone Chrome to Samsung Chrome broadcasting on shared Wi-Fi with audible voice and TV sound; Samsung/iPhone private video calling in both reported directions between mobile data and Wi-Fi; iPhone/iPad private video calling over an iPad hotspot and from iPad Wi-Fi to iPhone mobile data; and the earlier iPhone Safari to iPad Safari broadcast. Unresolved: the earlier intermittent failures, untested browser/network combinations, and independently verified private-call audio and physical camera switching. See the dated test summary for evidence limits; no cause is assumed for earlier failures.</p>
           </div></div>
         </section>
 

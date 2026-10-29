@@ -1,3 +1,12 @@
+> **Physical-test update — 29 October 2026:** Subsequent participant-reported
+> private video-call tests passed on Samsung/iPhone in both reported directions,
+> iPhone/iPad over an iPad hotspot, and iPad Wi-Fi to iPhone mobile data.
+> See [Passed physical private video-call tests](live-private-call-field-tests.md)
+> for evidence, network setups and limitations. Statements below about physical
+> tests not yet being verified describe the earlier implementation-test stage;
+> they are not the current overall field-test status. Earlier failures remain
+> part of the record. Private-call audio was not independently verified.
+
 # Isolated live-video browser verification
 
 ## Reproduce
