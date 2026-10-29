@@ -2,6 +2,8 @@
  * Announcement summaries of the numbered disclosures in PRIOR_ART.md.
  * Keep the titles in sync with its Claim Index. Public disclosure is not
  * evidence of independent validation or a granted patent.
+ * Release exporters must run scripts/check-disclosure-export.mjs against the
+ * final proposed Git tree before opening a PR; workspace-only tests are not enough.
  */
 export const PRIOR_ART_CLAIMS = [
   "Ghost Nodes — Gaps in the Periodic Table as Compression State Voids",

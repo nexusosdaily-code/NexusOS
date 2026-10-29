@@ -4,6 +4,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
+    "check:disclosure-export": "node_modules/.bin/node scripts/check-disclosure-export.mjs",
     "pip:project": "python -I -m pip",
     "check:python-security": "python -I scripts/audit-python-runtime.py",
     "test:protocol": "python tests/test_wnsp_protocol.py",
