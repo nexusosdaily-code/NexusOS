@@ -3,6 +3,17 @@ import { describe, expect, it } from "vitest";
 import { PRIOR_ART_CLAIMS, PRIOR_ART_CAMPAIGN_SLOTS, BREAKTHROUGH_CAMPAIGN_SLOTS } from "./prior-art-campaign";
 
 describe("prior-art announcements", () => {
+  it("indexes every full claim exactly once and in disclosure order", () => {
+    const register = readFileSync(new URL("../PRIOR_ART.md", import.meta.url), "utf8");
+    const fullClaims = [...register.matchAll(/^### Claim (\d+)\r?$/gm)]
+      .map((match) => Number(match[1]));
+    const index = [...register.matchAll(/^\| \[(\d+)\]\(#claim-(\d+)\) \|/gm)];
+    expect(fullClaims.length).toBeGreaterThan(0);
+    expect(fullClaims).toEqual(Array.from({ length: fullClaims.length }, (_, i) => i + 1));
+    expect(index.map((match) => Number(match[1]))).toEqual(fullClaims);
+    expect(index.map((match) => Number(match[2]))).toEqual(fullClaims);
+  });
+
   it("includes every numbered claim in the source register, with its current title", () => {
     const register = readFileSync(new URL("../PRIOR_ART.md", import.meta.url), "utf8");
     const index = [...register.matchAll(/^\| \[(\d+)\]\(#claim-\d+\) \| (.*?) \|/gm)];
