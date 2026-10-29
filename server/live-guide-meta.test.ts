@@ -7,9 +7,12 @@ describe("public live guide disclosure metadata", () => {
     expect(guide.canonical).toBe("https://wnsp.io/live-guide");
     expect(guide.ogType).toBe("article");
     expect(guide.bodyHtml).toContain("iPhone Chrome");
-    expect(guide.bodyHtml).toContain("live video and audio to Samsung Chrome");
+    expect(guide.bodyHtml).toContain("iPhone Chrome → Samsung Chrome");
     expect(guide.bodyHtml).toContain("iPhone Safari to iPad Safari");
-    expect(guide.bodyHtml).toContain("earlier Safari-to-Samsung failure remains unresolved");
+    expect(guide.bodyHtml).toContain("All four physical-device tests passed with live video and audio");
+    expect(guide.bodyHtml).toContain("subsequent retests passed with live video and audio");
+    expect(guide.bodyHtml).not.toContain("failure remains unresolved");
+    expect(guide.bodyHtml).toContain("do not guarantee every browser, carrier or network");
     expect(guide.bodyHtml).toContain("Audio and front/rear camera switching were not separately reported");
     expect(guide.bodyHtml).toContain("no TURN relay fallback");
   });
