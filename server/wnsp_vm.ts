@@ -3,7 +3,7 @@
 // v1.1 adds: STORE/LOAD (persistent state), XFER_NXT/XFER_SATS (transfers),
 //            CALL (sub-contract invocation).
 import { encodeVMName, vmBand } from "../shared/wnsp-model";
-import { assertVmSource, VM_MAX_CYCLES } from "../shared/vm-security";
+import { assertVmSource, assertNotCollectionSource, VM_MAX_CYCLES } from "../shared/vm-security";
 
 // ── Physics helpers ───────────────────────────────────────────────────────────
 export function nmToBand(nm: number): string {
@@ -79,6 +79,7 @@ export function freshVM(initialState?: Record<string, any>): VMState {
 // ── WavelengthScript compiler ─────────────────────────────────────────────────
 export function compileWLS(src: string): Ins[] {
   assertVmSource(src);
+  assertNotCollectionSource(src);
   if (!src.trim()) return [];
   const ins: Ins[] = [];
   let off = 0;

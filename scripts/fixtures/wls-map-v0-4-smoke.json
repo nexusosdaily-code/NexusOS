@@ -1,0 +1,47 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {
+      "name": "right wins without moving left keys",
+      "program": "map.merge",
+      "inputs": {
+        "left": {"entries": [["a", "left"], ["b", "keep"]]},
+        "right": {"entries": [["a", "right"], ["c", "new"]]}
+      },
+      "expect": {"value": {"entries": [["a", "right"], ["b", "keep"], ["c", "new"]]}}
+    },
+    {
+      "name": "intersection retains left value",
+      "program": "map.intersection",
+      "inputs": {
+        "left": {"entries": [["a", "left"], ["b", "keep"]]},
+        "right": {"entries": [["a", "right"]]}
+      },
+      "expect": {"value": {"entries": [["a", "left"]]}}
+    },
+    {
+      "name": "difference retains unmatched left entry",
+      "program": "map.difference",
+      "inputs": {
+        "left": {"entries": [["a", "left"], ["b", "keep"]]},
+        "right": {"entries": [["a", "right"]]}
+      },
+      "expect": {"value": {"entries": [["b", "keep"]]}}
+    },
+    {
+      "name": "duplicate input keys fail",
+      "program": "map.merge",
+      "inputs": {
+        "left": {"entries": [["a", "one"], ["a", "two"]]},
+        "right": {"entries": []}
+      },
+      "expect": {"error": true}
+    },
+    {
+      "name": "original map get remains available",
+      "program": "map.get",
+      "inputs": {"map": {"entries": [["__proto__", "plain text"]]}, "key": "__proto__"},
+      "expect": {"value": "plain text"}
+    }
+  ]
+}

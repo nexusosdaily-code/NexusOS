@@ -1,0 +1,77 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {
+      "name": "Map equality ignores order but checks payloads",
+      "program": "map.equals",
+      "inputs": {"left": {"entries": [["a", "one"], ["b", "two"]]}, "right": {"entries": [["b", "two"], ["a", "one"]]}},
+      "expect": {"value": true}
+    },
+    {
+      "name": "Submap requires matching entries",
+      "program": "map.isSubmap",
+      "inputs": {"left": {"entries": [["a", "one"]]}, "right": {"entries": [["b", "two"], ["a", "one"]]}},
+      "expect": {"value": true}
+    },
+    {
+      "name": "Entry intersection keeps only equal key-value pairs",
+      "program": "map.intersectionEntries",
+      "inputs": {"left": {"entries": [["b", "left"], ["a", "same"]]}, "right": {"entries": [["b", "right"], ["a", "same"]]}},
+      "expect": {"value": {"entries": [["a", "same"]]}}
+    },
+    {
+      "name": "Entry difference keeps mismatched payloads",
+      "program": "map.differenceEntries",
+      "inputs": {"left": {"entries": [["b", "left"], ["a", "same"]]}, "right": {"entries": [["b", "right"], ["a", "same"]]}},
+      "expect": {"value": {"entries": [["b", "left"]]}}
+    },
+    {
+      "name": "Exclusive members keep left-only then right-only order",
+      "program": "set.symmetricDifference",
+      "inputs": {"left": {"entries": [["b", "ignored"], ["a", "ignored"]]}, "right": {"entries": [["a", "other"], ["c", "ignored"]]}},
+      "expect": {"value": {"entries": [["b", ""], ["c", ""]]}}
+    },
+    {
+      "name": "Equal keys alone do not imply Map equality",
+      "program": "map.equals",
+      "inputs": {"left": {"entries": [["a", "é"]]}, "right": {"entries": [["a", "é"]]}},
+      "expect": {"value": false}
+    },
+    {
+      "name": "Empty Map is a submap",
+      "program": "map.isSubmap",
+      "inputs": {"left": {"entries": []}, "right": {"entries": [["a", "one"]]}},
+      "expect": {"value": true}
+    },
+    {
+      "name": "Retained Map program remains available",
+      "program": "map.get",
+      "inputs": {"map": {"entries": [["__proto__", "plain text"]]}, "key": "__proto__"},
+      "expect": {"value": "plain text"}
+    },
+    {
+      "name": "Retained Set equality deliberately ignores payloads",
+      "program": "set.equals",
+      "inputs": {"left": {"entries": [["a", "one"]]}, "right": {"entries": [["a", "two"]]}},
+      "expect": {"value": true}
+    },
+    {
+      "name": "Empty exclusive-members scan validates the right Map",
+      "program": "set.symmetricDifference",
+      "inputs": {"left": {"entries": []}, "right": false},
+      "expect": {"error": true}
+    },
+    {
+      "name": "Empty entry intersection validates the right Map",
+      "program": "map.intersectionEntries",
+      "inputs": {"left": {"entries": []}, "right": 3},
+      "expect": {"error": true}
+    },
+    {
+      "name": "Exclusive-members overflow is rejected rather than truncated",
+      "program": "set.symmetricDifference",
+      "inputs": {"left": {"entries": [["a0", ""], ["a1", ""], ["a2", ""], ["a3", ""], ["a4", ""], ["a5", ""], ["a6", ""], ["a7", ""], ["a8", ""], ["a9", ""], ["a10", ""], ["a11", ""], ["a12", ""], ["a13", ""], ["a14", ""], ["a15", ""], ["a16", ""], ["a17", ""], ["a18", ""], ["a19", ""]]}, "right": {"entries": [["b", ""]]}},
+      "expect": {"error": true}
+    }
+  ]
+}

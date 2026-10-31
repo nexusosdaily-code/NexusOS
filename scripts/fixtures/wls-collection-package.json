@@ -1,0 +1,14 @@
+{
+  "profile": "WLS-PACKAGE/1",
+  "name": "example.collection-consumer",
+  "version": "0.1.0",
+  "executionProfile": "WLS-COLLECTION/1",
+  "dependencies": {
+    "wls.collections": "0.1.0"
+  },
+  "programs": [
+    "string.contains",
+    "string.concat",
+    "recipient.count"
+  ]
+}

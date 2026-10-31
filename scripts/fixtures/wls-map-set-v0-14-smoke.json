@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"Map first key position","program":"map.indexOfKey","inputs":{"map":{"entries":[["b","x"],["a","y"]]},"key":"b"},"expect":{"value":0}},
+    {"name":"Map last key position","program":"map.indexOfKey","inputs":{"map":{"entries":[["b","x"],["a","y"]]},"key":"a"},"expect":{"value":1}},
+    {"name":"Map empty key position","program":"map.indexOfKey","inputs":{"map":{"entries":[["","x"]]},"key":""},"expect":{"value":0}},
+    {"name":"Map missing key","program":"map.indexOfKey","inputs":{"map":{"entries":[]},"key":"absent"},"expect":{"value":-1}},
+    {"name":"Set member ignores payload","program":"set.indexOf","inputs":{"set":{"entries":[["b","a"],["a","b"]]},"value":"a"},"expect":{"value":1}},
+    {"name":"Set empty member","program":"set.indexOf","inputs":{"set":{"entries":[["","x"]]},"value":""},"expect":{"value":0}},
+    {"name":"Set absent payload is not a member","program":"set.indexOf","inputs":{"set":{"entries":[["a","payload"]]},"value":"payload"},"expect":{"value":-1}},
+    {"name":"Set empty lookup","program":"set.indexOf","inputs":{"set":{"entries":[]},"value":"absent"},"expect":{"value":-1}},
+    {"name":"Set member by position","program":"set.atOrDefault","inputs":{"set":{"entries":[["b","x"],["a","y"]]},"index":1,"fallback":"missing"},"expect":{"value":"a"}},
+    {"name":"Set empty member is present","program":"set.atOrDefault","inputs":{"set":{"entries":[["","x"]]},"index":0,"fallback":"missing"},"expect":{"value":""}},
+    {"name":"Set negative position defaults","program":"set.atOrDefault","inputs":{"set":{"entries":[["a","x"]]},"index":-1,"fallback":"missing"},"expect":{"value":"missing"}},
+    {"name":"Set empty position defaults","program":"set.atOrDefault","inputs":{"set":{"entries":[]},"index":0,"fallback":"missing"},"expect":{"value":"missing"}}
+  ]
+}

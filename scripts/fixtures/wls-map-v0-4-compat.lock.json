@@ -1,0 +1,12 @@
+{
+  "profile": "WLS-LOCK/1",
+  "manifestSha256": "4b567eb1aadf3c0baea3bf3a60876438e36806fea73b6eb904266083dd071a72",
+  "package": {"name": "example.map-composition", "version": "0.1.0", "executionProfile": "WLS-MAP/1"},
+  "dependencies": [{"name": "wls.collections", "version": "0.4.0", "executionProfile": "WLS-MAP/1"}],
+  "programs": [
+    {"id": "map.merge", "sha256": "3b306c07dad648660f006f922458d38862522f8796e7041dc7b75361f8e06b7c"},
+    {"id": "map.intersection", "sha256": "a5f87641e1822743ac8498646abb23066512ed551e814e09edffa561b8051fe4"},
+    {"id": "map.difference", "sha256": "1f0df7d407c76d9e0f4d87ecf64db66ea93cded54a31f4fc77ebdcc1a5256351"},
+    {"id": "map.get", "sha256": "4dd6c0e8604c647e579dc49ec217cc574461440791216e2aa026295ef2ddca07"}
+  ]
+}

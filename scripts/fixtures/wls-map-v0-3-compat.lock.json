@@ -1,0 +1,16 @@
+{
+  "profile": "WLS-LOCK/1",
+  "manifestSha256": "9bb588844976ffa04b0a2c0db31b04730461f77c2b79a9f68a99f4f6fe556383",
+  "package": {"name": "example.maps", "version": "1.0.0", "executionProfile": "WLS-MAP/1"},
+  "dependencies": [{"name": "wls.collections", "version": "0.3.0", "executionProfile": "WLS-MAP/1"}],
+  "programs": [
+    {"id": "map.empty", "sha256": "f346882fa158b8daf7d328bae0b5998c5125370fefa689f4364d082888176c2e"},
+    {"id": "map.copy", "sha256": "34d8708d8ec265c640a92c7291194658d42da784c3f36454129ae4b85ad59765"},
+    {"id": "map.size", "sha256": "6a22f9c3332702d85fe00b064e2c71e8a7862974a99690f471b3514806e2cac7"},
+    {"id": "map.has", "sha256": "25451abf52e9d5d2e2988d00a33de5c7093b48e9e37fe8bed47cafe0ab5c0e6d"},
+    {"id": "map.get", "sha256": "4dd6c0e8604c647e579dc49ec217cc574461440791216e2aa026295ef2ddca07"},
+    {"id": "map.set", "sha256": "90bd9a2dd88877d1b29ad7ad718517790c1d4528bd94d05031b5e38c310a4120"},
+    {"id": "map.delete", "sha256": "a25030ab1f8c58a315ae32d0ccf032a2d016c113ced96303fa6f6f8092189a9b"},
+    {"id": "map.keyAt", "sha256": "08c4a852b9254bb6eb9007ff6ed2bfb7d8e45ccaaa8b4ea93b952918d41a9b08"}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"Present empty string is not missing","program":"map.getOrDefault","inputs":{"map":{"entries":[["a",""]]},"key":"a","fallback":"default"},"expect":{"value":""}},
+    {"name":"Missing key selects fallback","program":"map.getOrDefault","inputs":{"map":{"entries":[]},"key":"a","fallback":"Ψ🙂"},"expect":{"value":"Ψ🙂"}},
+    {"name":"Prototype-like keys are ordinary data","program":"map.getOrDefault","inputs":{"map":{"entries":[["__proto__","value"]]},"key":"__proto__","fallback":""},"expect":{"value":"value"}},
+    {"name":"Absent key appends","program":"map.setIfAbsent","inputs":{"map":{"entries":[["a","old"]]},"key":"b","value":"new"},"expect":{"value":{"entries":[["a","old"],["b","new"]]}}},
+    {"name":"Present key is unchanged","program":"map.setIfAbsent","inputs":{"map":{"entries":[["a","old"]]},"key":"a","value":"new"},"expect":{"value":{"entries":[["a","old"]]}}},
+    {"name":"Present key is replaced in place","program":"map.replaceIfPresent","inputs":{"map":{"entries":[["a","old"],["b","two"]]},"key":"a","value":"new"},"expect":{"value":{"entries":[["a","new"],["b","two"]]}}},
+    {"name":"Absent replacement does not insert","program":"map.replaceIfPresent","inputs":{"map":{"entries":[["a","old"]]},"key":"b","value":"new"},"expect":{"value":{"entries":[["a","old"]]}}},
+    {"name":"Unused fallback must still be a string","program":"map.getOrDefault","inputs":{"map":{"entries":[["a","old"]]},"key":"a","fallback":false},"expect":{"error":true}},
+    {"name":"Unused insert value must still be a string","program":"map.setIfAbsent","inputs":{"map":{"entries":[["a","old"]]},"key":"a","value":3},"expect":{"error":true}},
+    {"name":"Unused replacement value must still be a string","program":"map.replaceIfPresent","inputs":{"map":{"entries":[]},"key":"a","value":false},"expect":{"error":true}},
+    {"name":"Retained strict get still rejects a missing key","program":"map.get","inputs":{"map":{"entries":[]},"key":"a"},"expect":{"error":true}},
+    {"name":"Retained merge remains right-wins","program":"map.merge","inputs":{"left":{"entries":[["a","old"]]},"right":{"entries":[["a","new"]]}},"expect":{"value":{"entries":[["a","new"]]}}}
+  ]
+}

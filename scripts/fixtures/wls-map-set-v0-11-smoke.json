@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"replace all matching values in order","program":"map.replaceValue","inputs":{"map":{"entries":[["b","x"],["a","y"],["","x"]]},"value":"x","replacement":"z"},"expect":{"value":{"entries":[["b","z"],["a","y"],["","z"]]}}},
+    {"name":"absent replacement query preserves entries","program":"map.replaceValue","inputs":{"map":{"entries":[["x","y"]]},"value":"x","replacement":""},"expect":{"value":{"entries":[["x","y"]]}}},
+    {"name":"replace empty values","program":"map.replaceValue","inputs":{"map":{"entries":[["a",""]]},"value":"","replacement":"Ψ🙂"},"expect":{"value":{"entries":[["a","Ψ🙂"]]}}},
+    {"name":"empty replacement input","program":"map.replaceValue","inputs":{"map":{"entries":[]},"value":"","replacement":""},"expect":{"value":{"entries":[]}}},
+    {"name":"first inversion wins duplicates","program":"map.invertFirst","inputs":{"map":{"entries":[["b","same"],["a","same"],["c","other"]]}},"expect":{"value":{"entries":[["same","b"],["other","c"]]}}},
+    {"name":"empty key is a real first match","program":"map.invertFirst","inputs":{"map":{"entries":[["",""],["b",""]]}},"expect":{"value":{"entries":[["",""]]}}},
+    {"name":"invert empty Map","program":"map.invertFirst","inputs":{"map":{"entries":[]}},"expect":{"value":{"entries":[]}}},
+    {"name":"unique values retain first occurrence order","program":"set.fromValues","inputs":{"map":{"entries":[["a","b"],["b","a"],["c","b"],["d","__proto__"]]}},"expect":{"value":{"entries":[["b",""],["a",""],["__proto__",""]]}}},
+    {"name":"values use exact Unicode equality","program":"set.fromValues","inputs":{"map":{"entries":[["a","é"],["b","é"],["c",""]]}},"expect":{"value":{"entries":[["é",""],["é",""],["",""]]}}},
+    {"name":"empty value Set","program":"set.fromValues","inputs":{"map":{"entries":[]}},"expect":{"value":{"entries":[]}}},
+    {"name":"invalid unused replacement rejected","program":"map.replaceValue","inputs":{"map":{"entries":[]},"value":"","replacement":false},"expect":{"error":true}},
+    {"name":"value extraction requires a Map","program":"set.fromValues","inputs":{"map":false},"expect":{"error":true}}
+  ]
+}

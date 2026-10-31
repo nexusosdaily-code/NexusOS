@@ -1,0 +1,29 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {
+      "name": "Find an exact string",
+      "program": "string.contains",
+      "inputs": { "items": ["alpha", "beta"], "value": "beta" },
+      "expect": { "value": true }
+    },
+    {
+      "name": "Return the first matching index",
+      "program": "string.indexOf",
+      "inputs": { "items": ["alpha", "beta", "alpha"], "value": "alpha" },
+      "expect": { "value": 0 }
+    },
+    {
+      "name": "Concatenate without removing duplicates",
+      "program": "string.concat",
+      "inputs": { "left": ["alpha"], "right": ["alpha", "beta"] },
+      "expect": { "value": ["alpha", "alpha", "beta"] }
+    },
+    {
+      "name": "Reject an out-of-range index",
+      "program": "recipient.at",
+      "inputs": { "items": [], "index": 0 },
+      "expect": { "error": true }
+    }
+  ]
+}

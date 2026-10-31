@@ -119,6 +119,53 @@ distinguish matching key/value pairs from matching keys. The older key-based
 operations are unchanged; native symmetric difference avoids an unnecessary
 union-size restriction while still enforcing the 20-member result cap.
 
+[Conditional Maps 0.8.0](wavelengthscript-map-set-v0-8.md) adds fallback reads,
+insert-if-absent and replace-if-present operations, retaining the previous
+32 programs for a fixed 35-program surface. These are immutable local operations,
+not shared-state atomic updates or database transactions.
+
+[Ordered selection 0.9.0](wavelengthscript-map-set-v0-9.md) adds take/drop for
+Maps and map-backed string Sets, for a fixed 39-program surface. Safe integer
+counts clamp to the operand's cardinality, preserving order and Map payloads;
+Set outputs have canonical empty payloads. Earlier exact releases, profiles
+and interpreter budgets remain unchanged.
+
+[Map value queries 0.10.0](wavelengthscript-map-set-v0-10.md) adds value
+membership, entry-match counting and first matching key lookup with a required
+string fallback. The fixed surface is 42 Map/Set programs under the same Map
+profile. These are exact bounded local data queries, not identity checks,
+database access or measured application speed improvements.
+
+[Value transformations 0.11.0](wavelengthscript-map-set-v0-11.md) adds
+all-match payload replacement, first-key-wins inversion and unique-value
+string Sets. Its fixed 45-program surface uses the unchanged Map interpreter
+and budgets. Earlier inversion policies and key-Set extraction are retained;
+this does not introduce callbacks, arbitrary transforms or new I/O capabilities.
+
+[Ordered value operations 0.12.0](wavelengthscript-map-set-v0-12.md) adds
+last-key lookup and first/last matching-payload replacement. Its fixed
+48-program surface retains the same interpreter, limits and all previous
+sources. It does not add callbacks, sorting, arbitrary value types or host
+capabilities.
+
+[Indexed Map reads 0.13.0](wavelengthscript-map-set-v0-13.md) adds strict
+value-by-position reads and key/value-by-position reads with required string
+fallbacks. Its 51-program surface preserves insertion order and the existing
+Map interpreter and limits. Fallbacks cover out-of-range safe-integer indices,
+not malformed arguments; strict `map.keyAt` is unchanged.
+
+[Ordered membership queries 0.14.0](wavelengthscript-map-set-v0-14.md) adds
+Map key positions, Set member positions and Set indexed reads with a required
+string fallback. Its 54-program surface uses the existing Map interpreter and
+budgets. Member positions follow insertion order and ignore Map payloads;
+these are local data operations, not live participant tracking.
+
+[Ordered Map/Set slices 0.15.0](wavelengthscript-map-set-v0-15.md) adds native
+offset-and-count windows, preserving Map payloads and canonicalizing Set
+payloads. Its 56-program surface retains existing execution limits and source
+commitments. These are bounded local selections, not database pagination or a
+live P2P integration.
+
 1. **Define a small execution/library contract.** Specify which engine runs the
    first native library, how modules and values are represented, and how unknown
    operations fail. Do not merge the two VMs or grant the computation VM

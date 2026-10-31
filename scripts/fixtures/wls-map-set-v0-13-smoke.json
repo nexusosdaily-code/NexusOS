@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"strict first value","program":"map.valueAt","inputs":{"map":{"entries":[["b","x"],["a","y"]]},"index":0},"expect":{"value":"x"}},
+    {"name":"strict last value","program":"map.valueAt","inputs":{"map":{"entries":[["b","x"],["a","y"]]},"index":1},"expect":{"value":"y"}},
+    {"name":"empty string is present","program":"map.valueAt","inputs":{"map":{"entries":[["__proto__",""]]},"index":0},"expect":{"value":""}},
+    {"name":"Unicode value","program":"map.valueAt","inputs":{"map":{"entries":[["é","🙂"]]},"index":0},"expect":{"value":"🙂"}},
+    {"name":"first key preserves order","program":"map.keyAtOrDefault","inputs":{"map":{"entries":[["b","x"],["a","y"]]},"index":0,"fallback":"missing"},"expect":{"value":"b"}},
+    {"name":"empty key is present","program":"map.keyAtOrDefault","inputs":{"map":{"entries":[["","x"]]},"index":0,"fallback":"missing"},"expect":{"value":""}},
+    {"name":"negative key index defaults","program":"map.keyAtOrDefault","inputs":{"map":{"entries":[["a","x"]]},"index":-1,"fallback":"missing"},"expect":{"value":"missing"}},
+    {"name":"empty map key defaults","program":"map.keyAtOrDefault","inputs":{"map":{"entries":[]},"index":0,"fallback":"missing"},"expect":{"value":"missing"}},
+    {"name":"last value preserves order","program":"map.valueAtOrDefault","inputs":{"map":{"entries":[["b","x"],["a","y"]]},"index":1,"fallback":"missing"},"expect":{"value":"y"}},
+    {"name":"empty value does not default","program":"map.valueAtOrDefault","inputs":{"map":{"entries":[["a",""]]},"index":0,"fallback":"missing"},"expect":{"value":""}},
+    {"name":"past end value defaults","program":"map.valueAtOrDefault","inputs":{"map":{"entries":[["a","x"]]},"index":1,"fallback":"missing"},"expect":{"value":"missing"}},
+    {"name":"empty map value defaults","program":"map.valueAtOrDefault","inputs":{"map":{"entries":[]},"index":0,"fallback":"missing"},"expect":{"value":"missing"}}
+  ]
+}

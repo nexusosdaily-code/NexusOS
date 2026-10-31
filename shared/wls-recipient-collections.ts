@@ -1,51 +1,16 @@
 import { COLLECTION_LIMITS, CollectionVMError, executeCollection } from "./wls-collection-vm";
+import { getCollectionProgramSource } from "./wls-library";
 
 /**
- * Executable WavelengthScript collection source, embedded for browser and Node
- * bundler portability. Deduplication/search/removal control flow lives here,
+ * Compatibility exports of the canonical standalone WavelengthScript programs.
+ * Deduplication/search/removal control flow lives in the .wls sources,
  * not in a JavaScript includes/Set/filter wrapper.
  */
 export const RECIPIENT_COLLECTION_SOURCE = Object.freeze({
-  add: `WLS-COLLECTION/1
-LIST_LEN ["size","items"]
-CONST ["index",0]
-:scan
-LT ["more","index","size"]
-JTRUE ["more","check"]
-LIST_COPY ["result","items"]
-LIST_PUSH ["result","value"]
-RETURN ["result"]
-:check
-LIST_AT ["item","items","index"]
-EQ ["same","item","value"]
-JTRUE ["same","existing"]
-INC ["index"]
-JUMP ["scan"]
-:existing
-RETURN ["items"]`,
-  remove: `WLS-COLLECTION/1
-LIST_NEW ["result"]
-LIST_LEN ["size","items"]
-CONST ["index",0]
-:scan
-LT ["more","index","size"]
-JTRUE ["more","check"]
-RETURN ["result"]
-:check
-LIST_AT ["item","items","index"]
-EQ ["same","item","value"]
-JTRUE ["same","next"]
-LIST_PUSH ["result","item"]
-:next
-INC ["index"]
-JUMP ["scan"]
-RETURN ["result"]`,
-  count: `WLS-COLLECTION/1
-LIST_LEN ["size","items"]
-RETURN ["size"]`,
-  at: `WLS-COLLECTION/1
-LIST_AT ["item","items","index"]
-RETURN ["item"]`,
+  add: getCollectionProgramSource("recipient.add"),
+  remove: getCollectionProgramSource("recipient.remove"),
+  count: getCollectionProgramSource("recipient.count"),
+  at: getCollectionProgramSource("recipient.at"),
 });
 
 export const MAX_SELECTED_RECIPIENTS = COLLECTION_LIMITS.items;

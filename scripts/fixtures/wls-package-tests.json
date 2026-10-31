@@ -1,0 +1,29 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {
+      "name": "Find an exact string",
+      "program": "string.contains",
+      "inputs": { "items": ["alpha", "beta"], "value": "beta" },
+      "expect": { "value": true }
+    },
+    {
+      "name": "Count recipients",
+      "program": "recipient.count",
+      "inputs": { "items": ["alpha", "beta"] },
+      "expect": { "value": 2 }
+    },
+    {
+      "name": "Concatenate declared lists",
+      "program": "string.concat",
+      "inputs": { "left": ["alpha"], "right": ["beta"] },
+      "expect": { "value": ["alpha", "beta"] }
+    },
+    {
+      "name": "Reject non-string members",
+      "program": "string.contains",
+      "inputs": { "items": [1], "value": "alpha" },
+      "expect": { "error": true }
+    }
+  ]
+}

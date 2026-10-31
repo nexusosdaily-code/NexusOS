@@ -1,0 +1,8 @@
+{
+  "profile": "WLS-PACKAGE/1",
+  "name": "example.maps",
+  "version": "1.0.0",
+  "executionProfile": "WLS-MAP/1",
+  "dependencies": { "wls.collections": "0.3.0" },
+  "programs": ["map.empty", "map.copy", "map.size", "map.has", "map.get", "map.set", "map.delete", "map.keyAt"]
+}

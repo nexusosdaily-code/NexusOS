@@ -1,0 +1,83 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {
+      "name": "empty set",
+      "program": "set.empty",
+      "inputs": {},
+      "expect": {"value": {"entries": []}}
+    },
+    {
+      "name": "project map keys and discard payloads",
+      "program": "set.fromMap",
+      "inputs": {"map": {"entries": [["__proto__", "ordinary"], ["🌊", "text"]]}},
+      "expect": {"value": {"entries": [["__proto__", ""], ["🌊", ""]]}}
+    },
+    {
+      "name": "set size",
+      "program": "set.size",
+      "inputs": {"set": {"entries": [["a", ""], ["b", ""]] }},
+      "expect": {"value": 2}
+    },
+    {
+      "name": "exact membership",
+      "program": "set.has",
+      "inputs": {"set": {"entries": [["é", "ignored"]]}, "value": "é"},
+      "expect": {"value": false}
+    },
+    {
+      "name": "add without duplicate membership",
+      "program": "set.add",
+      "inputs": {"set": {"entries": [["a", "ignored"]]}, "value": "a"},
+      "expect": {"value": {"entries": [["a", ""]]}}
+    },
+    {
+      "name": "delete member and normalize surviving payloads",
+      "program": "set.delete",
+      "inputs": {"set": {"entries": [["a", "old"], ["b", "old"]]}, "value": "a"},
+      "expect": {"value": {"entries": [["b", ""]]}}
+    },
+    {
+      "name": "ordered member lookup",
+      "program": "set.at",
+      "inputs": {"set": {"entries": [["b", ""], ["a", ""]]}, "index": 0},
+      "expect": {"value": "b"}
+    },
+    {
+      "name": "ordered union",
+      "program": "set.union",
+      "inputs": {"left": {"entries": [["b", "x"], ["a", "x"]]}, "right": {"entries": [["a", "y"], ["c", "y"]]}},
+      "expect": {"value": {"entries": [["b", ""], ["a", ""], ["c", ""]]}}
+    },
+    {
+      "name": "key intersection",
+      "program": "set.intersection",
+      "inputs": {"left": {"entries": [["b", "x"], ["a", "x"]]}, "right": {"entries": [["a", "y"], ["c", "y"]]}},
+      "expect": {"value": {"entries": [["a", ""]]}}
+    },
+    {
+      "name": "key difference",
+      "program": "set.difference",
+      "inputs": {"left": {"entries": [["b", "x"], ["a", "x"]]}, "right": {"entries": [["a", "y"], ["c", "y"]]}},
+      "expect": {"value": {"entries": [["b", ""]]}}
+    },
+    {
+      "name": "map operations remain available",
+      "program": "map.get",
+      "inputs": {"map": {"entries": [["a", "unchanged"]]}, "key": "a"},
+      "expect": {"value": "unchanged"}
+    },
+    {
+      "name": "duplicate incoming keys fail instead of silently collapsing",
+      "program": "set.fromMap",
+      "inputs": {"map": {"entries": [["a", "one"], ["a", "two"]]}},
+      "expect": {"error": true}
+    },
+    {
+      "name": "out of bounds set member lookup fails",
+      "program": "set.at",
+      "inputs": {"set": {"entries": []}, "index": 0},
+      "expect": {"error": true}
+    }
+  ]
+}
