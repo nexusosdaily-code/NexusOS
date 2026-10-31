@@ -2,6 +2,13 @@
 
 **AGPL-3.0 project · WavelengthScript language technology and blockchain development**
 
+## WavelengthScript dependency documentation
+
+See the [complete dependency documentation index](docs/wavelengthscript-dependencies.md)
+for native library releases, bounded collections and maps, offline tools,
+dependency manifests and source-integrity locks. The index distinguishes
+workspace implementation evidence from this documentation-only disclosure.
+
 ## The direction has not changed
 
 **WavelengthScript and the blockchain have always been the project's primary

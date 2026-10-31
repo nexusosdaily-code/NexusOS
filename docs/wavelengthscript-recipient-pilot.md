@@ -61,8 +61,10 @@ not completeness of this dependency library or a universal security guarantee.
 
 Operator-inaccessible privacy is **not established** by this pilot or by private
 room access controls. Account and operational records exist; coordinates alone
-are not a cryptographic privacy boundary. Privacy review and appropriate
-remediation must precede further WavelengthScript expansion.
+are not a cryptographic privacy boundary. The original privacy-first sequencing
+was explicitly changed by the founder on 2026-10-30: build dependencies for the
+existing language now and return to privacy later. This changes priority, not
+the unresolved privacy status or real-user activation requirements.
 
 Website publication, a GitHub pull request and merging that pull request are
 separate actions. A source update or opened PR does not mean it is already
