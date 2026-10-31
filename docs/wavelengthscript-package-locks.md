@@ -1,7 +1,10 @@
 # Exact-source integrity locks for local WavelengthScript dependencies
 
 Locks also cover the separate [map-only 0.3.0 release](wavelengthscript-maps-v0-3.md)
-and [map composition 0.4.0](wavelengthscript-map-composition-v0-4.md)
+and [map composition 0.4.0](wavelengthscript-map-composition-v0-4.md),
+plus [Map + string-key Sets 0.5.0](wavelengthscript-sets-v0-5.md),
+and [Map values/Set comparisons 0.6.0](wavelengthscript-map-set-v0-6.md),
+and [Map entries/Set symmetric difference 0.7.0](wavelengthscript-map-set-v0-7.md),
 with `WLS-MAP/1` source. Retained 0.1.0/0.2.0 collection locks stay valid
 without regeneration; switching execution profiles or dependency versions
 requires an explicit reviewed new lock.

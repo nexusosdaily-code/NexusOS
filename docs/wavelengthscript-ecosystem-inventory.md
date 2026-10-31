@@ -48,7 +48,7 @@ already implemented in WavelengthScript.
 
 | Area | Existing foundation | Missing from the proposal as executable native functionality |
 |---|---|---|
-| Native libraries | Scalar computation, function calls, branching, bounds, diagnostics, bounded string-list programs and separate bounded string-to-string maps | General module resolution; Set, general/richer Map and list values; richer text APIs; structured-data parsing; library-level error handling; authorised file abstractions |
+| Native libraries | Scalar computation, function calls, branching, bounds, diagnostics, bounded string-list programs, bounded string-to-string maps and map-backed string-key Sets | General module resolution; general Set values/list conversion, richer Map and list values; richer text APIs; structured-data parsing; library-level error handling; authorised file abstractions |
 | Dependency replacements | Working application packages listed in package.json | Exact used-API inventory, native implementations and behavioural parity tests; no implementation found for proposed wnsp_merge or nativeSecureDefault |
 | Interoperability | Existing TypeScript browser/server application, authenticated routes, database and private storage integration | Explicit WavelengthScript host-call ABI, capability checks, data marshaling, asynchronous operation/cancellation and resource accounting |
 | Development tools | npm/TypeScript/Vitest/Vite bootstrap, local collection compile/run/test CLI, exact-version offline manifests, explicit source-integrity locks and fixed-catalogue library packaging | General wnsp CLI/toolchain, transitive dependency/version resolution, signed/complete-runtime artifacts, module-aware diagnostics and debugger/source mapping |
@@ -95,7 +95,7 @@ List/Map/Set implementation.
 string-to-string map programs in a separate **WLS-MAP/1** profile. Exact
 key matching, stable insertion order, immutable results and finite resource
 budgets are specified there. The retained 0.1.0/0.2.0 string-list surfaces and
-source commitments do not change; Set, general-purpose maps and host
+source commitments do not change; general Set values, general-purpose maps and host
 capabilities remain missing.
 
 [Map composition 0.4.0](wavelengthscript-map-composition-v0-4.md) adds three
@@ -103,6 +103,21 @@ native programs for right-biased merge, shared keys and unmatched left keys
 under the existing map profile. The 0.3.0 map surface stays fixed. This is
 shallow string-map composition, not deep structured-data merging, a Set
 implementation or replacement of an application's dependency package.
+
+[Map-backed string Sets 0.5.0](wavelengthscript-sets-v0-5.md) now add ten native
+key-set programs under the existing Map interpreter, retaining all eleven Map
+programs. Outputs normalize payloads to empty strings; this does not create a
+general Set VM value type, array-to-Set conversion or a new host capability.
+
+[Map values and Set comparisons 0.6.0](wavelengthscript-map-set-v0-6.md)
+adds exact value filtering/rejection, explicitly last-key-wins inversion and
+subset/disjoint/equality predicates. These remain bounded flat-string library
+algorithms under the same Map profile, not richer structured-data parsing.
+
+[Full-entry comparisons and Set symmetric difference 0.7.0](wavelengthscript-map-set-v0-7.md)
+distinguish matching key/value pairs from matching keys. The older key-based
+operations are unchanged; native symmetric difference avoids an unnecessary
+union-size restriction while still enforcing the 20-member result cap.
 
 1. **Define a small execution/library contract.** Specify which engine runs the
    first native library, how modules and values are represented, and how unknown

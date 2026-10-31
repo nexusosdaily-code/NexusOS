@@ -5,7 +5,8 @@
 ## WavelengthScript dependency documentation
 
 See the [complete dependency documentation index](docs/wavelengthscript-dependencies.md)
-for native library releases, bounded collections and maps, offline tools,
+for native library releases through 0.7.0, bounded collections, Maps and
+map-backed string Sets, offline tools,
 dependency manifests and source-integrity locks. The index distinguishes
 workspace implementation evidence from this documentation-only disclosure.
 

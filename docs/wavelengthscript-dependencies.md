@@ -2,6 +2,10 @@
 
 **Documentation disclosure snapshot: 31 October 2026.**
 
+This workspace index can include additions beyond an earlier GitHub disclosure
+snapshot. Updating it locally does not itself update GitHub, establish passing
+remote checks or change the published application.
+
 WavelengthScript already exists. This work develops its bounded native libraries
 and dependency tooling; it does not claim that the whole application, its AI,
 or all third-party dependencies have been rewritten in WavelengthScript.
@@ -18,11 +22,22 @@ Versions below identify exact **repository-local library contracts**, not
 published registry packages. Documentation and a passing workspace test are not
 proof that an equivalent implementation or check is present on a GitHub branch.
 
-The development workspace reports 492 passing focused checks for the map
-composition increment, plus TypeScript, generated-source consistency and
-documentation-link checks. Coverage included retained releases, bounded native
-execution, maximum payloads, overflow safety, input immutability, guarded offline
-CLI execution, browser-environment tests and standalone Node ESM/CommonJS bundles.
+Recorded workspace verification at the completion of each dependency increment:
+
+| Increment | Passing focused tests |
+| --- | --- |
+| Map composition 0.4.0 | 492 |
+| Map-backed string Sets 0.5.0 | 623 |
+| Map values and Set comparisons 0.6.0 | 736 |
+| Full-entry comparisons and symmetric difference 0.7.0 | 854 |
+
+These are historical results from different focused suites and workspace
+snapshots, not additive totals or claims that every later change was tested.
+The increments also passed TypeScript, generated-source consistency and
+documentation-link checks. Coverage included retained releases and source
+commitments, bounded native execution, maximum payloads, overflow safety,
+input immutability, guarded offline CLI execution, browser-environment tests
+and standalone Node ESM/CommonJS bundles.
 This is workspace evidence, not a claim that GitHub CI, new physical-device
 Safari tests or an independent security audit passed for this documentation PR.
 
@@ -40,6 +55,9 @@ No new physical photonic execution or speed advantage is asserted.
 | `wls.collections` 0.2.0 | `WLS-COLLECTION/1` | Those seven plus `string.lastIndexOf` and `string.reverse` |
 | `wls.collections` 0.3.0 | `WLS-MAP/1` | Eight bounded string-to-string map programs |
 | `wls.collections` 0.4.0 | `WLS-MAP/1` | Those eight plus `map.merge`, `map.intersection` and `map.difference` |
+| `wls.collections` 0.5.0 | `WLS-MAP/1` | Those eleven Map programs plus ten map-backed string-key Set programs |
+| `wls.collections` 0.6.0 | `WLS-MAP/1` | Those 21 programs plus three Map value operations and three Set comparisons |
+| `wls.collections` 0.7.0 | `WLS-MAP/1` | Those 27 programs plus four full-entry Map operations and Set symmetric difference |
 
 The map profile is separate from the retained string-list profile. A higher
 version does not mix interpreters or silently add programs to older manifests.
@@ -61,6 +79,9 @@ changes require a deliberate new lock.
 - [Collection library 0.2.0: last-index search and list reversal](wavelengthscript-collections-v0-2.md)
 - [Bounded maps 0.3.0: values, ordering, errors and resource budgets](wavelengthscript-maps-v0-3.md)
 - [Map composition 0.4.0: merge, key intersection and key difference](wavelengthscript-map-composition-v0-4.md)
+- [Map-backed string Sets 0.5.0: unique membership and Set algebra](wavelengthscript-sets-v0-5.md)
+- [Map values and Set comparisons 0.6.0](wavelengthscript-map-set-v0-6.md)
+- [Full-entry Map comparisons and Set symmetric difference 0.7.0](wavelengthscript-map-set-v0-7.md)
 
 ### Offline dependency and developer tooling
 
@@ -71,9 +92,9 @@ changes require a deliberate new lock.
 
 ## Still outside the implemented scope
 
-General module resolution, arbitrary package installation, richer/general maps,
-Set values, general structured-data parsing, host/file/network capability
-interfaces, a complete dependency replacement, a fully native AI and a
+General module resolution, arbitrary package installation, richer/general Maps,
+general Set values and list-to-Set conversion, general structured-data parsing,
+host/file/network capability interfaces, a complete dependency replacement, a fully native AI and a
 whole-application migration are not established by these guides. The inventory
 distinguishes these gaps from the existing bounded implementations.
 
