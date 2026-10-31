@@ -56,3 +56,21 @@ Local verification includes a clean `npm ci --registry=https://registry.npmjs.or
 in a separate ignored directory using the translated lockfile (802 packages
 installed), plus regression checks that conversion preserves every other
 package field. This is not a substitute for a hosted GitHub Actions run.
+
+## Security regression coverage
+
+The required **Types and isolated release build** job runs the synthetic
+physics-output privacy regression with isolated Python and a fatal 30-second
+timeout. It inspects source with the standard-library AST parser; it does not
+import or execute the physics demonstration.
+
+The same job's existing build runs the database-free server Vitest project,
+including minimatch resource limits, disclosure-export integrity, founder
+session isolation and glob-discovery regressions. A security CI regression
+checks actual Vitest file discovery for all four suites, verifies that the
+build still invokes that project, and protects the Python step from being
+removed or made optional. The full JavaScript suite is not run twice.
+
+These checks use synthetic fixtures, not real wallet credentials or live
+participant data. They do not replace physical-device calling tests or
+complete the separate private-data security review.
