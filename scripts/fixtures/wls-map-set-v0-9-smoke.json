@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"Map take keeps leading entries","program":"map.take","inputs":{"map":{"entries":[["b","two"],["a","one"]]},"count":1},"expect":{"value":{"entries":[["b","two"]]}}},
+    {"name":"Map drop keeps trailing entries","program":"map.drop","inputs":{"map":{"entries":[["b","two"],["a","one"]]},"count":1},"expect":{"value":{"entries":[["a","one"]]}}},
+    {"name":"Set take canonicalizes payloads","program":"set.take","inputs":{"set":{"entries":[["b","ignored"],["a","payload"]]},"count":1},"expect":{"value":{"entries":[["b",""]]}}},
+    {"name":"Set drop canonicalizes payloads","program":"set.drop","inputs":{"set":{"entries":[["b","ignored"],["a","payload"]]},"count":1},"expect":{"value":{"entries":[["a",""]]}}},
+    {"name":"Negative take clamps to zero","program":"map.take","inputs":{"map":{"entries":[["a","one"]]},"count":-1},"expect":{"value":{"entries":[]}}},
+    {"name":"Negative drop clamps to zero","program":"map.drop","inputs":{"map":{"entries":[["a","one"]]},"count":-1},"expect":{"value":{"entries":[["a","one"]]}}},
+    {"name":"Oversize take keeps all members","program":"set.take","inputs":{"set":{"entries":[["a","payload"]]},"count":9007199254740991},"expect":{"value":{"entries":[["a",""]]}}},
+    {"name":"Oversize drop returns empty","program":"set.drop","inputs":{"set":{"entries":[["a","payload"]]},"count":9007199254740991},"expect":{"value":{"entries":[]}}},
+    {"name":"Empty take still validates count","program":"map.take","inputs":{"map":{"entries":[]},"count":false},"expect":{"error":true}},
+    {"name":"Empty drop still validates count","program":"set.drop","inputs":{"set":{"entries":[]},"count":"0"},"expect":{"error":true}},
+    {"name":"Zero take still validates its operand","program":"set.take","inputs":{"set":false,"count":0},"expect":{"error":true}},
+    {"name":"Conditional map operation is retained","program":"map.getOrDefault","inputs":{"map":{"entries":[]},"key":"a","fallback":"default"},"expect":{"value":"default"}}
+  ]
+}

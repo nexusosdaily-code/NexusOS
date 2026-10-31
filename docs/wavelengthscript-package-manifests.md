@@ -42,7 +42,7 @@ All six fields are required; unknown fields are rejected.
   between 0 and 999999 and no leading zeroes except `0` itself. No ranges,
   prerelease/build suffixes or tags in this initial format.
 - `executionProfile`: `WLS-COLLECTION/1` for 0.1.0/0.2.0, or `WLS-MAP/1`
-  for the map-only 0.3.0/0.4.0 or Map + string-key Set 0.5.0/0.6.0/0.7.0 releases.
+  for the map-only 0.3.0/0.4.0 or Map + string-key Set 0.5.0–0.15.0 releases.
   The dependency and source profile must match.
 - `dependencies`: exactly the supported local library and its exact version.
   Unknown dependencies, ranges, mismatched versions, paths and URLs fail.
@@ -78,6 +78,48 @@ Release 0.7.0 retains the 27 prior Map/Set programs and adds `map.equals`,
 `map.isSubmap`, `map.intersectionEntries`, `map.differenceEntries` and
 `set.symmetricDifference`, for 32 programs under the unchanged Map profile.
 See [entry comparisons and exclusive Set members 0.7.0](wavelengthscript-map-set-v0-7.md).
+
+Release 0.8.0 retains those 32 IDs and adds `map.getOrDefault`,
+`map.setIfAbsent` and `map.replaceIfPresent`, for 35 programs.
+See [conditional Maps 0.8.0](wavelengthscript-map-set-v0-8.md).
+Release 0.9.0 retains those 35 IDs and adds `map.take`, `map.drop`,
+`set.take` and `set.drop`, for 39 programs.
+See [ordered selection 0.9.0](wavelengthscript-map-set-v0-9.md).
+These remain exact local contracts under the unchanged Map profile, not
+published registry packages or automatic upgrades. The corresponding full
+fixtures are `wls-map-set-package-v0-8.json` and `wls-map-set-package-v0-9.json`
+in `scripts/fixtures/`.
+
+Release 0.10.0 retains those 39 IDs and adds `map.hasValue`, `map.countValue`
+and `map.findKeyByValueOrDefault`, for 42 programs under the same Map profile.
+See [Map value queries 0.10.0](wavelengthscript-map-set-v0-10.md) and the
+full `scripts/fixtures/wls-map-set-package-v0-10.json` example.
+
+Release 0.11.0 retains those 42 IDs and adds `map.replaceValue`,
+`map.invertFirst` and `set.fromValues`, for 45 programs under the same Map
+profile. See [value transformations 0.11.0](wavelengthscript-map-set-v0-11.md)
+and `scripts/fixtures/wls-map-set-package-v0-11.json`.
+
+Release 0.12.0 retains all 45 IDs and adds `map.findLastKeyByValueOrDefault`,
+`map.replaceFirstValue` and `map.replaceLastValue`, for 48 programs under the
+same Map profile. See [ordered value operations 0.12.0](wavelengthscript-map-set-v0-12.md)
+and `scripts/fixtures/wls-map-set-package-v0-12.json`.
+
+Release 0.13.0 retains all 48 IDs and adds `map.valueAt`,
+`map.keyAtOrDefault` and `map.valueAtOrDefault`, for 51 programs under the
+same Map profile. See [indexed Map reads 0.13.0](wavelengthscript-map-set-v0-13.md)
+and `scripts/fixtures/wls-map-set-package-v0-13.json`.
+
+Release 0.14.0 retains all 51 IDs and adds `map.indexOfKey`,
+`set.indexOf` and `set.atOrDefault`, for 54 programs under the same Map profile.
+See [ordered membership queries 0.14.0](wavelengthscript-map-set-v0-14.md)
+and `scripts/fixtures/wls-map-set-package-v0-14.json`.
+
+Release 0.15.0 retains all 54 IDs and adds `map.slice` and `set.slice`,
+for 56 programs under the same Map profile. See
+[ordered Map/Set slices 0.15.0](wavelengthscript-map-set-v0-15.md) and
+`scripts/fixtures/wls-map-set-package-v0-15.json`.
+
 Entry comparison does not change the older key-only intersection/difference.
 
 See [collection library 0.2.0](wavelengthscript-collections-v0-2.md) for

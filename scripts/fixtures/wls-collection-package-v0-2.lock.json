@@ -1,0 +1,11 @@
+{
+  "profile": "WLS-LOCK/1",
+  "manifestSha256": "d1658776be95d2a756c46745751300d376d2a0c65cd0b03d2d3c809b72128cfe",
+  "package": { "name": "example.collection-tools", "version": "0.1.0", "executionProfile": "WLS-COLLECTION/1" },
+  "dependencies": [{ "name": "wls.collections", "version": "0.2.0", "executionProfile": "WLS-COLLECTION/1" }],
+  "programs": [
+    { "id": "string.lastIndexOf", "sha256": "2cc2f0ad08df349d05b087a9b90959048f386ae1f4d41bb569e3742c5365b705" },
+    { "id": "string.reverse", "sha256": "d7e078da1ae615dc76e0a67804d0d2d2c8623761a0f241e4ed3210a42f5ea6c8" },
+    { "id": "string.indexOf", "sha256": "e3d3c893b4053133340e1427bfebc5c79c8a35177c6dc608119b9bc46a38e40c" }
+  ]
+}

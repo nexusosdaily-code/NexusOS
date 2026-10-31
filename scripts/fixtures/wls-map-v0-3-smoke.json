@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    { "name": "empty", "program": "map.empty", "inputs": {}, "expect": { "value": { "entries": [] } } },
+    { "name": "copy", "program": "map.copy", "inputs": { "map": { "entries": [["a","one"]] } }, "expect": { "value": { "entries": [["a","one"]] } } },
+    { "name": "size", "program": "map.size", "inputs": { "map": { "entries": [["a","one"],["b","two"]] } }, "expect": { "value": 2 } },
+    { "name": "has prototype key", "program": "map.has", "inputs": { "map": { "entries": [["__proto__","text"]] }, "key": "__proto__" }, "expect": { "value": true } },
+    { "name": "get Unicode", "program": "map.get", "inputs": { "map": { "entries": [["Ψ🙂","é"]] }, "key": "Ψ🙂" }, "expect": { "value": "é" } },
+    { "name": "missing read errors", "program": "map.get", "inputs": { "map": { "entries": [] }, "key": "missing" }, "expect": { "error": true } },
+    { "name": "overwrite preserves order", "program": "map.set", "inputs": { "map": { "entries": [["a","one"],["b","two"]] }, "key": "a", "value": "new" }, "expect": { "value": { "entries": [["a","new"],["b","two"]] } } },
+    { "name": "delete missing is no-op", "program": "map.delete", "inputs": { "map": { "entries": [["a","one"]] }, "key": "missing" }, "expect": { "value": { "entries": [["a","one"]] } } },
+    { "name": "key at", "program": "map.keyAt", "inputs": { "map": { "entries": [["a","one"],["b","two"]] }, "index": 1 }, "expect": { "value": "b" } },
+    { "name": "duplicate input rejected", "program": "map.copy", "inputs": { "map": { "entries": [["a","one"],["a","two"]] } }, "expect": { "error": true } },
+    { "name": "no normalization", "program": "map.has", "inputs": { "map": { "entries": [["é","one"]] }, "key": "é" }, "expect": { "value": false } },
+    { "name": "malformed map rejected", "program": "map.copy", "inputs": { "map": { "entries": [["a",7]] } }, "expect": { "error": true } }
+  ]
+}

@@ -5,6 +5,14 @@ and [map composition 0.4.0](wavelengthscript-map-composition-v0-4.md),
 plus [Map + string-key Sets 0.5.0](wavelengthscript-sets-v0-5.md),
 and [Map values/Set comparisons 0.6.0](wavelengthscript-map-set-v0-6.md),
 and [Map entries/Set symmetric difference 0.7.0](wavelengthscript-map-set-v0-7.md),
+and [conditional Maps 0.8.0](wavelengthscript-map-set-v0-8.md)
+and [ordered selection 0.9.0](wavelengthscript-map-set-v0-9.md),
+and [Map value queries 0.10.0](wavelengthscript-map-set-v0-10.md),
+and [Map value transformations 0.11.0](wavelengthscript-map-set-v0-11.md),
+and [ordered Map value operations 0.12.0](wavelengthscript-map-set-v0-12.md),
+and [indexed Map reads 0.13.0](wavelengthscript-map-set-v0-13.md),
+and [ordered membership queries 0.14.0](wavelengthscript-map-set-v0-14.md),
+and [ordered Map/Set slices 0.15.0](wavelengthscript-map-set-v0-15.md),
 with `WLS-MAP/1` source. Retained 0.1.0/0.2.0 collection locks stay valid
 without regeneration; switching execution profiles or dependency versions
 requires an explicit reviewed new lock.

@@ -1,0 +1,13 @@
+{
+  "profile": "WLS-PACKAGE/1",
+  "name": "example.string-sets",
+  "version": "0.1.0",
+  "executionProfile": "WLS-MAP/1",
+  "dependencies": {"wls.collections": "0.5.0"},
+  "programs": [
+    "map.empty", "map.copy", "map.size", "map.has", "map.get", "map.set",
+    "map.delete", "map.keyAt", "map.merge", "map.intersection", "map.difference",
+    "set.empty", "set.fromMap", "set.size", "set.has", "set.add", "set.delete",
+    "set.at", "set.union", "set.intersection", "set.difference"
+  ]
+}

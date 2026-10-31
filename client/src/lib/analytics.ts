@@ -31,6 +31,26 @@ export function trackEvent(name: string, data?: AnalyticsData): void {
   }
 }
 
+/** Collection telemetry accepts identifiers only, never program data. */
+function collectionMetadata(example: string): AnalyticsData {
+  return {
+    profile: "WLS-COLLECTION/1",
+    example: ["add", "remove", "count", "at"].includes(example) ? example : "custom",
+  };
+}
+
+export function trackCollectionProfileSelected(): void {
+  trackEvent("collection_profile_selected", { profile: "WLS-COLLECTION/1" });
+}
+
+export function trackCollectionStage(
+  stage: "compile" | "execute",
+  outcome: "success" | "failure",
+  example: string,
+): void {
+  trackEvent("collection_stage_result", { ...collectionMetadata(example), stage, outcome });
+}
+
 /** Coarse buckets keep financial values useful without recording exact amounts. */
 export function amountBucket(value: number | string): string {
   const amount = typeof value === "string" ? Number(value) : value;

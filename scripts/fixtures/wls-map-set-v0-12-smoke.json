@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"last duplicate key","program":"map.findLastKeyByValueOrDefault","inputs":{"map":{"entries":[["b","x"],["a","y"],["","x"]]},"value":"x","fallback":"missing"},"expect":{"value":""}},
+    {"name":"absent value fallback","program":"map.findLastKeyByValueOrDefault","inputs":{"map":{"entries":[["a","y"]]},"value":"x","fallback":"missing"},"expect":{"value":"missing"}},
+    {"name":"empty lookup","program":"map.findLastKeyByValueOrDefault","inputs":{"map":{"entries":[]},"value":"","fallback":"none"},"expect":{"value":"none"}},
+    {"name":"Unicode lookup","program":"map.findLastKeyByValueOrDefault","inputs":{"map":{"entries":[["é","Ψ"],["é","Ψ"]]},"value":"Ψ","fallback":""},"expect":{"value":"é"}},
+    {"name":"replace first duplicate","program":"map.replaceFirstValue","inputs":{"map":{"entries":[["b","x"],["a","x"]]},"value":"x","replacement":"z"},"expect":{"value":{"entries":[["b","z"],["a","x"]]}}},
+    {"name":"first absent query","program":"map.replaceFirstValue","inputs":{"map":{"entries":[["a","y"]]},"value":"x","replacement":"z"},"expect":{"value":{"entries":[["a","y"]]}}},
+    {"name":"first empty map","program":"map.replaceFirstValue","inputs":{"map":{"entries":[]},"value":"","replacement":"z"},"expect":{"value":{"entries":[]}}},
+    {"name":"first empty key","program":"map.replaceFirstValue","inputs":{"map":{"entries":[["",""],["__proto__",""]]},"value":"","replacement":"Ψ"},"expect":{"value":{"entries":[["","Ψ"],["__proto__",""]]}}},
+    {"name":"replace last duplicate","program":"map.replaceLastValue","inputs":{"map":{"entries":[["b","x"],["a","x"]]},"value":"x","replacement":"z"},"expect":{"value":{"entries":[["b","x"],["a","z"]]}}},
+    {"name":"last absent query","program":"map.replaceLastValue","inputs":{"map":{"entries":[["a","y"]]},"value":"x","replacement":"z"},"expect":{"value":{"entries":[["a","y"]]}}},
+    {"name":"last empty map","program":"map.replaceLastValue","inputs":{"map":{"entries":[]},"value":"","replacement":"z"},"expect":{"value":{"entries":[]}}},
+    {"name":"last prototype key","program":"map.replaceLastValue","inputs":{"map":{"entries":[["",""],["__proto__",""]]},"value":"","replacement":"Ψ"},"expect":{"value":{"entries":[["",""],["__proto__","Ψ"]]}}}
+  ]
+}

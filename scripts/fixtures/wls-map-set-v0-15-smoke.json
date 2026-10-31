@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"Map middle window","program":"map.slice","inputs":{"map":{"entries":[["b","x"],["a","y"],["c","z"]]},"offset":1,"count":1},"expect":{"value":{"entries":[["a","y"]]}}},
+    {"name":"Map negative offset starts at zero","program":"map.slice","inputs":{"map":{"entries":[["b","x"],["a","y"]]},"offset":-1,"count":1},"expect":{"value":{"entries":[["b","x"]]}}},
+    {"name":"Map negative count selects nothing","program":"map.slice","inputs":{"map":{"entries":[["b","x"]]},"offset":0,"count":-1},"expect":{"value":{"entries":[]}}},
+    {"name":"Map past end is empty","program":"map.slice","inputs":{"map":{"entries":[["b","x"]]},"offset":1,"count":2},"expect":{"value":{"entries":[]}}},
+    {"name":"Map overlong count takes remainder","program":"map.slice","inputs":{"map":{"entries":[["b","x"],["","Ψ"]]},"offset":1,"count":20},"expect":{"value":{"entries":[["","Ψ"]]}}},
+    {"name":"Map empty input","program":"map.slice","inputs":{"map":{"entries":[]},"offset":0,"count":1},"expect":{"value":{"entries":[]}}},
+    {"name":"Set middle window canonicalizes payload","program":"set.slice","inputs":{"set":{"entries":[["b","x"],["a","y"],["c","z"]]},"offset":1,"count":1},"expect":{"value":{"entries":[["a",""]]}}},
+    {"name":"Set negative offset starts at zero","program":"set.slice","inputs":{"set":{"entries":[["b","x"],["a","y"]]},"offset":-1,"count":1},"expect":{"value":{"entries":[["b",""]]}}},
+    {"name":"Set zero count selects nothing","program":"set.slice","inputs":{"set":{"entries":[["b","x"]]},"offset":0,"count":0},"expect":{"value":{"entries":[]}}},
+    {"name":"Set past end is empty","program":"set.slice","inputs":{"set":{"entries":[["b","x"]]},"offset":2,"count":1},"expect":{"value":{"entries":[]}}},
+    {"name":"Set preserves empty member","program":"set.slice","inputs":{"set":{"entries":[["b","x"],["","Ψ"]]},"offset":1,"count":20},"expect":{"value":{"entries":[["",""]]}}},
+    {"name":"Set empty input","program":"set.slice","inputs":{"set":{"entries":[]},"offset":0,"count":1},"expect":{"value":{"entries":[]}}}
+  ]
+}

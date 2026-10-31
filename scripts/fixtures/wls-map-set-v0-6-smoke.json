@@ -1,0 +1,65 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {
+      "name": "retain entries with the exact value",
+      "program": "map.filterByValue",
+      "inputs": {"map": {"entries": [["b", "keep"], ["a", "drop"], ["c", "keep"]]}, "value": "keep"},
+      "expect": {"value": {"entries": [["b", "keep"], ["c", "keep"]]}}
+    },
+    {
+      "name": "reject entries with the exact value",
+      "program": "map.rejectByValue",
+      "inputs": {"map": {"entries": [["b", "keep"], ["a", "drop"], ["c", "keep"]]}, "value": "drop"},
+      "expect": {"value": {"entries": [["b", "keep"], ["c", "keep"]]}}
+    },
+    {
+      "name": "invert duplicate values with explicit last-key precedence",
+      "program": "map.invertLast",
+      "inputs": {"map": {"entries": [["a", "x"], ["b", "y"], ["c", "x"]]}},
+      "expect": {"value": {"entries": [["x", "c"], ["y", "b"]]}}
+    },
+    {
+      "name": "subset membership ignores payloads",
+      "program": "set.isSubset",
+      "inputs": {"left": {"entries": [["a", "left"]]}, "right": {"entries": [["b", "right"], ["a", "different"]]}},
+      "expect": {"value": true}
+    },
+    {
+      "name": "disjoint sets have no shared key",
+      "program": "set.isDisjoint",
+      "inputs": {"left": {"entries": [["a", "left"]]}, "right": {"entries": [["b", "right"]]}},
+      "expect": {"value": true}
+    },
+    {
+      "name": "set equality ignores insertion order and payloads",
+      "program": "set.equals",
+      "inputs": {"left": {"entries": [["a", "one"], ["b", "two"]]}, "right": {"entries": [["b", "other"], ["a", "text"]]}},
+      "expect": {"value": true}
+    },
+    {
+      "name": "retained Map behavior is available",
+      "program": "map.get",
+      "inputs": {"map": {"entries": [["__proto__", "plain text"]]}, "key": "__proto__"},
+      "expect": {"value": "plain text"}
+    },
+    {
+      "name": "retained Set behavior is available",
+      "program": "set.union",
+      "inputs": {"left": {"entries": [["a", "ignored"]]}, "right": {"entries": [["a", "also ignored"], ["b", "ignored"]]}},
+      "expect": {"value": {"entries": [["a", ""], ["b", ""]]}}
+    },
+    {
+      "name": "empty filtering still rejects a non-string query",
+      "program": "map.filterByValue",
+      "inputs": {"map": {"entries": []}, "value": 3},
+      "expect": {"error": true}
+    },
+    {
+      "name": "empty subset still validates the right Map",
+      "program": "set.isSubset",
+      "inputs": {"left": {"entries": []}, "right": true},
+      "expect": {"error": true}
+    }
+  ]
+}

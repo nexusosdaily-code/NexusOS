@@ -1,0 +1,41 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {
+      "name": "last exact match",
+      "program": "string.lastIndexOf",
+      "inputs": {"items": ["alpha", "beta", "alpha"], "value": "alpha"},
+      "expect": {"value": 2}
+    },
+    {
+      "name": "absent last match",
+      "program": "string.lastIndexOf",
+      "inputs": {"items": [], "value": "alpha"},
+      "expect": {"value": -1}
+    },
+    {
+      "name": "empty list still validates query",
+      "program": "string.lastIndexOf",
+      "inputs": {"items": [], "value": false},
+      "expect": {"error": true}
+    },
+    {
+      "name": "reverse keeps duplicates",
+      "program": "string.reverse",
+      "inputs": {"items": ["alpha", "beta", "alpha", "gamma"]},
+      "expect": {"value": ["gamma", "alpha", "beta", "alpha"]}
+    },
+    {
+      "name": "reverse empty list",
+      "program": "string.reverse",
+      "inputs": {"items": []},
+      "expect": {"value": []}
+    },
+    {
+      "name": "original first-match API retained",
+      "program": "string.indexOf",
+      "inputs": {"items": ["alpha", "beta", "alpha"], "value": "alpha"},
+      "expect": {"value": 0}
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"Present value is found","program":"map.hasValue","inputs":{"map":{"entries":[["a","one"],["b","two"]]},"value":"two"},"expect":{"value":true}},
+    {"name":"Absent value is not found","program":"map.hasValue","inputs":{"map":{"entries":[["one","other"]]},"value":"one"},"expect":{"value":false}},
+    {"name":"Empty Map has no values","program":"map.hasValue","inputs":{"map":{"entries":[]},"value":""},"expect":{"value":false}},
+    {"name":"Unicode normalization is not implicit","program":"map.hasValue","inputs":{"map":{"entries":[["a","é"]]},"value":"é"},"expect":{"value":false}},
+    {"name":"Counts matching entries rather than distinct values","program":"map.countValue","inputs":{"map":{"entries":[["a","same"],["b","same"],["c","same"]]},"value":"same"},"expect":{"value":3}},
+    {"name":"Empty strings are real values","program":"map.countValue","inputs":{"map":{"entries":[["a",""],["b","other"],["c",""]]},"value":""},"expect":{"value":2}},
+    {"name":"Missing value count is zero","program":"map.countValue","inputs":{"map":{"entries":[["a","one"]]},"value":"absent"},"expect":{"value":0}},
+    {"name":"Lookup returns first matching key in insertion order","program":"map.findKeyByValueOrDefault","inputs":{"map":{"entries":[["b","same"],["a","same"]]},"value":"same","fallback":"missing"},"expect":{"value":"b"}},
+    {"name":"Empty key is a valid match","program":"map.findKeyByValueOrDefault","inputs":{"map":{"entries":[["","same"],["a","same"]]},"value":"same","fallback":"missing"},"expect":{"value":""}},
+    {"name":"No match returns caller fallback","program":"map.findKeyByValueOrDefault","inputs":{"map":{"entries":[]},"value":"same","fallback":"Ψ🙂"},"expect":{"value":"Ψ🙂"}},
+    {"name":"Empty Maps still validate queries","program":"map.countValue","inputs":{"map":{"entries":[]},"value":false},"expect":{"error":true}},
+    {"name":"Unused fallback is validated","program":"map.findKeyByValueOrDefault","inputs":{"map":{"entries":[["a","same"]]},"value":"same","fallback":3},"expect":{"error":true}}
+  ]
+}
