@@ -12,6 +12,17 @@ const suites = [
   "scripts/seal-retry-glob.test.ts",
 ];
 
+it("declares and locks the YAML parser instead of relying on the local install", () => {
+  const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  const lock = JSON.parse(readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
+  const declared = { ...manifest.dependencies, ...manifest.devDependencies }.yaml;
+  expect(typeof declared).toBe("string");
+  expect(declared.length).toBeGreaterThan(0);
+  const locked = { ...lock.packages[""].dependencies, ...lock.packages[""].devDependencies };
+  expect(locked.yaml).toBe(declared);
+  expect(lock.packages["node_modules/yaml"].integrity).toMatch(/^sha512-/);
+});
+
 it("discovers every reviewed security suite in the server project run by the required build", () => {
   const manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
   expect(manifest.scripts.build).toContain("script/build.ts");
