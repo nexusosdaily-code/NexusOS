@@ -157,11 +157,13 @@ consistency, whitespace checks and 78 relative documentation links passed.
 The public landing-page preview loaded. Signed-in UI and physical devices
 were not verified for this library-only release.
 
-An earlier full-project `test:all` run overlapped active edits and failed 41
+Historical 0.15.0 checkpoint: an earlier full-project `test:all` run overlapped active edits and failed 41
 CLI lifecycle assertions in `scripts/wls-package-isolation.test.ts`. That
 entire file passed in the clean dependency run above. The separate full-project
-workflow and its subsequent chained checks were not rerun, so its failed status
-is not represented here as a full-project pass or independent security clearance.
+workflow and its subsequent chained checks had not been rerun at that checkpoint.
+For the later completed production-build and typecheck results, see the
+[0.1.0–0.15.0 dependency audit](wavelengthscript-dependency-audit-0-1-to-0-15.md).
+Neither checkpoint is an independent security clearance.
 
 ## Complete guide index
 

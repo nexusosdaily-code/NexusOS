@@ -55,6 +55,43 @@ execution budgets were changed by these fixes. No implementation fault in those
 algorithms was reproduced by the added cross-release expected-result checks.
 This statement is limited to the tests performed, not proof of no possible bugs.
 
+**Additional export correction:** the immutable-tree import checker treated
+`.generated` in a TypeScript basename as an unsupported loader extension.
+It now resolves only concrete `.generated.ts` or `.generated.tsx` regular blobs
+included in the proposed Git tree. Missing targets and unsupported loaders still
+fail. This is direct-file metadata validation, not a full Node/TypeScript
+resolver or a source-authentication guarantee.
+
+## Verified workspace results
+
+- A clean isolated `npm run build` completed: **9,006 tests passed**, with
+  **51 pre-existing skips** unchanged (245 passing files, four skipped files).
+  No new skip, deleted assertion or placeholder execution was used.
+- Canonical-source consistency, browser/server production bundling, JavaScript
+  and CSS budgets, Wave Vault navigation, preloads and the startup-artifact
+  safety check passed.
+- `npm run check:types` and `git diff --check` passed.
+- The new release matrix supplies successful literal expected-value cases for
+  every declared operation in every retained release, exercising both ordinary
+  and source-locked execution and checking read-only inputs.
+- The new legacy-boundary tests cover all 56 Map/Set programs plus comments and
+  quoted strings. Browser-component tests execute examples from each of
+  0.10.0–0.15.0 against literal expected results.
+- The self-contained public guide was visually checked at a phone viewport.
+  The signed-in learning page was not visually verified; its new examples were
+  checked in component tests.
+
+An earlier broad run had two test deadline failures while a separate unbounded
+test command competed for resources. The standalone dependency command now uses
+two workers, and the clean production-build rerun above passed without removing
+those tests. Earlier release documents retain their historical results.
+
+GitHub's source export preserves the remote dependency declarations and lockfile,
+checks actual proposed imports against those files, and verifies exported Git
+blob hashes and modes by readback. These workspace results are not a claim that
+GitHub's required checks have passed, that the branch is merged, or that the
+website has been published.
+
 ## Reproducible checks
 
 ```sh
