@@ -1416,6 +1416,8 @@ if __name__ == "__main__":
     )
     print(f"  Packet ID: {packet.packet_id}")
     print(f"  Carrier: {packet.carrier.frequency:.2e} Hz (Octave {packet.current_octave.name})")
+    # Standalone synthetic demo: joules from the fixed 1e-5 input above,
+    # not a person's financial budget or private account information.
     print(f"  Energy budget: {packet.energy_budget:.2e} J")
     
     print("\nPropagating packet...")

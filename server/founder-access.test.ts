@@ -57,6 +57,42 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("founder BTC access — real login guard and authenticate middleware", () => {
+  it("never adopts an attacker-chosen session ID and rotates it on each successful login", async () => {
+    const attacker = "attacker-chosen-session";
+    const issued: string[] = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const req = request({
+        wifKey: "synthetic-btc-secret-not-a-real-key",
+        token: attacker, auth_token: attacker, sessionId: attacker,
+      });
+      req.cookies.auth_token = attacker;
+      req.headers.cookie = `auth_token=${attacker}`;
+      req.headers.authorization = `Bearer ${attacker}`;
+      const res = response();
+      await founderBtcLoginHandler(req, res);
+      expect(res.code).toBe(200);
+      const [name, token, options] = res.cookie.mock.calls[0];
+      expect(name).toBe("auth_token");
+      expect(token).not.toBe(attacker);
+      expect(isFounderBtcSession(token)).toBe(true);
+      expect(options).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
+      expect(fixtures.sessions.has(token)).toBe(true);
+      issued.push(token);
+    }
+    expect(new Set(issued).size).toBe(2);
+    expect(fixtures.createSession).toHaveBeenCalledTimes(2);
+    for (const call of fixtures.createSession.mock.calls) expect(call[3]).toBe("founder_btc");
+  });
+
+  it("cannot use an existing signed cookie to bypass BTC proof during login", async () => {
+    const req = request({ wifKey: "wrong-secret" });
+    req.cookies.auth_token = createFounderSessionToken();
+    const res = response();
+    await founderBtcLoginHandler(req, res);
+    expect(res.code).toBe(401);
+    expect(res.cookie).not.toHaveBeenCalled();
+    expect(fixtures.createSession).not.toHaveBeenCalled();
+  });
   it.each(["Nexus", "nexus", "NEXUS"])("blocks the repository password login for %s before issuing a session", async username => {
     const res = response(), next = vi.fn();
     await blockFounderPasswordAccess(request({ username, password: "repository-known-password" }), res, next);

@@ -36,6 +36,24 @@ function remoteFixture(text = register) {
 }
 
 describe("isolated pre-PR disclosure export", () => {
+  it("requires Git's blob header, not a bare-content SHA-1 digest", async () => {
+    const fixture = remoteFixture();
+    const entry = fixture.listing.tree[0];
+    const blob = fixture.blobs[`git/blobs/${entry.sha}`];
+    const bytes = Buffer.from(blob.content, "base64");
+    const bareHash = createHash("sha1").update(bytes).digest("hex");
+    delete fixture.blobs[`git/blobs/${entry.sha}`];
+    entry.sha = bareHash;
+    blob.sha = bareHash;
+    fixture.blobs[`git/blobs/${bareHash}`] = blob;
+    await expect(checkGitHubDisclosureTree(treeSha, fixture.request)).rejects.toThrow(/Blob hash\/size mismatch/);
+  });
+
+  it("does not mistake SHA-256 identifiers for Git's 40-character object IDs", async () => {
+    const fixture = remoteFixture();
+    fixture.listing.tree[0].sha = "a".repeat(64);
+    await expect(checkGitHubDisclosureTree(treeSha, fixture.request)).rejects.toThrow(/immutable/);
+  });
   it("accepts the complete register, including CRLF, without executing catalogue code", () => {
     expect(validateDisclosureSources(register.replace(/\n/g, "\r\n"),
       catalogue + '\nthrow new Error("must not execute");')).toEqual({ claims: 39, indexRows: 39, anchors: 39 });

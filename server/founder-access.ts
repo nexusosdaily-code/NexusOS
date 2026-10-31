@@ -67,6 +67,8 @@ export async function founderBtcLoginHandler(req: Request, res: Response): Promi
     }
     const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"], "founder_btc");
     await storage.updateUserLastLogin(user.id);
+    // createSession generates a fresh signed random token server-side. Request
+    // cookies/body tokens are never adopted as this authenticated session ID.
     res.cookie("auth_token", session.token, {
       httpOnly: true, sameSite: "lax", maxAge: 365 * 24 * 60 * 60 * 1000,
       path: "/", secure: process.env.NODE_ENV === "production",
