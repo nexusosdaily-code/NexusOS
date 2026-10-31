@@ -34,6 +34,10 @@ jobs:
         run: node scripts/prepare-public-ci-lock.mjs
       - run: npm ci --no-audit --no-fund
       - run: npm run check:types
+      - name: Synthetic physics privacy regression
+        # Standard-library AST inspection only; never import/execute the demo.
+        # Direct execution fails if the test file is missing; timeout is fatal.
+        run: timeout 30s python3 -I tests/test_security_finding_triage.py
       # Includes server/client tests (two workers), client/server bundles,
       # bundle budget, Wave Vault navigation, preloads and startup guards.
       # Do not duplicate these with test:all or another Vite build.
