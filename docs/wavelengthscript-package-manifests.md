@@ -42,7 +42,8 @@ All six fields are required; unknown fields are rejected.
   between 0 and 999999 and no leading zeroes except `0` itself. No ranges,
   prerelease/build suffixes or tags in this initial format.
 - `executionProfile`: `WLS-COLLECTION/1` for 0.1.0/0.2.0, or `WLS-MAP/1`
-  for the map-only 0.3.0/0.4.0 releases. The dependency and source profile must match.
+  for the map-only 0.3.0/0.4.0 or Map + string-key Set 0.5.0/0.6.0/0.7.0 releases.
+  The dependency and source profile must match.
 - `dependencies`: exactly the supported local library and its exact version.
   Unknown dependencies, ranges, mismatched versions, paths and URLs fail.
 - `programs`: a nonempty, duplicate-free subset of the chosen release's fixed
@@ -53,7 +54,7 @@ Release 0.1.0 provides `string.contains`, `string.indexOf`, `string.concat`,
 Release 0.2.0 retains those seven and adds `string.lastIndexOf` and
 `string.reverse`. Release 0.3.0 provides a **separate map-only surface** in
 `WLS-MAP/1`; see [bounded maps 0.3.0](wavelengthscript-maps-v0-3.md) for its
-eight program IDs, entry format and limits. All three exact versions are
+eight program IDs, entry format and limits. These retained exact versions are
 supported locally; no ranges or
 automatic upgrades are accepted. The original manifest example remains valid,
 and unchanged old locks do not need to be regenerated.
@@ -61,6 +62,23 @@ Release 0.4.0 retains the eight map IDs and adds `map.merge`,
 `map.intersection` and `map.difference`, under the same bounded map profile.
 See [map composition 0.4.0](wavelengthscript-map-composition-v0-4.md).
 Old exact-version manifests do not gain these programs automatically.
+
+Release 0.5.0 retains the eleven Map programs and adds ten map-backed
+string-key Set programs, still under `WLS-MAP/1`. See
+[bounded string Sets 0.5.0](wavelengthscript-sets-v0-5.md). It does not add a
+new Set interpreter, mix the string-list profile or upgrade old manifests.
+
+Release 0.6.0 retains all 21 Map/Set programs and adds `map.filterByValue`,
+`map.rejectByValue`, `map.invertLast`, `set.isSubset`, `set.isDisjoint` and
+`set.equals`, for 27 programs under the unchanged Map profile.
+See [Map values and Set comparisons 0.6.0](wavelengthscript-map-set-v0-6.md),
+including the explicit lossy last-key policy for inversion.
+
+Release 0.7.0 retains the 27 prior Map/Set programs and adds `map.equals`,
+`map.isSubmap`, `map.intersectionEntries`, `map.differenceEntries` and
+`set.symmetricDifference`, for 32 programs under the unchanged Map profile.
+See [entry comparisons and exclusive Set members 0.7.0](wavelengthscript-map-set-v0-7.md).
+Entry comparison does not change the older key-only intersection/difference.
 
 See [collection library 0.2.0](wavelengthscript-collections-v0-2.md) for
 new-release fixtures and a locked test command.
