@@ -100,6 +100,9 @@ export async function checkGitHubDisclosureTree(tree, request) {
       throw new Error(`Invalid blob readback: ${path}`);
     }
     const bytes = Buffer.from(blob.content, "base64");
+    // Git's SHA-1 blob object ID includes this header. This is protocol identity,
+    // not a password hash or an authenticity/signature guarantee. SHA-256 is
+    // not interchangeable with the 40-character IDs returned by this API.
     const hash = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
     if (hash !== entry.sha || bytes.length !== blob.size) throw new Error(`Blob hash/size mismatch: ${path}`);
     blobs[path] = hash;

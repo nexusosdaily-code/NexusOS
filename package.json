@@ -174,7 +174,7 @@
     "esbuild": "^0.28.1",
     "happy-dom": "^21.0.4",
     "jsdom": "^29.1.1",
-    "minimatch": "^10.2.6",
+    "minimatch": "^11.0.1",
     "playwright-core": "^1.64.1",
     "postcss": "^8.5.29",
     "symbol-tree": "^3.2.4",
