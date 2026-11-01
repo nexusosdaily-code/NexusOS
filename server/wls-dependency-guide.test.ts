@@ -14,7 +14,7 @@ describe("complete public dependency disclosure", () => {
   it("contains every linked guide verbatim as escaped text, not metadata-only summaries", () => {
     const html = read("public/wavelengthscript-dependencies.html");
     for (const doc of docs) expect(html).toContain(`<pre>${escape(read(doc))}</pre>`);
-    for (let i = 1; i <= 16; i++) expect(html).toContain(`0.${i}.0`);
+    for (let i = 1; i <= 17; i++) expect(html).toContain(`0.${i}.0`);
     expect(html).not.toMatch(/<script\b|<iframe\b|<img\b|(?:src|href)\s*=\s*["']https?:\/\//i);
     expect(html).toContain('name="viewport"');
   });

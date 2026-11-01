@@ -33,6 +33,8 @@ add("map.replaceValue map.replaceFirstValue map.replaceLastValue", { map, value:
 add("map.take map.drop", { map, count: 0 });
 add("map.slice", { map, offset: 0, count: 1 });
 add("map.renameKeyIfAbsent", { map, key: "a", replacement: "b" });
+add("map.swapValues", { map, first: "a", second: "b" });
+add("set.toggle", { set: map, value: "a" });
 add("set.replaceIfAbsent", { set: map, value: "a", replacement: "b" });
 add("set.size", { set: map });
 add("set.has set.add set.delete", { set: map, value: "a" });
@@ -131,6 +133,7 @@ const releases = [
   ["wls-map-set-package-v0-14.json", "1e8dbda57f2408cd30ebf6ae1ca6a99221b429a9f8c1713925cd1c975f3f181f"],
   ["wls-map-set-package-v0-15.json", "4167f0cd15f9925f032566ae67c2ee14b50cd2cd898542c5b2013ab195ae9d7b"],
   ["wls-map-set-package-v0-16.json", "a27550d21f349d8dddf61515b14c6846eb06ce07626a0c48e9ca0b372c271528"],
+  ["wls-map-set-package-v0-17.json", "2d0f0314f2f891bc0e4bffb30ffed4508f7ebd661b9fc5695cc40058b12c45fb"],
 ] as const;
 it.each(releases)("preserves %s lock and validates all its declared APIs", async (file, digest) => {
   const text = fixture(file), resolved = resolveCollectionPackage(text);

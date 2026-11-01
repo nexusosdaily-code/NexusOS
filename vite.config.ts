@@ -5,6 +5,7 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
 import { CRITICAL_CHUNKS } from "./scripts/critical-chunks";
+import { dependencyGuidePlugin } from "./scripts/wls-dependency-guide-plugin";
 
 /**
  * Enforces gzip size limits on the entry chunk and vendor-react chunk.
@@ -17,7 +18,7 @@ function bundleSizeCheckPlugin(): Plugin {
     apply: "build",
     async closeBundle() {
       const { checkBundleSize } = await import(
-        "./scripts/check-bundle-size.js"
+        "./scripts/check-bundle-size"
       );
       await checkBundleSize();
     },
@@ -141,6 +142,7 @@ export default defineConfig({
     runtimeErrorOverlay(),
     tailwindcss(),
     metaImagesPlugin(),
+    dependencyGuidePlugin(),
     dropColorMixSupportsPlugin(),
     deduplicateGradientStopsPlugin(),
     criticalChunkPreloadPlugin(),

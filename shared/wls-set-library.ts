@@ -1,6 +1,9 @@
 import { CollectionVMError } from "./wls-collection-vm";
 import { executeMap, type MapValue } from "./wls-map-vm";
 import { getCollectionProgramSource } from "./wls-library";
+/** Remove a present member or append an absent member; overflow fails explicitly. */
+export const setToggle = (set: MapValue, value: string): StringSetValue =>
+  result(run("set.toggle", { set, value }));
 
 /** Keys are members; every returned payload is the empty string. */
 export type StringSetValue = { readonly entries: readonly (readonly [string, ""])[] };
