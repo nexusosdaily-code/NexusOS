@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Merge missing keys with left values winning","program":"map.mergeIfAbsent","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","z"],["c","q"]]}},"expect":{"value":{"entries":[["a","x"],["b","y"],["c","q"]]}}},
+  {"name":"Update only existing left keys in original order","program":"map.mergeExisting","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","z"],["c","q"]]}},"expect":{"value":{"entries":[["a","z"],["b","y"]]}}},
+  {"name":"Empty left receives absent entries","program":"map.mergeIfAbsent","inputs":{"left":{"entries":[]},"right":{"entries":[["a","z"]]}},"expect":{"value":{"entries":[["a","z"]]}}},
+  {"name":"Empty left has no existing keys to update","program":"map.mergeExisting","inputs":{"left":{"entries":[]},"right":{"entries":[["a","z"]]}},"expect":{"value":{"entries":[]}}}
+]}

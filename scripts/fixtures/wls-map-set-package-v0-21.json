@@ -1,0 +1,1 @@
+{"profile":"WLS-PACKAGE/1","name":"example.tail-selection","version":"0.1.0","executionProfile":"WLS-MAP/1","dependencies":{"wls.collections":"0.21.0"},"programs":["map.takeLast","set.takeLast"]}

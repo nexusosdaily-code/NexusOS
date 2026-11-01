@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Find first insertion-order value position","program":"map.indexOfValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"value":"x"},"expect":{"value":0}},
+  {"name":"Find last insertion-order value position","program":"map.lastIndexOfValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"value":"x"},"expect":{"value":2}},
+  {"name":"Missing first value returns minus one","program":"map.indexOfValue","inputs":{"map":{"entries":[]},"value":"x"},"expect":{"value":-1}},
+  {"name":"Missing last value returns minus one","program":"map.lastIndexOfValue","inputs":{"map":{"entries":[["a","y"]]},"value":"x"},"expect":{"value":-1}}
+]}

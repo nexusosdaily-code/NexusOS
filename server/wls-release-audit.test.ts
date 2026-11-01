@@ -35,6 +35,17 @@ add("map.slice", { map, offset: 0, count: 1 });
 add("map.renameKeyIfAbsent", { map, key: "a", replacement: "b" });
 add("map.swapValues", { map, first: "a", second: "b" });
 add("map.moveToEnd", { map, key: "a" });
+add("map.moveToFront", { map, key: "a" });
+add("set.moveToFront", { set: map, value: "a" });
+add("map.takeWhileValue map.dropWhileValue map.indexOfValue map.lastIndexOfValue map.deleteFirstValue map.deleteLastValue",
+  { map, value: "x" });
+add("map.takeLast map.dropLast", { map, count: 1 });
+add("set.takeLast set.dropLast", { set: map, count: 1 });
+add("map.countCommonKeys map.countMatchingEntries map.mergeIfAbsent map.mergeExisting set.intersectionSize set.unionSize set.differenceSize set.symmetricDifferenceSize",
+  { left: map, right: map });
+add("map.countDistinctValues map.hasDuplicateValues", { map });
+add("map.replaceEntryIfValue", { map, key: "a", expected: "x", replacement: "y" });
+add("map.deleteEntryIfValue", { map, key: "a", expected: "x" });
 add("set.moveToEnd", { set: map, value: "a" });
 add("set.toggle", { set: map, value: "a" });
 add("set.replaceIfAbsent", { set: map, value: "a", replacement: "b" });
@@ -137,6 +148,18 @@ const releases = [
   ["wls-map-set-package-v0-16.json", "a27550d21f349d8dddf61515b14c6846eb06ce07626a0c48e9ca0b372c271528"],
   ["wls-map-set-package-v0-17.json", "2d0f0314f2f891bc0e4bffb30ffed4508f7ebd661b9fc5695cc40058b12c45fb"],
   ["wls-map-set-package-v0-18.json", "b1911ada2f91330483adfe8ac9b80f523d73eebb9a8473ea2450bf748fd64e21"],
+  ["wls-map-set-package-v0-19.json", "371ece79790ef69e55f962b0d2176f4977dab64f8240ef612b52313bc9ed1cee"],
+  ["wls-map-set-package-v0-20.json", "6389918da0da87a1d8e3752d21492f8baf08d3ab206309419f83d4dcaa370cf5"],
+  ["wls-map-set-package-v0-21.json", "313e070f49c075948a163efce9f03852de7aaa5df07c2308d2ca9e03a3b52a30"],
+  ["wls-map-set-package-v0-22.json", "a9fb21c534eea42336451d8086b1bb6642b913f90b3b9f12c627bec95c14e86f"],
+  ["wls-map-set-package-v0-23.json", "405b3aafc5fc0aeb7b19c9673f9b1bbf580120ab816e8f3a4156b324185f4819"],
+  ["wls-map-set-package-v0-24.json", "9901409cbb231db55c695bdea8d1c51f5128f2e3e997c9d792eebb725d7f5dbe"],
+  ["wls-map-set-package-v0-25.json", "1fac150b0be8a1fe04efe8e73db5d079e7296878aa18d770202dd1ca57cc0914"],
+  ["wls-map-set-package-v0-26.json", "b3bdf7ad86c107a584f3633bc44e8c3ef88fb3a17357487a4c18d56a230f381a"],
+  ["wls-map-set-package-v0-27.json", "fb890781ac4ed47aebe403630f9f02a41884fb8bbd1fc7e680e7b352afdc7fdb"],
+  ["wls-map-set-package-v0-28.json", "e1d78a83608d1beef3d08e70bfac16cb468ca63aeeef6f59efa1953959de7224"],
+  ["wls-map-set-package-v0-29.json", "52626f765188ffd13e53e74d827f0bf888e3d5fd73c44c99004a5066f3ea0aa6"],
+  ["wls-map-set-package-v0-30.json", "989c7925fda2b0df58c2bbdf005e58554f1fd5e84aeb4a8e23eb7af4211dd8cc"],
 ] as const;
 it.each(releases)("preserves %s lock and validates all its declared APIs", async (file, digest) => {
   const text = fixture(file), resolved = resolveCollectionPackage(text);

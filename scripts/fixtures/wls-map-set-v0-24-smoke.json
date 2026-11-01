@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Count keys regardless of payload","program":"map.countCommonKeys","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","x"],["b","z"]]}},"expect":{"value":2}},
+  {"name":"Count equal key and value pairs","program":"map.countMatchingEntries","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","x"],["b","z"]]}},"expect":{"value":1}},
+  {"name":"Empty common keys","program":"map.countCommonKeys","inputs":{"left":{"entries":[]},"right":{"entries":[["a","x"]]}},"expect":{"value":0}},
+  {"name":"Absent empty value is not matching","program":"map.countMatchingEntries","inputs":{"left":{"entries":[["a",""]]},"right":{"entries":[]}},"expect":{"value":0}}
+]}

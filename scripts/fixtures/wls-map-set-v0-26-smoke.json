@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Delete only the first matching value","program":"map.deleteFirstValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"value":"x"},"expect":{"value":{"entries":[["b","y"],["c","x"]]}}},
+  {"name":"Delete only the last matching value","program":"map.deleteLastValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"value":"x"},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}},
+  {"name":"Absent last match preserves empty key","program":"map.deleteLastValue","inputs":{"map":{"entries":[["","x"]]},"value":"y"},"expect":{"value":{"entries":[["","x"]]}}},
+  {"name":"Empty first match stays empty","program":"map.deleteFirstValue","inputs":{"map":{"entries":[]},"value":""},"expect":{"value":{"entries":[]}}}
+]}
