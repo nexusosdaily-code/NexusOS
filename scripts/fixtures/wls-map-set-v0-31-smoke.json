@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Take stops before first exact value","program":"map.takeUntilValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"value":"y"},"expect":{"value":{"entries":[["a","x"]]}}},
+{"name":"Missing stop retains every entry","program":"map.takeUntilValue","inputs":{"map":{"entries":[["a","x"]]},"value":"absent"},"expect":{"value":{"entries":[["a","x"]]}}},
+{"name":"Drop includes first matching entry","program":"map.dropUntilValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"value":"y"},"expect":{"value":{"entries":[["b","y"],["c","x"]]}}},
+{"name":"Missing stop drops everything","program":"map.dropUntilValue","inputs":{"map":{"entries":[["a",""]]},"value":"absent"},"expect":{"value":{"entries":[]}}}
+]}

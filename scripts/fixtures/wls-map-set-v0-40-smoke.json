@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Take final key-membership run only","program":"map.takeLastWhileKeyIn","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","z"]]},"right":{"entries":[["a","ignored"],["c","ignored"]]}},"expect":{"value":{"entries":[["c","z"]]}}},
+{"name":"All-member suffix keeps every entry","program":"map.takeLastWhileKeyIn","inputs":{"map":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a",""],["b",""]]}},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}},
+{"name":"Drop suffix preserves earlier matching members","program":"map.dropLastWhileKeyIn","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","z"]]},"right":{"entries":[["a","ignored"],["c","ignored"]]}},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}},
+{"name":"Nonmember final key leaves map unchanged","program":"map.dropLastWhileKeyIn","inputs":{"map":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a",""]]}},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}}
+]}

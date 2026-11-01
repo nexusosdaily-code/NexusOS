@@ -1,0 +1,1 @@
+{"profile":"WLS-PACKAGE/1","name":"example.ordered-equality","version":"0.1.0","executionProfile":"WLS-MAP/1","dependencies":{"wls.collections":"0.36.0"},"programs":["map.equalsOrdered","set.equalsOrdered"]}

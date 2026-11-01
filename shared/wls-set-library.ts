@@ -1,6 +1,7 @@
 import { CollectionVMError } from "./wls-collection-vm";
 import { executeMap, type MapValue } from "./wls-map-vm";
 import { getCollectionProgramSource } from "./wls-library";
+export { setEqualsOrdered } from "./wls-map-batch-library";
 /** Move an existing member last without adding missing members; canonicalize payloads. */
 export const setMoveToEnd = (set: MapValue, value: string): StringSetValue =>
   result(run("set.moveToEnd", { set, value }));

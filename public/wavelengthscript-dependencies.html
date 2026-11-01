@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WavelengthScript working dependencies 0.1.0–0.30.0</title>
-<meta name="description" content="Executable local WavelengthScript dependency packages, real instructions, limits, examples and audit evidence for retained releases 0.1.0 through 0.30.0.">
+<title>WavelengthScript working dependencies 0.1.0–0.40.0</title>
+<meta name="description" content="Executable local WavelengthScript dependency packages, real instructions, limits, examples and audit evidence for retained releases 0.1.0 through 0.40.0.">
 <style>body{margin:0;background:#10121a;color:#e7e9f3;font:16px/1.65 system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:24px clamp(16px,4vw,48px)}a{color:#bfb0ff}a:focus-visible{outline:3px solid #fff;outline-offset:4px}h1,h2{line-height:1.25}section{border-top:1px solid #454459;margin-top:36px;padding-top:20px;scroll-margin-top:12px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.65 ui-monospace,monospace;background:#191c28;padding:16px;border-radius:8px}li{margin:8px 0}.note{border-left:4px solid #a994ff;padding:12px 18px;background:#202030}code{overflow-wrap:anywhere}</style></head>
 <body><main><p><a href="/learn">Open the learning tools</a></p><h1>Working WavelengthScript dependencies</h1>
-<p>Retained releases <strong>0.1.0–0.30.0</strong>. These are repository-local executable libraries, not a public package registry or a completed replacement for every project dependency.</p>
+<p>Retained releases <strong>0.1.0–0.40.0</strong>. These are repository-local executable libraries, not a public package registry or a completed replacement for every project dependency.</p>
 <p class="note">Algorithms execute as actual WavelengthScript instructions in bounded profiles. The interpreter, compiler and developer adapters still use TypeScript/JavaScript. Source locks check content integrity, not author identity or complete host security. Unsupported operations fail explicitly; queues or host adapters are not native language implementations.</p>
-<nav id="contents" aria-label="Dependency guide contents"><h2>Complete guide and audit</h2><ol><li><a href="#wavelengthscript-dependencies">WavelengthScript dependency documentation</a></li><li><a href="#wavelengthscript-map-set-v0-19-30">WavelengthScript collections 0.19.0–0.30.0</a></li><li><a href="#wavelengthscript-map-set-v0-18">WavelengthScript collections 0.18.0: ordered collection updates</a></li><li><a href="#wavelengthscript-map-set-v0-17">WavelengthScript collections 0.17.0: swapping and membership toggling</a></li><li><a href="#wavelengthscript-dependency-audit-0-1-to-0-15">Working dependency audit: 0.1.0–0.15.0</a></li><li><a href="#wavelengthscript-project-audit-2026-11-01">Project audit and rerun — 1 November 2026</a></li><li><a href="#WAVELENGTHSCRIPT_POSITIONING">WavelengthScript/WNSP: positioning and related work</a></li><li><a href="#wavelengthscript-release-audit">Internal dependency audit: 0.1.0–0.11.0</a></li><li><a href="#wavelengthscript-ecosystem-inventory">WavelengthScript ecosystem: implementation inventory</a></li><li><a href="#wavelengthscript-recipient-pilot">WavelengthScript recipient collection pilot — 29 October 2026</a></li><li><a href="#wavelengthscript-native-collections">Native collections: workspace profile and P2P recipient pilot</a></li><li><a href="#wavelengthscript-string-library">WavelengthScript expansion: reusable string-list operations</a></li><li><a href="#wavelengthscript-collections-v0-2">Native collection library 0.2.0</a></li><li><a href="#wavelengthscript-maps-v0-3">Bounded maps: offline library 0.3.0</a></li><li><a href="#wavelengthscript-map-composition-v0-4">Bounded native map composition: 0.4.0</a></li><li><a href="#wavelengthscript-sets-v0-5">Bounded map-backed string Sets: local release 0.5.0</a></li><li><a href="#wavelengthscript-map-set-v0-6">Map value operations and Set comparisons: local package 0.6.0</a></li><li><a href="#wavelengthscript-map-set-v0-7">Full-entry Map comparisons and Set symmetric difference: local 0.7.0</a></li><li><a href="#wavelengthscript-map-set-v0-8">Conditional Map operations: local dependency 0.8.0</a></li><li><a href="#wavelengthscript-map-set-v0-9">Ordered Map and Set selection: local dependency 0.9.0</a></li><li><a href="#wavelengthscript-map-set-v0-10">Map value queries: local dependency 0.10.0</a></li><li><a href="#wavelengthscript-map-set-v0-11">Map value transformations: local dependency 0.11.0</a></li><li><a href="#wavelengthscript-map-set-v0-12">Ordered Map value operations: local dependency 0.12.0</a></li><li><a href="#wavelengthscript-map-set-v0-13">Indexed Map reads: local dependency 0.13.0</a></li><li><a href="#wavelengthscript-map-set-v0-14">Ordered membership queries: local dependency 0.14.0</a></li><li><a href="#wavelengthscript-map-set-v0-15">Ordered Map/Set slices: local dependency 0.15.0</a></li><li><a href="#wavelengthscript-map-set-v0-16">WavelengthScript collections 0.16.0: collision-safe renaming</a></li><li><a href="#wavelengthscript-local-tools">Local tooling for existing WavelengthScript collections</a></li><li><a href="#wavelengthscript-package-manifests">Repository-local WavelengthScript dependency manifests</a></li><li><a href="#wavelengthscript-package-locks">Exact-source integrity locks for local WavelengthScript dependencies</a></li><li><a href="#wavelengthscript-test-tools">Repeatable tests for WavelengthScript libraries</a></li></ol></nav>
+<nav id="contents" aria-label="Dependency guide contents"><h2>Complete guide and audit</h2><ol><li><a href="#wavelengthscript-dependencies">WavelengthScript dependency documentation</a></li><li><a href="#wavelengthscript-map-set-v0-31-40">WavelengthScript collections 0.31.0–0.40.0</a></li><li><a href="#wavelengthscript-map-set-v0-19-30">WavelengthScript collections 0.19.0–0.30.0</a></li><li><a href="#wavelengthscript-map-set-v0-18">WavelengthScript collections 0.18.0: ordered collection updates</a></li><li><a href="#wavelengthscript-map-set-v0-17">WavelengthScript collections 0.17.0: swapping and membership toggling</a></li><li><a href="#wavelengthscript-dependency-audit-0-1-to-0-15">Working dependency audit: 0.1.0–0.15.0</a></li><li><a href="#wavelengthscript-project-audit-2026-11-01">Project audit and rerun — 1 November 2026</a></li><li><a href="#WAVELENGTHSCRIPT_POSITIONING">WavelengthScript/WNSP: positioning and related work</a></li><li><a href="#wavelengthscript-release-audit">Internal dependency audit: 0.1.0–0.11.0</a></li><li><a href="#wavelengthscript-ecosystem-inventory">WavelengthScript ecosystem: implementation inventory</a></li><li><a href="#wavelengthscript-recipient-pilot">WavelengthScript recipient collection pilot — 29 October 2026</a></li><li><a href="#wavelengthscript-native-collections">Native collections: workspace profile and P2P recipient pilot</a></li><li><a href="#wavelengthscript-string-library">WavelengthScript expansion: reusable string-list operations</a></li><li><a href="#wavelengthscript-collections-v0-2">Native collection library 0.2.0</a></li><li><a href="#wavelengthscript-maps-v0-3">Bounded maps: offline library 0.3.0</a></li><li><a href="#wavelengthscript-map-composition-v0-4">Bounded native map composition: 0.4.0</a></li><li><a href="#wavelengthscript-sets-v0-5">Bounded map-backed string Sets: local release 0.5.0</a></li><li><a href="#wavelengthscript-map-set-v0-6">Map value operations and Set comparisons: local package 0.6.0</a></li><li><a href="#wavelengthscript-map-set-v0-7">Full-entry Map comparisons and Set symmetric difference: local 0.7.0</a></li><li><a href="#wavelengthscript-map-set-v0-8">Conditional Map operations: local dependency 0.8.0</a></li><li><a href="#wavelengthscript-map-set-v0-9">Ordered Map and Set selection: local dependency 0.9.0</a></li><li><a href="#wavelengthscript-map-set-v0-10">Map value queries: local dependency 0.10.0</a></li><li><a href="#wavelengthscript-map-set-v0-11">Map value transformations: local dependency 0.11.0</a></li><li><a href="#wavelengthscript-map-set-v0-12">Ordered Map value operations: local dependency 0.12.0</a></li><li><a href="#wavelengthscript-map-set-v0-13">Indexed Map reads: local dependency 0.13.0</a></li><li><a href="#wavelengthscript-map-set-v0-14">Ordered membership queries: local dependency 0.14.0</a></li><li><a href="#wavelengthscript-map-set-v0-15">Ordered Map/Set slices: local dependency 0.15.0</a></li><li><a href="#wavelengthscript-map-set-v0-16">WavelengthScript collections 0.16.0: collision-safe renaming</a></li><li><a href="#wavelengthscript-local-tools">Local tooling for existing WavelengthScript collections</a></li><li><a href="#wavelengthscript-package-manifests">Repository-local WavelengthScript dependency manifests</a></li><li><a href="#wavelengthscript-package-locks">Exact-source integrity locks for local WavelengthScript dependencies</a></li><li><a href="#wavelengthscript-test-tools">Repeatable tests for WavelengthScript libraries</a></li></ol></nav>
 <section id="wavelengthscript-dependencies"><h2>WavelengthScript dependency documentation</h2><p>Repository source: <code>docs/wavelengthscript-dependencies.md</code></p><pre># WavelengthScript dependency documentation
 
-**Documentation disclosure snapshot: 1 November 2026.**
+**Documentation disclosure snapshot: 2 November 2026.**
 
 This workspace index can include additions beyond an earlier GitHub disclosure
 snapshot. Updating it locally does not itself update GitHub, establish passing
@@ -21,7 +21,12 @@ or all third-party dependencies have been rewritten in WavelengthScript.
 
 ## Scope and evidence
 
-The latest audited batch is [0.19.0–0.30.0: twelve working dependency versions](wavelengthscript-map-set-v0-19-30.md),
+The latest audited batch is [0.31.0–0.40.0: ten working dependency versions](wavelengthscript-map-set-v0-31-40.md),
+adding 20 native algorithms, exact-version consumers and executable learning
+examples. Version 0.40.0 exposes 106 Map/Set APIs within the unchanged
+execution limits.
+
+The preceding [0.19.0–0.30.0: twelve working dependency versions](wavelengthscript-map-set-v0-19-30.md),
 adding 24 native algorithms, exact-version consumers and executable learning
 examples. Version 0.30.0 exposes 86 Map/Set APIs. The preceding
 [0.18.0: ordered collection updates](wavelengthscript-map-set-v0-18.md)
@@ -246,6 +251,224 @@ distinguishes these gaps from the existing bounded implementations.
 
 This disclosure does not create financial, privacy or deployment authority and
 does not change research, attribution or licensing boundaries.
+</pre><a href="#contents">Back to contents</a></section>
+<section id="wavelengthscript-map-set-v0-31-40"><h2>WavelengthScript collections 0.31.0–0.40.0</h2><p>Repository source: <code>docs/wavelengthscript-map-set-v0-31-40.md</code></p><pre># WavelengthScript collections 0.31.0–0.40.0
+
+Ten repository-local dependency versions add 20 executable `WLS-MAP/1`
+algorithms. Version 0.40.0 offers 106 Map/Set APIs; the full catalogue has
+115 operations across the retained Map/Set and string-list profiles.
+
+WavelengthScript already exists. This batch develops native dependency
+libraries, not a new language, public package registry, complete application
+rewrite or replacement for the host runtime. Each algorithm executes a real
+`.wls` program. TypeScript bridges marshal inputs and check returned types;
+they do not substitute JavaScript collection algorithms.
+
+## Release contracts
+
+Every release below retains the preceding Map/Set surface and adds exactly
+two APIs. Earlier exact-version consumers cannot select later APIs. Versions
+0.1.0 and 0.2.0 retain their separate string-list execution profile. Each of
+the ten new example consumers selects only its two new APIs; applications
+may explicitly declare other APIs supported by that release.
+
+### 0.31.0 — select until an exact value
+
+- `map.takeUntilValue(map, value)` retains the prefix **before** the first
+  entry whose payload equals `value`. That matching entry is excluded.
+- `map.dropUntilValue(map, value)` returns the suffix **including** that
+  first matching entry and everything after it.
+- If no entry matches, take returns all entries and drop returns an empty
+  map. These are contiguous selections, not whole-map filters.
+
+### 0.32.0 — matching value suffixes
+
+- `map.takeLastWhileValue(map, value)` retains the final contiguous run of
+  entries whose payloads exactly equal `value`.
+- `map.dropLastWhileValue(map, value)` removes that run. Earlier matching
+  entries remain if separated from the suffix by a mismatch.
+- All-match input yields a full take and empty drop. A nonmatching final
+  entry yields an empty take and full drop. The cut advances monotonically;
+  this does not repeatedly restart a nested scan.
+
+### 0.33.0 — retain entries with distinct values
+
+- `map.distinctValuesFirst(map)` keeps the first original entry for every
+  distinct exact value.
+- `map.distinctValuesLast(map)` keeps the last original entry for every
+  distinct exact value.
+- Survivors retain their original keys, payloads and relative input order.
+  Last-occurrence retention is not grouping by first value occurrence.
+  Empty values are valid duplicates; empty keys are not absence sentinels.
+
+### 0.34.0 — filter by value membership
+
+- `map.filterByValueSet(map, right)` keeps entries whose payload occurs as a
+  **key** in `right`.
+- `map.rejectByValueSet(map, right)` keeps entries whose payload does not
+  occur as a key in `right`.
+- Right-hand payloads are ignored for membership. A right-hand Map is a
+  bounded string-key membership set, not a list of its payloads. Original
+  map keys, payloads and survivor order are preserved.
+
+### 0.35.0 — dictionary value remapping
+
+- `map.remapValues(map, right)` looks up each original payload as a key in
+  `right`, replacing it with the dictionary value when present. Missing
+  dictionary keys leave the original payload unchanged.
+- `map.remapValuesOrDefault(map, right, fallback)` uses `fallback` for
+  missing dictionary keys.
+- A present dictionary key with an empty payload is a real replacement,
+  not a missing lookup. Each original payload is translated **once**:
+  replacements are not recursively translated, even for cyclic dictionaries.
+  Map keys, size and insertion order do not change.
+
+### 0.36.0 — order-sensitive equality
+
+- `map.equalsOrdered(left, right)` requires identical entry counts and the
+  same exact keys and payloads at each insertion-order position.
+- `set.equalsOrdered(left, right)` compares key membership **and order**,
+  ignoring payloads. Both operands must still be valid bounded Maps.
+- These are distinct from the retained order-insensitive equality APIs.
+  Empty operands compare equal. These comparisons are not constant-time
+  cryptographic operations.
+
+### 0.37.0 — directional change counts
+
+- `map.countChangedEntries(left, right)` counts shared keys whose payload
+  changed. Additions and removals are excluded.
+- `map.countRemovedKeys(left, right)` counts left keys absent from right,
+  irrespective of their payloads.
+- Counts describe two local snapshots. They do not establish database
+  transactions, authorization, synchronization or wallet settlement.
+
+### 0.38.0 — first and last matching entries
+
+- `map.findEntryByValue(map, value)` returns a Map containing the first
+  matching original entry.
+- `map.findLastEntryByValue(map, value)` returns the last matching original
+  entry.
+- No match returns an empty Map. A match returns exactly one entry. This
+  representation distinguishes absence from an entry with an empty key
+  and/or payload without inventing a sentinel string.
+
+### 0.39.0 — contiguous key-membership prefixes
+
+- `map.takeWhileKeyIn(map, right)` keeps the initial contiguous run of
+  entries whose keys occur in `right`.
+- `map.dropWhileKeyIn(map, right)` removes only that initial run.
+- The first nonmember ends the run. Later matching keys are not gathered
+  into the take or removed from the drop. Right-hand payloads are ignored.
+
+### 0.40.0 — contiguous key-membership suffixes
+
+- `map.takeLastWhileKeyIn(map, right)` keeps the final contiguous run of
+  entries whose keys occur in `right`.
+- `map.dropLastWhileKeyIn(map, right)` removes only that final run.
+- The last nonmember determines the boundary. Earlier matching keys remain
+  outside the suffix. All-member input yields full take and empty drop;
+  a nonmember final key yields empty take and full drop.
+
+## Execution limits and input rules
+
+The existing limits are unchanged:
+
+| Resource | Limit |
+| --- | --- |
+| Entries in one Map/Set | 20 |
+| UTF-16 code units in one key/value/string operand | 256 |
+| Compiled instructions | 128 |
+| Executed cycles | 1,024 |
+| Registers | 32 |
+| Logical live-register memory | 65,536 bytes |
+
+Every required operand is validated, including otherwise unused operands on
+empty or no-op paths. Missing arguments, wrong types, duplicate keys, holes,
+over-limit Maps and overlong strings fail explicitly.
+
+All collection results are fresh, deeply frozen snapshots. Inputs are not
+modified. Strings compare exactly, without case folding or Unicode
+normalization. Prototype-like keys such as `__proto__` and `constructor` are
+ordinary data keys, not object-property lookups.
+
+No new opcode, interpreter permission, network fallback, installation hook,
+execution profile or execution-budget increase was introduced. Source locks
+commit to selected source and manifests; they do not authenticate the author,
+pin the interpreter/host, or establish operator-inaccessible privacy.
+
+## Use the actual packages
+
+Each version has an exact consumer and four independently authored literal
+examples under `scripts/fixtures/`. For example, using the installed Node
+executable and CLI:
+
+```sh
+node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/wls-collections-cli.ts package-check \
+  scripts/fixtures/wls-map-set-package-v0-40.json
+
+node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/wls-collections-cli.ts package-lock \
+  scripts/fixtures/wls-map-set-package-v0-40.json &gt; /tmp/wls-040.lock.json
+
+node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/wls-collections-cli.ts package-verify \
+  scripts/fixtures/wls-map-set-package-v0-40.json /tmp/wls-040.lock.json
+
+node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/wls-collections-cli.ts package-test-locked \
+  scripts/fixtures/wls-map-set-package-v0-40.json /tmp/wls-040.lock.json \
+  scripts/fixtures/wls-map-set-v0-40-smoke.json
+```
+
+Replace `40` with any version from `31` through `40` to execute that consumer.
+Lock verification fails on altered manifest bytes or selected source
+commitments; it does not silently recreate mismatched locks.
+
+Named host bridges are available from `shared/wls-map-library.ts` and
+`shared/wls-set-library.ts`. Their marshal-only implementations are kept in
+`shared/wls-map-batch-library.ts`. The Learn collection workspace includes
+editable native source, inputs, execution traces and examples for all 20
+new operations.
+
+## Audit evidence
+
+The implementation audit and production build completed before this guide
+was linked into the public webpage or exported to GitHub.
+
+- **Full database-free production build:** 10,612 tests passed across 259
+  passing files. The 51 pre-existing skips across four files were unchanged.
+  No tests or assertions were removed and no deadlines were increased.
+- **82 new batch contract tests:** 1,920 independently expected reference
+  scenarios execute through both native source and named host bridges.
+  Additional cases cover every full-capacity cut, maximum UTF-16 payloads,
+  empty/singleton inputs, all-match and alternating suffixes, no-op branches,
+  and malformed or missing arguments.
+- **Maximum live-register memory:** distinct-value retention and full-size
+  remapping were exercised at maximum key/value lengths. No memory,
+  instruction, register, entry or cycle cap was raised.
+- **Ten real offline CLI pipelines:** each creates a lock, verifies it and
+  executes all four literal cases under the existing process/network
+  isolation guard. Guard readiness and drained successful exit are asserted.
+- **Standalone ESM and CommonJS:** both bundles execute all 40 new literal
+  fixture cases without network access.
+- **Source locking:** all 40 consumer fingerprints are pinned. Earlier
+  source commitments remain unchanged. Each new version rejects manifest
+  byte changes and tampering with either new program commitment.
+- **Compatibility and usability:** fixed cumulative surfaces, rejection of
+  later APIs by every earlier Map release, immutable three-field dependency
+  identities, ordinary and locked package execution, and all 20 new runnable
+  learning-page examples passed.
+- **Project safeguards:** TypeScript, canonical source generation,
+  production bundle budgets, Wave Vault navigation, critical modulepreloads,
+  startup guards, constitutional static checks and route-handler wiring
+  passed. The entry chunk remained 34.0 KB gzip against its 35 KB limit.
+
+The documentation CLI commands use the installed TypeScript runner, rather
+than assuming bare Node resolves extensionless TypeScript module imports.
+
+These results do **not** certify production database operations, the Python
+suite, real-phone behavior, independent security clearance or native browser
+worker execution of these new APIs. Browser-environment component tests are
+not physical-device or native-worker tests. Existing large-chunk warnings
+remain visible. No wallet action, merge, automatic merge or website
+publication is implied by these results.
 </pre><a href="#contents">Back to contents</a></section>
 <section id="wavelengthscript-map-set-v0-19-30"><h2>WavelengthScript collections 0.19.0–0.30.0</h2><p>Repository source: <code>docs/wavelengthscript-map-set-v0-19-30.md</code></p><pre># WavelengthScript collections 0.19.0–0.30.0
 

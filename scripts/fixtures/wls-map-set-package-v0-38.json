@@ -1,0 +1,1 @@
+{"profile":"WLS-PACKAGE/1","name":"example.entry-search","version":"0.1.0","executionProfile":"WLS-MAP/1","dependencies":{"wls.collections":"0.38.0"},"programs":["map.findEntryByValue","map.findLastEntryByValue"]}

@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Remap once without recursively translating replacement","program":"map.remapValues","inputs":{"map":{"entries":[["a","x"],["b","z"]]},"right":{"entries":[["x","y"],["y","q"]]}},"expect":{"value":{"entries":[["a","y"],["b","z"]]}}},
+{"name":"Present empty replacement is not absent","program":"map.remapValues","inputs":{"map":{"entries":[["a","x"]]},"right":{"entries":[["x",""]]}},"expect":{"value":{"entries":[["a",""]]}}},
+{"name":"Unmapped payload selects explicit fallback","program":"map.remapValuesOrDefault","inputs":{"map":{"entries":[["a","x"],["b","z"]]},"right":{"entries":[["x","y"]]},"fallback":"?"},"expect":{"value":{"entries":[["a","y"],["b","?"]]}}},
+{"name":"Empty-string fallback is valid","program":"map.remapValuesOrDefault","inputs":{"map":{"entries":[["a","x"]]},"right":{"entries":[]},"fallback":""},"expect":{"value":{"entries":[["a",""]]}}}
+]}

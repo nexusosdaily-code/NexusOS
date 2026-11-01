@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Keep first original entry for each value","program":"map.distinctValuesFirst","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]}},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}},
+{"name":"Empty values are legitimate duplicates","program":"map.distinctValuesFirst","inputs":{"map":{"entries":[["",""],["b",""]]}},"expect":{"value":{"entries":[["",""]]}}},
+{"name":"Last survivors retain original order","program":"map.distinctValuesLast","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]}},"expect":{"value":{"entries":[["b","y"],["c","x"]]}}},
+{"name":"Empty map remains empty","program":"map.distinctValuesLast","inputs":{"map":{"entries":[]}},"expect":{"value":{"entries":[]}}}
+]}
