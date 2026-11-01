@@ -1,0 +1,11 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"Swap payloads without moving keys","program":"map.swapValues","inputs":{"map":{"entries":[["b","x"],["a","y"],["c","z"]]},"first":"b","second":"c"},"expect":{"value":{"entries":[["b","z"],["a","y"],["c","x"]]}}},
+    {"name":"Missing key keeps both payloads","program":"map.swapValues","inputs":{"map":{"entries":[["a","x"],["b","y"]]},"first":"missing","second":"b"},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}},
+    {"name":"Identical keys are unchanged","program":"map.swapValues","inputs":{"map":{"entries":[["","Ψ"]]},"first":"","second":""},"expect":{"value":{"entries":[["","Ψ"]]}}},
+    {"name":"Toggle removes middle member and canonicalizes","program":"set.toggle","inputs":{"set":{"entries":[["b","x"],["a","y"],["c","z"]]},"value":"a"},"expect":{"value":{"entries":[["b",""],["c",""]]}}},
+    {"name":"Toggle appends absent member","program":"set.toggle","inputs":{"set":{"entries":[["b","x"]]},"value":"Ψ"},"expect":{"value":{"entries":[["b",""],["Ψ",""]]}}},
+    {"name":"Toggle empty-string member into empty Set","program":"set.toggle","inputs":{"set":{"entries":[]},"value":""},"expect":{"value":{"entries":[["",""]]}}}
+  ]
+}

@@ -1,6 +1,6 @@
 # WavelengthScript dependency documentation
 
-**Documentation disclosure snapshot: 31 October 2026.**
+**Documentation disclosure snapshot: 1 November 2026.**
 
 This workspace index can include additions beyond an earlier GitHub disclosure
 snapshot. Updating it locally does not itself update GitHub, establish passing
@@ -11,6 +11,9 @@ and dependency tooling; it does not claim that the whole application, its AI,
 or all third-party dependencies have been rewritten in WavelengthScript.
 
 ## Scope and evidence
+
+The latest local increment is [0.17.0: swapping and membership toggling](wavelengthscript-map-set-v0-17.md),
+with real native programs, a full 60-API consumer and executable learning examples.
 
 These guides describe the matching development workspace. Runnable releases
 need their actual source, tests, fixtures and build configuration, not only
