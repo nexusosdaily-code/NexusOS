@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Count common set members ignoring payloads","program":"set.intersectionSize","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","z"],["c","x"]]}},"expect":{"value":1}},
+  {"name":"Count union without constructing it","program":"set.unionSize","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","z"],["c","x"]]}},"expect":{"value":3}},
+  {"name":"Empty intersection","program":"set.intersectionSize","inputs":{"left":{"entries":[]},"right":{"entries":[]}},"expect":{"value":0}},
+  {"name":"Right-only union size","program":"set.unionSize","inputs":{"left":{"entries":[]},"right":{"entries":[["","x"]]}},"expect":{"value":1}}
+]}

@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Take matching prefix only","program":"map.takeWhileValue","inputs":{"map":{"entries":[["a","x"],["b","x"],["c","y"],["d","x"]]},"value":"x"},"expect":{"value":{"entries":[["a","x"],["b","x"]]}}},
+  {"name":"Drop matching prefix only","program":"map.dropWhileValue","inputs":{"map":{"entries":[["a","x"],["b","x"],["c","y"],["d","x"]]},"value":"x"},"expect":{"value":{"entries":[["c","y"],["d","x"]]}}},
+  {"name":"First mismatch takes nothing","program":"map.takeWhileValue","inputs":{"map":{"entries":[["a","y"]]},"value":"x"},"expect":{"value":{"entries":[]}}},
+  {"name":"All matching prefix drops everything","program":"map.dropWhileValue","inputs":{"map":{"entries":[["a","x"]]},"value":"x"},"expect":{"value":{"entries":[]}}}
+]}

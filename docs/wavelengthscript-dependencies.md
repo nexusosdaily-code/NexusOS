@@ -12,8 +12,11 @@ or all third-party dependencies have been rewritten in WavelengthScript.
 
 ## Scope and evidence
 
-The latest local increment is [0.18.0: ordered collection updates](wavelengthscript-map-set-v0-18.md),
-with real native programs, a full 62-API consumer and executable learning examples.
+The latest audited batch is [0.19.0–0.30.0: twelve working dependency versions](wavelengthscript-map-set-v0-19-30.md),
+adding 24 native algorithms, exact-version consumers and executable learning
+examples. Version 0.30.0 exposes 86 Map/Set APIs. The preceding
+[0.18.0: ordered collection updates](wavelengthscript-map-set-v0-18.md)
+remains available with its original source lock and 62-API consumer.
 The preceding [0.17.0: swapping and membership toggling](wavelengthscript-map-set-v0-17.md)
 remains available with its original contract and source lock.
 

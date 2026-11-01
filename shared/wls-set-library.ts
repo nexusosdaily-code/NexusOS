@@ -24,6 +24,21 @@ function result(value: unknown): StringSetValue {
 
 /** Host bridges marshal only. Valid input map payloads are intentionally ignored. */
 export const setEmpty = (): StringSetValue => result(run("set.empty", {}));
+export const setMoveToFront = (set: MapValue, value: string): StringSetValue =>
+  result(run("set.moveToFront", { set, value }));
+export const setTakeLast = (set: MapValue, count: number): StringSetValue =>
+  result(run("set.takeLast", { set, count }));
+export const setDropLast = (set: MapValue, count: number): StringSetValue =>
+  result(run("set.dropLast", { set, count }));
+function sizeResult(id: string, left: MapValue, right: MapValue): number {
+  const value = run(id, { left, right });
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) throw new CollectionVMError("Invalid set cardinality.");
+  return value;
+}
+export const setIntersectionSize = (left: MapValue, right: MapValue): number => sizeResult("set.intersectionSize", left, right);
+export const setUnionSize = (left: MapValue, right: MapValue): number => sizeResult("set.unionSize", left, right);
+export const setDifferenceSize = (left: MapValue, right: MapValue): number => sizeResult("set.differenceSize", left, right);
+export const setSymmetricDifferenceSize = (left: MapValue, right: MapValue): number => sizeResult("set.symmetricDifferenceSize", left, right);
 /** Replace in insertion order without overwriting another member; canonicalizes payloads. */
 export const setReplaceIfAbsent = (set: MapValue, value: string, replacement: string): StringSetValue =>
   result(run("set.replaceIfAbsent", { set, value, replacement }));
