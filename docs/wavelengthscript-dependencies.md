@@ -12,11 +12,12 @@ or all third-party dependencies have been rewritten in WavelengthScript.
 
 ## Scope and evidence
 
-This documentation-only disclosure synchronises the guides below with the
-development workspace. It does **not** synchronise every referenced source file,
-test, fixture or build configuration into the GitHub default branch. Source
-paths and commands in the guides describe the matching workspace implementation;
-check the actual repository files before trying to run those commands.
+These guides describe the matching development workspace. Runnable releases
+need their actual source, tests, fixtures and build configuration, not only
+documentation. Source exports are reviewed through separate GitHub pull
+requests; check the actual repository tree and CI for the commit you intend
+to use. Workspace changes do not automatically update the default branch
+or the published website.
 
 Versions below identify exact **repository-local library contracts**, not
 published registry packages. Documentation and a passing workspace test are not
@@ -95,6 +96,7 @@ No new physical photonic execution or speed advantage is asserted.
 | `wls.collections` 0.13.0 | `WLS-MAP/1` | Those 48 programs plus strict indexed value reads and key/value indexed reads with fallbacks |
 | `wls.collections` 0.14.0 | `WLS-MAP/1` | Those 51 programs plus key/member position queries and Set indexed reads with a fallback |
 | `wls.collections` 0.15.0 | `WLS-MAP/1` | Those 54 programs plus native ordered Map/Set offset-and-count slices |
+| `wls.collections` 0.16.0 | `WLS-MAP/1` | Those 56 programs plus collision-safe Map key and Set member renaming |
 
 The map profile is separate from the retained string-list profile. A higher
 version does not mix interpreters or silently add programs to older manifests.
@@ -197,6 +199,18 @@ Neither checkpoint is an independent security clearance.
 - [Indexed Map reads 0.13.0](wavelengthscript-map-set-v0-13.md)
 - [Ordered membership queries 0.14.0](wavelengthscript-map-set-v0-14.md)
 - [Ordered Map/Set slices 0.15.0](wavelengthscript-map-set-v0-15.md)
+- [Collision-safe Map/Set renaming 0.16.0](wavelengthscript-map-set-v0-16.md)
+
+## 0.16.0 build and internal audit
+
+The collision-safe renaming increment passed a clean production build with
+**9,126 tests passing and 51 pre-existing skips unchanged**, plus TypeScript,
+generated-source, bundle-budget, navigation, preload and startup-artifact
+checks. The release has 103 direct behavior/boundary tests and three offline
+CLI / standalone bundle tests. The independent distribution asset inventory
+was extended to require both new real `.wls` programs. See the
+[0.16.0 guide](wavelengthscript-map-set-v0-16.md) for complete evidence, failed-run
+history and limits. No new interpreter permissions or live P2P changes.
 
 ### Offline dependency and developer tooling
 

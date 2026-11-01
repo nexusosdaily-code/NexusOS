@@ -27,6 +27,7 @@ const examples = [
 // Fixed asset inventory includes the independent map release. Legacy execution
 // expectations above stay intact; map execution has its own distribution tests.
 const allFiles = [...examples.map(({ file }) => file),
+  "map/renameKeyIfAbsent.wls", "set/replaceIfAbsent.wls",
   "map/empty.wls", "map/copy.wls", "map/size.wls", "map/has.wls",
   "map/get.wls", "map/set.wls", "map/delete.wls", "map/keyAt.wls",
   "map/merge.wls", "map/intersection.wls", "map/difference.wls",

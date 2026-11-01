@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WavelengthScript working dependencies 0.1.0–0.15.0</title>
-<meta name="description" content="Executable local WavelengthScript dependency packages, real instructions, limits, examples and audit evidence for retained releases 0.1.0 through 0.15.0.">
+<title>WavelengthScript working dependencies 0.1.0–0.16.0</title>
+<meta name="description" content="Executable local WavelengthScript dependency packages, real instructions, limits, examples and audit evidence for retained releases 0.1.0 through 0.16.0.">
 <style>body{margin:0;background:#10121a;color:#e7e9f3;font:16px/1.65 system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:24px clamp(16px,4vw,48px)}a{color:#bfb0ff}a:focus-visible{outline:3px solid #fff;outline-offset:4px}h1,h2{line-height:1.25}section{border-top:1px solid #454459;margin-top:36px;padding-top:20px;scroll-margin-top:12px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.65 ui-monospace,monospace;background:#191c28;padding:16px;border-radius:8px}li{margin:8px 0}.note{border-left:4px solid #a994ff;padding:12px 18px;background:#202030}code{overflow-wrap:anywhere}</style></head>
 <body><main><p><a href="/learn">Open the learning tools</a></p><h1>Working WavelengthScript dependencies</h1>
-<p>Retained releases <strong>0.1.0–0.15.0</strong>. These are repository-local executable libraries, not a public package registry or a completed replacement for every project dependency.</p>
+<p>Retained releases <strong>0.1.0–0.16.0</strong>. These are repository-local executable libraries, not a public package registry or a completed replacement for every project dependency.</p>
 <p class="note">Algorithms execute as actual WavelengthScript instructions in bounded profiles. The interpreter, compiler and developer adapters still use TypeScript/JavaScript. Source locks check content integrity, not author identity or complete host security. Unsupported operations fail explicitly; queues or host adapters are not native language implementations.</p>
-<nav id="contents" aria-label="Dependency guide contents"><h2>Complete guide and audit</h2><ol><li><a href="#wavelengthscript-dependencies">WavelengthScript dependency documentation</a></li><li><a href="#wavelengthscript-dependency-audit-0-1-to-0-15">Working dependency audit: 0.1.0–0.15.0</a></li><li><a href="#wavelengthscript-project-audit-2026-11-01">Project audit and rerun — 1 November 2026</a></li><li><a href="#WAVELENGTHSCRIPT_POSITIONING">WavelengthScript/WNSP: positioning and related work</a></li><li><a href="#wavelengthscript-release-audit">Internal dependency audit: 0.1.0–0.11.0</a></li><li><a href="#wavelengthscript-ecosystem-inventory">WavelengthScript ecosystem: implementation inventory</a></li><li><a href="#wavelengthscript-recipient-pilot">WavelengthScript recipient collection pilot — 29 October 2026</a></li><li><a href="#wavelengthscript-native-collections">Native collections: workspace profile and P2P recipient pilot</a></li><li><a href="#wavelengthscript-string-library">WavelengthScript expansion: reusable string-list operations</a></li><li><a href="#wavelengthscript-collections-v0-2">Native collection library 0.2.0</a></li><li><a href="#wavelengthscript-maps-v0-3">Bounded maps: offline library 0.3.0</a></li><li><a href="#wavelengthscript-map-composition-v0-4">Bounded native map composition: 0.4.0</a></li><li><a href="#wavelengthscript-sets-v0-5">Bounded map-backed string Sets: local release 0.5.0</a></li><li><a href="#wavelengthscript-map-set-v0-6">Map value operations and Set comparisons: local package 0.6.0</a></li><li><a href="#wavelengthscript-map-set-v0-7">Full-entry Map comparisons and Set symmetric difference: local 0.7.0</a></li><li><a href="#wavelengthscript-map-set-v0-8">Conditional Map operations: local dependency 0.8.0</a></li><li><a href="#wavelengthscript-map-set-v0-9">Ordered Map and Set selection: local dependency 0.9.0</a></li><li><a href="#wavelengthscript-map-set-v0-10">Map value queries: local dependency 0.10.0</a></li><li><a href="#wavelengthscript-map-set-v0-11">Map value transformations: local dependency 0.11.0</a></li><li><a href="#wavelengthscript-map-set-v0-12">Ordered Map value operations: local dependency 0.12.0</a></li><li><a href="#wavelengthscript-map-set-v0-13">Indexed Map reads: local dependency 0.13.0</a></li><li><a href="#wavelengthscript-map-set-v0-14">Ordered membership queries: local dependency 0.14.0</a></li><li><a href="#wavelengthscript-map-set-v0-15">Ordered Map/Set slices: local dependency 0.15.0</a></li><li><a href="#wavelengthscript-local-tools">Local tooling for existing WavelengthScript collections</a></li><li><a href="#wavelengthscript-package-manifests">Repository-local WavelengthScript dependency manifests</a></li><li><a href="#wavelengthscript-package-locks">Exact-source integrity locks for local WavelengthScript dependencies</a></li><li><a href="#wavelengthscript-test-tools">Repeatable tests for WavelengthScript libraries</a></li></ol></nav>
+<nav id="contents" aria-label="Dependency guide contents"><h2>Complete guide and audit</h2><ol><li><a href="#wavelengthscript-dependencies">WavelengthScript dependency documentation</a></li><li><a href="#wavelengthscript-dependency-audit-0-1-to-0-15">Working dependency audit: 0.1.0–0.15.0</a></li><li><a href="#wavelengthscript-project-audit-2026-11-01">Project audit and rerun — 1 November 2026</a></li><li><a href="#WAVELENGTHSCRIPT_POSITIONING">WavelengthScript/WNSP: positioning and related work</a></li><li><a href="#wavelengthscript-release-audit">Internal dependency audit: 0.1.0–0.11.0</a></li><li><a href="#wavelengthscript-ecosystem-inventory">WavelengthScript ecosystem: implementation inventory</a></li><li><a href="#wavelengthscript-recipient-pilot">WavelengthScript recipient collection pilot — 29 October 2026</a></li><li><a href="#wavelengthscript-native-collections">Native collections: workspace profile and P2P recipient pilot</a></li><li><a href="#wavelengthscript-string-library">WavelengthScript expansion: reusable string-list operations</a></li><li><a href="#wavelengthscript-collections-v0-2">Native collection library 0.2.0</a></li><li><a href="#wavelengthscript-maps-v0-3">Bounded maps: offline library 0.3.0</a></li><li><a href="#wavelengthscript-map-composition-v0-4">Bounded native map composition: 0.4.0</a></li><li><a href="#wavelengthscript-sets-v0-5">Bounded map-backed string Sets: local release 0.5.0</a></li><li><a href="#wavelengthscript-map-set-v0-6">Map value operations and Set comparisons: local package 0.6.0</a></li><li><a href="#wavelengthscript-map-set-v0-7">Full-entry Map comparisons and Set symmetric difference: local 0.7.0</a></li><li><a href="#wavelengthscript-map-set-v0-8">Conditional Map operations: local dependency 0.8.0</a></li><li><a href="#wavelengthscript-map-set-v0-9">Ordered Map and Set selection: local dependency 0.9.0</a></li><li><a href="#wavelengthscript-map-set-v0-10">Map value queries: local dependency 0.10.0</a></li><li><a href="#wavelengthscript-map-set-v0-11">Map value transformations: local dependency 0.11.0</a></li><li><a href="#wavelengthscript-map-set-v0-12">Ordered Map value operations: local dependency 0.12.0</a></li><li><a href="#wavelengthscript-map-set-v0-13">Indexed Map reads: local dependency 0.13.0</a></li><li><a href="#wavelengthscript-map-set-v0-14">Ordered membership queries: local dependency 0.14.0</a></li><li><a href="#wavelengthscript-map-set-v0-15">Ordered Map/Set slices: local dependency 0.15.0</a></li><li><a href="#wavelengthscript-map-set-v0-16">WavelengthScript collections 0.16.0: collision-safe renaming</a></li><li><a href="#wavelengthscript-local-tools">Local tooling for existing WavelengthScript collections</a></li><li><a href="#wavelengthscript-package-manifests">Repository-local WavelengthScript dependency manifests</a></li><li><a href="#wavelengthscript-package-locks">Exact-source integrity locks for local WavelengthScript dependencies</a></li><li><a href="#wavelengthscript-test-tools">Repeatable tests for WavelengthScript libraries</a></li></ol></nav>
 <section id="wavelengthscript-dependencies"><h2>WavelengthScript dependency documentation</h2><p>Repository source: <code>docs/wavelengthscript-dependencies.md</code></p><pre># WavelengthScript dependency documentation
 
 **Documentation disclosure snapshot: 31 October 2026.**
@@ -21,11 +21,12 @@ or all third-party dependencies have been rewritten in WavelengthScript.
 
 ## Scope and evidence
 
-This documentation-only disclosure synchronises the guides below with the
-development workspace. It does **not** synchronise every referenced source file,
-test, fixture or build configuration into the GitHub default branch. Source
-paths and commands in the guides describe the matching workspace implementation;
-check the actual repository files before trying to run those commands.
+These guides describe the matching development workspace. Runnable releases
+need their actual source, tests, fixtures and build configuration, not only
+documentation. Source exports are reviewed through separate GitHub pull
+requests; check the actual repository tree and CI for the commit you intend
+to use. Workspace changes do not automatically update the default branch
+or the published website.
 
 Versions below identify exact **repository-local library contracts**, not
 published registry packages. Documentation and a passing workspace test are not
@@ -104,6 +105,7 @@ No new physical photonic execution or speed advantage is asserted.
 | `wls.collections` 0.13.0 | `WLS-MAP/1` | Those 48 programs plus strict indexed value reads and key/value indexed reads with fallbacks |
 | `wls.collections` 0.14.0 | `WLS-MAP/1` | Those 51 programs plus key/member position queries and Set indexed reads with a fallback |
 | `wls.collections` 0.15.0 | `WLS-MAP/1` | Those 54 programs plus native ordered Map/Set offset-and-count slices |
+| `wls.collections` 0.16.0 | `WLS-MAP/1` | Those 56 programs plus collision-safe Map key and Set member renaming |
 
 The map profile is separate from the retained string-list profile. A higher
 version does not mix interpreters or silently add programs to older manifests.
@@ -206,6 +208,18 @@ Neither checkpoint is an independent security clearance.
 - [Indexed Map reads 0.13.0](wavelengthscript-map-set-v0-13.md)
 - [Ordered membership queries 0.14.0](wavelengthscript-map-set-v0-14.md)
 - [Ordered Map/Set slices 0.15.0](wavelengthscript-map-set-v0-15.md)
+- [Collision-safe Map/Set renaming 0.16.0](wavelengthscript-map-set-v0-16.md)
+
+## 0.16.0 build and internal audit
+
+The collision-safe renaming increment passed a clean production build with
+**9,126 tests passing and 51 pre-existing skips unchanged**, plus TypeScript,
+generated-source, bundle-budget, navigation, preload and startup-artifact
+checks. The release has 103 direct behavior/boundary tests and three offline
+CLI / standalone bundle tests. The independent distribution asset inventory
+was extended to require both new real `.wls` programs. See the
+[0.16.0 guide](wavelengthscript-map-set-v0-16.md) for complete evidence, failed-run
+history and limits. No new interpreter permissions or live P2P changes.
 
 ### Offline dependency and developer tooling
 
@@ -3154,6 +3168,88 @@ See [the dependency index](wavelengthscript-dependencies.md),
 [0.14.0](wavelengthscript-map-set-v0-14.md),
 [manifests](wavelengthscript-package-manifests.md) and
 [source locks](wavelengthscript-package-locks.md).
+</pre><a href="#contents">Back to contents</a></section>
+<section id="wavelengthscript-map-set-v0-16"><h2>WavelengthScript collections 0.16.0: collision-safe renaming</h2><p>Repository source: <code>docs/wavelengthscript-map-set-v0-16.md</code></p><pre># WavelengthScript collections 0.16.0: collision-safe renaming
+
+Repository-local exact dependency `wls.collections: 0.16.0`, using the existing
+`WLS-MAP/1` profile. This adds two real WavelengthScript programs to the
+58-operation Map/Set release surface (67 operations across all profiles).
+All retained releases, source bytes and locks remain unchanged.
+
+## Contracts
+
+- `map.renameKeyIfAbsent(map, key, replacement)` renames an existing key at its
+  original insertion position, preserving its string payload.
+- `set.replaceIfAbsent(set, value, replacement)` replaces a member at its
+  original position. All returned payloads are the canonical empty string.
+- Missing source, occupied destination, and identical source/destination
+  return a fresh unchanged-content copy (with canonical Set payloads).
+- No overwrite, merging, sorting, Unicode normalization or input mutation.
+  Empty strings and prototype-like keys are ordinary strings.
+- All operands are required and validated, including empty/no-op paths.
+  Duplicate keys, non-string entries and over-limit inputs fail explicitly.
+
+Algorithms are in `shared/wls-library/map/renameKeyIfAbsent.wls` and
+`shared/wls-library/set/replaceIfAbsent.wls`. TypeScript bridges only marshal
+inputs/results. No new opcode, VM permission, callback, network or file I/O.
+Existing bounds remain 20 entries, 256 UTF-16 code units per key/value,
+1,024 cycles and 65,536 logical live-register bytes. These are logical limits,
+not heap or speed guarantees. The single bounded scan preserves key order.
+
+## Use and verify
+
+The full 58-operation runnable consumer manifest is
+`scripts/fixtures/wls-map-set-package-v0-16.json`; its six-case suite is
+`scripts/fixtures/wls-map-set-v0-16-smoke.json`.
+
+```sh
+npm run generate:wls-library
+npm run check:wls-library
+node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/wls-collections-cli.ts \
+  package-lock scripts/fixtures/wls-map-set-package-v0-16.json &gt; renaming.lock.json
+node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/wls-collections-cli.ts \
+  package-test-locked scripts/fixtures/wls-map-set-package-v0-16.json \
+  renaming.lock.json scripts/fixtures/wls-map-set-v0-16-smoke.json
+npm run test:wls-dependencies
+```
+
+Keep a reviewed lock; do not overwrite a trusted lock to conceal a mismatch.
+The smoke suite demonstrates the two new APIs; the consumer also declares
+all retained Map/Set APIs under 0.16.0. Older manifests cannot select new APIs.
+Browser workspace examples execute these same sources.
+
+## Build and internal audit — 1 November 2026
+
+- Clean production build: **9,126 passing tests across 248 passing files**;
+  **51 pre-existing skips across four files**, unchanged. No added skips,
+  removed assertions, placeholder implementations or timeout increases.
+- TypeScript check, generated-source consistency, bundle budgets, Wave Vault
+  navigation, critical preloads and production-startup artifact checks passed.
+- The new release has **103 direct behavior/boundary tests** and **three
+  guarded offline CLI / standalone ESM and CommonJS bundle tests**.
+- All 67 operations have independently expected successful examples across
+  the 16 retained releases. The full 58-operation 0.16.0 manifest runs through
+  normal and source-locked package paths; all retained lock fingerprints pass,
+  and the new release fingerprint is pinned.
+- Browser-environment examples exercise both new APIs. The public guide was
+  visually checked at a 402-pixel phone viewport. This does not verify the
+  signed-in learning screen visually or replace real browser-worker/phone tests.
+
+The full audit caught a distribution inventory omission: the independent list
+of shipped assets had not included the two new `.wls` files. The inventory was
+extended to require those real files, preserving exact file-equality checks.
+One subsequent full run encountered an unrelated five-second recovery-runner
+test deadline. Its 67 tests passed in isolation and then in the final complete
+build without changing its assertions or timeouts. Neither failed run is
+counted as a successful build.
+
+These are workspace results. GitHub CI, an owner merge and website publication
+are separate steps; this is not an independent security clearance.
+
+Source locks commit to the declared source and manifest, not the host runtime,
+author identity or operator-inaccessible privacy. This release is not a
+registry publication, GitHub merge, live P2P migration or physical-phone test.
+See [the dependency index](wavelengthscript-dependencies.md).
 </pre><a href="#contents">Back to contents</a></section>
 <section id="wavelengthscript-local-tools"><h2>Local tooling for existing WavelengthScript collections</h2><p>Repository source: <code>docs/wavelengthscript-local-tools.md</code></p><pre># Local tooling for existing WavelengthScript collections
 

@@ -1,0 +1,11 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"Rename middle key in place","program":"map.renameKeyIfAbsent","inputs":{"map":{"entries":[["b","x"],["a","y"],["c","z"]]},"key":"a","replacement":"Ψ"},"expect":{"value":{"entries":[["b","x"],["Ψ","y"],["c","z"]]}}},
+    {"name":"Occupied destination preserves both entries","program":"map.renameKeyIfAbsent","inputs":{"map":{"entries":[["a","x"],["b","y"]]},"key":"a","replacement":"b"},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}},
+    {"name":"Missing source is unchanged","program":"map.renameKeyIfAbsent","inputs":{"map":{"entries":[]},"key":"a","replacement":"b"},"expect":{"value":{"entries":[]}}},
+    {"name":"Replace middle member canonicalizes payloads","program":"set.replaceIfAbsent","inputs":{"set":{"entries":[["b","x"],["a","y"],["c","z"]]},"value":"a","replacement":"Ψ"},"expect":{"value":{"entries":[["b",""],["Ψ",""],["c",""]]}}},
+    {"name":"Occupied Set member preserves membership","program":"set.replaceIfAbsent","inputs":{"set":{"entries":[["a","x"],["b","y"]]},"value":"a","replacement":"b"},"expect":{"value":{"entries":[["a",""],["b",""]]}}},
+    {"name":"Empty Set unchanged","program":"set.replaceIfAbsent","inputs":{"set":{"entries":[]},"value":"a","replacement":"b"},"expect":{"value":{"entries":[]}}}
+  ]
+}

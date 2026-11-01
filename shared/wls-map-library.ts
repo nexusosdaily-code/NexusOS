@@ -34,6 +34,9 @@ export const mapKeyAtOrDefault = (input: MapValue, index: number, fallback: stri
 export const mapValueAtOrDefault = (input: MapValue, index: number, fallback: string): string =>
   indexedString("map.valueAtOrDefault", { map: input, index, fallback });
 export const mapCopy = (input: MapValue): MapValue => map(run("map.copy", { map: input }));
+/** Rename in place in insertion order; absent source or occupied destination is a no-op copy. */
+export const mapRenameKeyIfAbsent = (input: MapValue, key: string, replacement: string): MapValue =>
+  map(run("map.renameKeyIfAbsent", { map: input, key, replacement }));
 export const mapSet = (input: MapValue, key: string, value: string): MapValue =>
   map(run("map.set", { map: input, key, value }));
 /** Missing keys select fallback; empty string values are present values. */
