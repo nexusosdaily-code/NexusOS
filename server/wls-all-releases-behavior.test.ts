@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { LIBRARY_PROGRAM_IDS } from "../shared/wls-library-catalogue";
 import { CollectionVMError } from "../shared/wls-library-compiler";
@@ -31,22 +31,24 @@ function freeze<T>(value: T): T {
   return value;
 }
 
-describe("actual package behavior across all eighteen retained releases", () => {
+describe("actual package behavior across all thirty retained releases", () => {
   it("has independently expected successful outputs for every canonical operation", () => {
     expect([...new Set(cases.filter(c => Object.hasOwn(c.expect, "value")).map(c => c.program))].sort())
       .toEqual([...LIBRARY_PROGRAM_IDS].sort());
     expect([...new Set(manifests.map(m => resolveCollectionPackage(m.text).dependencies[0].version))].sort())
-      .toEqual(Array.from({ length: 18 }, (_, i) => `0.${i + 1}.0`).sort());
+      .toEqual(Array.from({ length: 30 }, (_, i) => `0.${i + 1}.0`).sort());
   });
   for (const manifest of manifests) {
-    it(`${manifest.file}: matches expected values/errors, executes instructions and preserves inputs`, async () => {
+    describe(manifest.file, () => {
       const resolved = resolveCollectionPackage(manifest.text);
-      const lock = JSON.stringify(await createCollectionPackageLock(manifest.text));
-      let checked = 0;
+      let lock: string;
+      beforeAll(async () => { lock = JSON.stringify(await createCollectionPackageLock(manifest.text)); });
       for (const program of resolved.programs) {
-        const examples = cases.filter(c => c.program === program);
-        expect(examples.some(c => Object.hasOwn(c.expect, "value")), program).toBe(true);
-        for (const example of examples) {
+        it(`${program}: expected values/errors, executed instructions and preserved inputs`, async () => {
+          const examples = cases.filter(c => c.program === program);
+          expect(examples.some(c => Object.hasOwn(c.expect, "value")), program).toBe(true);
+          let checked = 0;
+          for (const example of examples) {
           const inputs = freeze(structuredClone(example.inputs));
           const before = JSON.stringify(inputs);
           if (example.expect.error) {
@@ -64,10 +66,12 @@ describe("actual package behavior across all eighteen retained releases", () => 
             }
           }
           expect(JSON.stringify(inputs)).toBe(before);
-          checked++;
-        }
+            checked++;
+          }
+          expect(checked).toBe(examples.length);
+          expect(checked).toBeGreaterThanOrEqual(1);
+        });
       }
-      expect(checked).toBeGreaterThanOrEqual(resolved.programs.length);
     });
   }
 });

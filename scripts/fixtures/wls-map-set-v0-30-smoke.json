@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Replace only the entry whose value matches","program":"map.replaceEntryIfValue","inputs":{"map":{"entries":[["a","x"],["b","y"]]},"key":"a","expected":"x","replacement":"z"},"expect":{"value":{"entries":[["a","z"],["b","y"]]}}},
+  {"name":"Mismatch is a fresh unchanged map","program":"map.replaceEntryIfValue","inputs":{"map":{"entries":[["a","x"]]},"key":"a","expected":"y","replacement":"z"},"expect":{"value":{"entries":[["a","x"]]}}},
+  {"name":"Delete matching empty key and payload","program":"map.deleteEntryIfValue","inputs":{"map":{"entries":[["",""],["a","x"]]},"key":"","expected":""},"expect":{"value":{"entries":[["a","x"]]}}},
+  {"name":"Absent key is never inserted","program":"map.deleteEntryIfValue","inputs":{"map":{"entries":[["a","x"]]},"key":"missing","expected":""},"expect":{"value":{"entries":[["a","x"]]}}}
+]}

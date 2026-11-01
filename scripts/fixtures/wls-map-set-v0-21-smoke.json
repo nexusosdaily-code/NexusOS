@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Take final two map entries in order","program":"map.takeLast","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","z"]]},"count":2},"expect":{"value":{"entries":[["b","y"],["c","z"]]}}},
+  {"name":"Negative count takes nothing","program":"map.takeLast","inputs":{"map":{"entries":[["a","x"]]},"count":-1},"expect":{"value":{"entries":[]}}},
+  {"name":"Take final set member","program":"set.takeLast","inputs":{"set":{"entries":[["a","x"],["b","y"]]},"count":1},"expect":{"value":{"entries":[["b",""]]}}},
+  {"name":"Huge count takes whole set without unbounded looping","program":"set.takeLast","inputs":{"set":{"entries":[["a","x"]]},"count":9007199254740991},"expect":{"value":{"entries":[["a",""]]}}}
+]}

@@ -1,0 +1,1 @@
+{"profile":"WLS-PACKAGE/1","name":"example.value-prefix","version":"0.1.0","executionProfile":"WLS-MAP/1","dependencies":{"wls.collections":"0.20.0"},"programs":["map.takeWhileValue","map.dropWhileValue"]}

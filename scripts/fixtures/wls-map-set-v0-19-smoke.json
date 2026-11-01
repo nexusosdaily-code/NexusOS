@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Existing map key moves first","program":"map.moveToFront","inputs":{"map":{"entries":[["b","x"],["a","y"],["c","z"]]},"key":"a"},"expect":{"value":{"entries":[["a","y"],["b","x"],["c","z"]]}}},
+  {"name":"Absent map key stays absent","program":"map.moveToFront","inputs":{"map":{"entries":[["b","x"]]},"key":"a"},"expect":{"value":{"entries":[["b","x"]]}}},
+  {"name":"Set member moves first with empty payloads","program":"set.moveToFront","inputs":{"set":{"entries":[["b","x"],["a","y"]]},"value":"a"},"expect":{"value":{"entries":[["a",""],["b",""]]}}},
+  {"name":"Empty set remains empty","program":"set.moveToFront","inputs":{"set":{"entries":[]},"value":""},"expect":{"value":{"entries":[]}}}
+]}

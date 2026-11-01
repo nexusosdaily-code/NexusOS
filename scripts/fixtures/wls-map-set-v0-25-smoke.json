@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Count distinct exact values","program":"map.countDistinctValues","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]}},"expect":{"value":2}},
+  {"name":"Detect duplicated values","program":"map.hasDuplicateValues","inputs":{"map":{"entries":[["a",""],["b",""]]}},"expect":{"value":true}},
+  {"name":"Empty map has zero distinct values","program":"map.countDistinctValues","inputs":{"map":{"entries":[]}},"expect":{"value":0}},
+  {"name":"Different Unicode sequences remain distinct","program":"map.hasDuplicateValues","inputs":{"map":{"entries":[["a","é"],["b","é"]]}},"expect":{"value":false}}
+]}

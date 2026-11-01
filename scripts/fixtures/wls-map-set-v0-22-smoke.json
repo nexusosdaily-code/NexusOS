@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Drop final two map entries","program":"map.dropLast","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","z"]]},"count":2},"expect":{"value":{"entries":[["a","x"]]}}},
+  {"name":"Negative count drops nothing","program":"map.dropLast","inputs":{"map":{"entries":[["a","x"]]},"count":-1},"expect":{"value":{"entries":[["a","x"]]}}},
+  {"name":"Drop final set member","program":"set.dropLast","inputs":{"set":{"entries":[["a","x"],["b","y"]]},"count":1},"expect":{"value":{"entries":[["a",""]]}}},
+  {"name":"Huge count drops whole set","program":"set.dropLast","inputs":{"set":{"entries":[["a","x"]]},"count":9007199254740991},"expect":{"value":{"entries":[]}}}
+]}

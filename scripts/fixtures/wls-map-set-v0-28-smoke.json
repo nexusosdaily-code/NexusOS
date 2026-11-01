@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+  {"name":"Count left-exclusive members","program":"set.differenceSize","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","z"],["c","x"]]}},"expect":{"value":1}},
+  {"name":"Count both exclusive sides","program":"set.symmetricDifferenceSize","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","z"],["c","x"]]}},"expect":{"value":2}},
+  {"name":"Directional difference","program":"set.differenceSize","inputs":{"left":{"entries":[]},"right":{"entries":[["a","x"]]}},"expect":{"value":0}},
+  {"name":"Identical keys cancel despite payload changes","program":"set.symmetricDifferenceSize","inputs":{"left":{"entries":[["a","x"]]},"right":{"entries":[["a","y"]]}},"expect":{"value":0}}
+]}

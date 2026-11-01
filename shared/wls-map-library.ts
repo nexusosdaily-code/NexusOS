@@ -34,6 +34,49 @@ export const mapKeyAtOrDefault = (input: MapValue, index: number, fallback: stri
 export const mapValueAtOrDefault = (input: MapValue, index: number, fallback: string): string =>
   indexedString("map.valueAtOrDefault", { map: input, index, fallback });
 export const mapCopy = (input: MapValue): MapValue => map(run("map.copy", { map: input }));
+export const mapMoveToFront = (input: MapValue, key: string): MapValue =>
+  map(run("map.moveToFront", { map: input, key }));
+export const mapTakeWhileValue = (input: MapValue, value: string): MapValue =>
+  map(run("map.takeWhileValue", { map: input, value }));
+export const mapDropWhileValue = (input: MapValue, value: string): MapValue =>
+  map(run("map.dropWhileValue", { map: input, value }));
+export const mapTakeLast = (input: MapValue, count: number): MapValue =>
+  map(run("map.takeLast", { map: input, count }));
+export const mapDropLast = (input: MapValue, count: number): MapValue =>
+  map(run("map.dropLast", { map: input, count }));
+function batchInteger(id: string, inputs: Readonly<Record<string, unknown>>): number {
+  const value = run(id, inputs);
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) throw new CollectionVMError("Invalid map integer result.");
+  return value;
+}
+export const mapIndexOfValue = (input: MapValue, value: string): number =>
+  batchInteger("map.indexOfValue", { map: input, value });
+export const mapLastIndexOfValue = (input: MapValue, value: string): number =>
+  batchInteger("map.lastIndexOfValue", { map: input, value });
+export const mapCountCommonKeys = (left: MapValue, right: MapValue): number =>
+  batchInteger("map.countCommonKeys", { left, right });
+export const mapCountMatchingEntries = (left: MapValue, right: MapValue): number =>
+  batchInteger("map.countMatchingEntries", { left, right });
+export const mapCountDistinctValues = (input: MapValue): number =>
+  batchInteger("map.countDistinctValues", { map: input });
+export function mapHasDuplicateValues(input: MapValue): boolean {
+  const value = run("map.hasDuplicateValues", { map: input });
+  if (typeof value !== "boolean") throw new CollectionVMError("Invalid map boolean result.");
+  return value;
+}
+export const mapDeleteFirstValue = (input: MapValue, value: string): MapValue =>
+  map(run("map.deleteFirstValue", { map: input, value }));
+export const mapDeleteLastValue = (input: MapValue, value: string): MapValue =>
+  map(run("map.deleteLastValue", { map: input, value }));
+export const mapMergeIfAbsent = (left: MapValue, right: MapValue): MapValue =>
+  map(run("map.mergeIfAbsent", { left, right }));
+export const mapMergeExisting = (left: MapValue, right: MapValue): MapValue =>
+  map(run("map.mergeExisting", { left, right }));
+/** Value-checked immutable update, NOT an atomic operation on external storage. */
+export const mapReplaceEntryIfValue = (input: MapValue, key: string, expected: string, replacement: string): MapValue =>
+  map(run("map.replaceEntryIfValue", { map: input, key, expected, replacement }));
+export const mapDeleteEntryIfValue = (input: MapValue, key: string, expected: string): MapValue =>
+  map(run("map.deleteEntryIfValue", { map: input, key, expected }));
 /** Move an existing entry last, keeping its payload; missing keys are not inserted. */
 export const mapMoveToEnd = (input: MapValue, key: string): MapValue =>
   map(run("map.moveToEnd", { map: input, key }));

@@ -18,6 +18,18 @@ import windowsSuite from "../../../scripts/fixtures/wls-map-set-v0-15-smoke.json
 import renamingSuite from "../../../scripts/fixtures/wls-map-set-v0-16-smoke.json";
 import swappingSuite from "../../../scripts/fixtures/wls-map-set-v0-17-smoke.json";
 import reorderingSuite from "../../../scripts/fixtures/wls-map-set-v0-18-smoke.json";
+import frontSuite from "../../../scripts/fixtures/wls-map-set-v0-19-smoke.json";
+import prefixSuite from "../../../scripts/fixtures/wls-map-set-v0-20-smoke.json";
+import takeLastSuite from "../../../scripts/fixtures/wls-map-set-v0-21-smoke.json";
+import dropLastSuite from "../../../scripts/fixtures/wls-map-set-v0-22-smoke.json";
+import positionsSuite from "../../../scripts/fixtures/wls-map-set-v0-23-smoke.json";
+import overlapSuite from "../../../scripts/fixtures/wls-map-set-v0-24-smoke.json";
+import uniquenessSuite from "../../../scripts/fixtures/wls-map-set-v0-25-smoke.json";
+import deletionSuite from "../../../scripts/fixtures/wls-map-set-v0-26-smoke.json";
+import unionSizesSuite from "../../../scripts/fixtures/wls-map-set-v0-27-smoke.json";
+import exclusiveSizesSuite from "../../../scripts/fixtures/wls-map-set-v0-28-smoke.json";
+import mergePoliciesSuite from "../../../scripts/fixtures/wls-map-set-v0-29-smoke.json";
+import checkedUpdatesSuite from "../../../scripts/fixtures/wls-map-set-v0-30-smoke.json";
 
 const INPUT_LIMIT = 16_384;
 type Instruction = ReturnType<typeof compileCollection>[number];
@@ -90,6 +102,18 @@ const laterReleases = [
   { version: "0.16.0", suite: renamingSuite },
   { version: "0.17.0", suite: swappingSuite },
   { version: "0.18.0", suite: reorderingSuite },
+  { version: "0.19.0", suite: frontSuite },
+  { version: "0.20.0", suite: prefixSuite },
+  { version: "0.21.0", suite: takeLastSuite },
+  { version: "0.22.0", suite: dropLastSuite },
+  { version: "0.23.0", suite: positionsSuite },
+  { version: "0.24.0", suite: overlapSuite },
+  { version: "0.25.0", suite: uniquenessSuite },
+  { version: "0.26.0", suite: deletionSuite },
+  { version: "0.27.0", suite: unionSizesSuite },
+  { version: "0.28.0", suite: exclusiveSizesSuite },
+  { version: "0.29.0", suite: mergePoliciesSuite },
+  { version: "0.30.0", suite: checkedUpdatesSuite },
 ].map(({ version, suite }) => ({
   version,
   examples: releaseExamples(suite, suite.cases.map(c => c.program), `wls-map-set-v0-${version.split(".")[1]}-smoke.json`),
@@ -289,7 +313,7 @@ function ProfileWorkspace({ profile, startWithSets }: { profile: Profile; startW
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
           <div>
             <h3 style={{ margin: "0 0 4px", color: "#e9ddff", fontSize: 14 }}>Boundaries</h3>
-            <a href="/wavelengthscript-dependencies.html" style={{ color: "#c4b5fd", fontSize: 12 }}>Working dependency packages 0.1.0–0.18.0: guide and audit</a>
+            <a href="/wavelengthscript-dependencies.html" style={{ color: "#c4b5fd", fontSize: 12 }}>Working dependency packages 0.1.0–0.30.0: guide and audit</a>
             <p style={{ margin: 0, color: "#8f869f", fontSize: 11 }}>Hard VM limits · rejected when exceeded</p>
           </div>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
