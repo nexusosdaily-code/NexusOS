@@ -15,6 +15,7 @@ import orderedValuesSuite from "../../../scripts/fixtures/wls-map-set-v0-12-smok
 import indexedSuite from "../../../scripts/fixtures/wls-map-set-v0-13-smoke.json";
 import membershipSuite from "../../../scripts/fixtures/wls-map-set-v0-14-smoke.json";
 import windowsSuite from "../../../scripts/fixtures/wls-map-set-v0-15-smoke.json";
+import renamingSuite from "../../../scripts/fixtures/wls-map-set-v0-16-smoke.json";
 
 const INPUT_LIMIT = 16_384;
 type Instruction = ReturnType<typeof compileCollection>[number];
@@ -84,6 +85,7 @@ const laterReleases = [
   { version: "0.13.0", suite: indexedSuite },
   { version: "0.14.0", suite: membershipSuite },
   { version: "0.15.0", suite: windowsSuite },
+  { version: "0.16.0", suite: renamingSuite },
 ].map(({ version, suite }) => ({
   version,
   examples: releaseExamples(suite, suite.cases.map(c => c.program), `wls-map-set-v0-${version.split(".")[1]}-smoke.json`),
@@ -283,7 +285,7 @@ function ProfileWorkspace({ profile, startWithSets }: { profile: Profile; startW
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
           <div>
             <h3 style={{ margin: "0 0 4px", color: "#e9ddff", fontSize: 14 }}>Boundaries</h3>
-            <a href="/wavelengthscript-dependencies.html" style={{ color: "#c4b5fd", fontSize: 12 }}>Working dependency packages 0.1.0–0.15.0: guide and audit</a>
+            <a href="/wavelengthscript-dependencies.html" style={{ color: "#c4b5fd", fontSize: 12 }}>Working dependency packages 0.1.0–0.16.0: guide and audit</a>
             <p style={{ margin: 0, color: "#8f869f", fontSize: 11 }}>Hard VM limits · rejected when exceeded</p>
           </div>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>

@@ -15,6 +15,8 @@ const contracts = {
   "string.reverse": { items: "list" },
   "map.empty": {},
   "map.copy": { map: "map" },
+  "map.renameKeyIfAbsent": { map: "map", key: "string", replacement: "string" },
+  "set.replaceIfAbsent": { set: "map", value: "string", replacement: "string" },
   "map.size": { map: "map" },
   "map.has": { map: "map", key: "string" },
   "map.get": { map: "map", key: "string" },

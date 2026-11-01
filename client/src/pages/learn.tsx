@@ -1767,7 +1767,7 @@ export default function LearnPage() {
       <div className="border-t border-white/8 px-4 py-4 flex-shrink-0 bg-black/20">
         <h2 className="text-[9px] text-gray-600 uppercase tracking-widest mb-3">Related Resources</h2>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
-          <a href="/wavelengthscript-dependencies.html" className="text-[11px] text-violet-400 hover:text-violet-300 transition-colors">Working dependency packages 0.1.0–0.15.0 · guide and audit</a>
+          <a href="/wavelengthscript-dependencies.html" className="text-[11px] text-violet-400 hover:text-violet-300 transition-colors">Working dependency packages · guide and audit</a>
           <Link href="/wavelength-lang" className="text-[11px] text-violet-400 hover:text-violet-300 transition-colors">WavelengthScript Language Spec</Link>
           <Link href="/wnsp-vm" className="text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors">WNSP Virtual Machine</Link>
           <Link href="/hardware-spec" className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors">Hardware Specification</Link>

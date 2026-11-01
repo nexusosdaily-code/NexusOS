@@ -18,6 +18,9 @@ function result(value: unknown): StringSetValue {
 
 /** Host bridges marshal only. Valid input map payloads are intentionally ignored. */
 export const setEmpty = (): StringSetValue => result(run("set.empty", {}));
+/** Replace in insertion order without overwriting another member; canonicalizes payloads. */
+export const setReplaceIfAbsent = (set: MapValue, value: string, replacement: string): StringSetValue =>
+  result(run("set.replaceIfAbsent", { set, value, replacement }));
 /** Zero-based member position in insertion order; payloads are ignored. */
 export function setIndexOf(set: MapValue, value: string): number {
   const index = run("set.indexOf", { set, value });

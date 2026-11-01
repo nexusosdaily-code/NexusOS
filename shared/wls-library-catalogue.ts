@@ -138,7 +138,13 @@ export const MAP_SET_V0_15_PROGRAM_FILES = Object.freeze({
   "set.slice": "set/slice.wls",
 } as const);
 export const MAP_SET_V0_15_PROGRAM_IDS = Object.freeze(Object.keys(MAP_SET_V0_15_PROGRAM_FILES) as (keyof typeof MAP_SET_V0_15_PROGRAM_FILES)[]);
-export const LIBRARY_PROGRAM_FILES = Object.freeze({ ...COLLECTION_PROGRAM_FILES, ...MAP_SET_V0_15_PROGRAM_FILES });
+export const MAP_SET_V0_16_PROGRAM_FILES = Object.freeze({
+  ...MAP_SET_V0_15_PROGRAM_FILES,
+  "map.renameKeyIfAbsent": "map/renameKeyIfAbsent.wls",
+  "set.replaceIfAbsent": "set/replaceIfAbsent.wls",
+} as const);
+export const MAP_SET_V0_16_PROGRAM_IDS = Object.freeze(Object.keys(MAP_SET_V0_16_PROGRAM_FILES) as (keyof typeof MAP_SET_V0_16_PROGRAM_FILES)[]);
+export const LIBRARY_PROGRAM_FILES = Object.freeze({ ...COLLECTION_PROGRAM_FILES, ...MAP_SET_V0_16_PROGRAM_FILES });
 export type LibraryProgramId = keyof typeof LIBRARY_PROGRAM_FILES;
 export const LIBRARY_PROGRAM_IDS = Object.freeze(Object.keys(LIBRARY_PROGRAM_FILES) as LibraryProgramId[]);
 
