@@ -80,6 +80,12 @@ jobs:
       - name: Independent native live-video fixtures
         if: ${{ !cancelled() }}
         run: npm run test:browser-live-video -- --reporter=verbose --reporter=json --outputFile=generated-artifacts/ci/live-video.json
+      # Separate from UI fixtures: all 106 exact-0.40.0 APIs must execute in
+      # ordinary and source-locked native workers in all three locked engines.
+      # Keep the harness watchdogs, deadlines and no-network checks unchanged.
+      - name: Complete dependency native-worker fixtures
+        if: ${{ !cancelled() }}
+        run: npm run test:browser-complete-collections
       - name: Report passes, failures and skips separately
         if: ${{ always() }}
         run: node scripts/summarize-safeguards.mjs
