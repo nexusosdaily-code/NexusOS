@@ -9,6 +9,7 @@ import { MAP_SET_V0_14_PROGRAM_IDS } from "./wls-library-catalogue";
 import { MAP_SET_V0_15_PROGRAM_IDS } from "./wls-library-catalogue";
 import { MAP_SET_V0_16_PROGRAM_IDS } from "./wls-library-catalogue";
 import { MAP_SET_V0_17_PROGRAM_IDS } from "./wls-library-catalogue";
+import { MAP_SET_V0_18_PROGRAM_IDS } from "./wls-library-catalogue";
 
 export const COLLECTION_PACKAGE_PROFILE = "WLS-PACKAGE/1";
 export const COLLECTION_PACKAGE_TEXT_LIMIT = 8_192;
@@ -68,6 +69,9 @@ export const MAP_SET_V0_16_LIBRARY_RELEASE = Object.freeze({
 export const MAP_SET_V0_17_LIBRARY_RELEASE = Object.freeze({
   name: "wls.collections", version: "0.17.0", executionProfile: MAP_PROFILE,
 });
+export const MAP_SET_V0_18_LIBRARY_RELEASE = Object.freeze({
+  name: "wls.collections", version: "0.18.0", executionProfile: MAP_PROFILE,
+});
 const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 function exactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
@@ -110,6 +114,7 @@ export function resolveCollectionPackage(text: string) {
     requested === MAP_SET_V0_15_LIBRARY_RELEASE.version ? MAP_SET_V0_15_LIBRARY_RELEASE :
     requested === MAP_SET_V0_16_LIBRARY_RELEASE.version ? MAP_SET_V0_16_LIBRARY_RELEASE :
     requested === MAP_SET_V0_17_LIBRARY_RELEASE.version ? MAP_SET_V0_17_LIBRARY_RELEASE :
+    requested === MAP_SET_V0_18_LIBRARY_RELEASE.version ? MAP_SET_V0_18_LIBRARY_RELEASE :
       fail("Unsupported collection dependency version; an exact local version is required.");
   if (manifest.executionProfile !== release.executionProfile) fail("Dependency execution profile mismatch.");
   const allowedPrograms: readonly LibraryProgramId[] = release === COLLECTION_LIBRARY_RELEASE ? COLLECTION_V0_1_PROGRAM_IDS :
@@ -127,7 +132,8 @@ export function resolveCollectionPackage(text: string) {
     release === MAP_SET_V0_14_LIBRARY_RELEASE ? MAP_SET_V0_14_PROGRAM_IDS :
     release === MAP_SET_V0_15_LIBRARY_RELEASE ? MAP_SET_V0_15_PROGRAM_IDS :
     release === MAP_SET_V0_16_LIBRARY_RELEASE ? MAP_SET_V0_16_PROGRAM_IDS :
-    release === MAP_SET_V0_17_LIBRARY_RELEASE ? MAP_SET_V0_17_PROGRAM_IDS : COLLECTION_V0_2_PROGRAM_IDS;
+    release === MAP_SET_V0_17_LIBRARY_RELEASE ? MAP_SET_V0_17_PROGRAM_IDS :
+    release === MAP_SET_V0_18_LIBRARY_RELEASE ? MAP_SET_V0_18_PROGRAM_IDS : COLLECTION_V0_2_PROGRAM_IDS;
   if (!Array.isArray(manifest.programs) || !manifest.programs.length ||
     manifest.programs.length > allowedPrograms.length) return fail("Declare a bounded nonempty program list.");
   const seen = new Set<LibraryProgramId>();

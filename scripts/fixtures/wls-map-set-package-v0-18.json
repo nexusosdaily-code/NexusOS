@@ -1,0 +1,26 @@
+{
+  "profile": "WLS-PACKAGE/1",
+  "name": "example.ordered-collection-updates",
+  "version": "0.1.0",
+  "executionProfile": "WLS-MAP/1",
+  "dependencies": {"wls.collections": "0.18.0"},
+  "programs": [
+    "map.empty", "map.copy", "map.size", "map.has", "map.get", "map.set",
+    "map.delete", "map.keyAt", "map.merge", "map.intersection", "map.difference",
+    "set.empty", "set.fromMap", "set.size", "set.has", "set.add", "set.delete",
+    "set.at", "set.union", "set.intersection", "set.difference",
+    "map.filterByValue", "map.rejectByValue", "map.invertLast",
+    "set.isSubset", "set.isDisjoint", "set.equals",
+    "map.equals", "map.isSubmap", "map.intersectionEntries",
+    "map.differenceEntries", "set.symmetricDifference",
+    "map.getOrDefault", "map.setIfAbsent", "map.replaceIfPresent",
+    "map.take", "map.drop", "set.take", "set.drop",
+    "map.hasValue", "map.countValue", "map.findKeyByValueOrDefault",
+    "map.replaceValue", "map.invertFirst", "set.fromValues",
+    "map.findLastKeyByValueOrDefault", "map.replaceFirstValue", "map.replaceLastValue",
+    "map.valueAt", "map.keyAtOrDefault", "map.valueAtOrDefault",
+    "map.indexOfKey", "set.indexOf", "set.atOrDefault", "map.slice", "set.slice",
+    "map.renameKeyIfAbsent", "set.replaceIfAbsent", "map.swapValues", "set.toggle",
+    "map.moveToEnd", "set.moveToEnd"
+  ]
+}

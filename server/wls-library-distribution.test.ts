@@ -29,6 +29,7 @@ const examples = [
 const allFiles = [...examples.map(({ file }) => file),
   "map/renameKeyIfAbsent.wls", "set/replaceIfAbsent.wls",
   "map/swapValues.wls", "set/toggle.wls",
+  "map/moveToEnd.wls", "set/moveToEnd.wls",
   "map/empty.wls", "map/copy.wls", "map/size.wls", "map/has.wls",
   "map/get.wls", "map/set.wls", "map/delete.wls", "map/keyAt.wls",
   "map/merge.wls", "map/intersection.wls", "map/difference.wls",
