@@ -31,12 +31,12 @@ function freeze<T>(value: T): T {
   return value;
 }
 
-describe("actual package behavior across all seventeen retained releases", () => {
+describe("actual package behavior across all eighteen retained releases", () => {
   it("has independently expected successful outputs for every canonical operation", () => {
     expect([...new Set(cases.filter(c => Object.hasOwn(c.expect, "value")).map(c => c.program))].sort())
       .toEqual([...LIBRARY_PROGRAM_IDS].sort());
     expect([...new Set(manifests.map(m => resolveCollectionPackage(m.text).dependencies[0].version))].sort())
-      .toEqual(Array.from({ length: 17 }, (_, i) => `0.${i + 1}.0`).sort());
+      .toEqual(Array.from({ length: 18 }, (_, i) => `0.${i + 1}.0`).sort());
   });
   for (const manifest of manifests) {
     it(`${manifest.file}: matches expected values/errors, executes instructions and preserves inputs`, async () => {

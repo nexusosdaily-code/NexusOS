@@ -12,8 +12,10 @@ or all third-party dependencies have been rewritten in WavelengthScript.
 
 ## Scope and evidence
 
-The latest local increment is [0.17.0: swapping and membership toggling](wavelengthscript-map-set-v0-17.md),
-with real native programs, a full 60-API consumer and executable learning examples.
+The latest local increment is [0.18.0: ordered collection updates](wavelengthscript-map-set-v0-18.md),
+with real native programs, a full 62-API consumer and executable learning examples.
+The preceding [0.17.0: swapping and membership toggling](wavelengthscript-map-set-v0-17.md)
+remains available with its original contract and source lock.
 
 These guides describe the matching development workspace. Runnable releases
 need their actual source, tests, fixtures and build configuration, not only

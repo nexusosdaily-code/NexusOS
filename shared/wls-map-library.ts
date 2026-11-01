@@ -34,6 +34,9 @@ export const mapKeyAtOrDefault = (input: MapValue, index: number, fallback: stri
 export const mapValueAtOrDefault = (input: MapValue, index: number, fallback: string): string =>
   indexedString("map.valueAtOrDefault", { map: input, index, fallback });
 export const mapCopy = (input: MapValue): MapValue => map(run("map.copy", { map: input }));
+/** Move an existing entry last, keeping its payload; missing keys are not inserted. */
+export const mapMoveToEnd = (input: MapValue, key: string): MapValue =>
+  map(run("map.moveToEnd", { map: input, key }));
 /** Swap existing payloads without moving keys; missing keys yield a fresh copy. */
 export const mapSwapValues = (input: MapValue, first: string, second: string): MapValue =>
   map(run("map.swapValues", { map: input, first, second }));

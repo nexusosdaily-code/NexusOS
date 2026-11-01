@@ -22,6 +22,8 @@ describe("current dependency usability", () => {
     ["0.16.0", "set.replaceIfAbsent", { entries: [["b", ""], ["Ψ", ""], ["c", ""]] }],
     ["0.17.0", "map.swapValues", { entries: [["b", "z"], ["a", "y"], ["c", "x"]] }],
     ["0.17.0", "set.toggle", { entries: [["b", ""], ["c", ""]] }],
+    ["0.18.0", "map.moveToEnd", { entries: [["b", "x"], ["c", "z"], ["a", "y"]] }],
+    ["0.18.0", "set.moveToEnd", { entries: [["b", ""], ["c", ""], ["a", ""]] }],
   ] as const)("offers and actually executes %s examples", (version, program, expected) => {
     render(<CollectionWorkspace profile={MAP_PROFILE} />);
     const group = screen.getByRole("group", { name: `Native Map and Set examples · local wls.collections ${version}` });

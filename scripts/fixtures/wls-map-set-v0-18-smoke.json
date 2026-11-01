@@ -1,0 +1,11 @@
+{
+  "profile": "WLS-TEST/1",
+  "cases": [
+    {"name":"Move middle entry last preserving values","program":"map.moveToEnd","inputs":{"map":{"entries":[["b","x"],["a","y"],["c","z"]]},"key":"a"},"expect":{"value":{"entries":[["b","x"],["c","z"],["a","y"]]}}},
+    {"name":"Missing key is not inserted","program":"map.moveToEnd","inputs":{"map":{"entries":[["a","x"],["b","y"]]},"key":"missing"},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}},
+    {"name":"Empty map remains empty","program":"map.moveToEnd","inputs":{"map":{"entries":[]},"key":""},"expect":{"value":{"entries":[]}}},
+    {"name":"Move middle member last and canonicalize","program":"set.moveToEnd","inputs":{"set":{"entries":[["b","x"],["a","y"],["c","z"]]},"value":"a"},"expect":{"value":{"entries":[["b",""],["c",""],["a",""]]}}},
+    {"name":"Missing member is not inserted","program":"set.moveToEnd","inputs":{"set":{"entries":[["b","x"]]},"value":"Ψ"},"expect":{"value":{"entries":[["b",""]]}}},
+    {"name":"Existing empty-string member remains last","program":"set.moveToEnd","inputs":{"set":{"entries":[["Ψ","x"],["","y"]]},"value":""},"expect":{"value":{"entries":[["Ψ",""],["",""]]}}}
+  ]
+}

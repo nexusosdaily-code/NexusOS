@@ -17,6 +17,8 @@ const contracts = {
   "map.copy": { map: "map" },
   "map.renameKeyIfAbsent": { map: "map", key: "string", replacement: "string" },
   "map.swapValues": { map: "map", first: "string", second: "string" },
+  "map.moveToEnd": { map: "map", key: "string" },
+  "set.moveToEnd": { set: "map", value: "string" },
   "set.toggle": { set: "map", value: "string" },
   "set.replaceIfAbsent": { set: "map", value: "string", replacement: "string" },
   "map.size": { map: "map" },
