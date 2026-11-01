@@ -36,7 +36,7 @@ describe("actual package behavior across all thirty retained releases", () => {
     expect([...new Set(cases.filter(c => Object.hasOwn(c.expect, "value")).map(c => c.program))].sort())
       .toEqual([...LIBRARY_PROGRAM_IDS].sort());
     expect([...new Set(manifests.map(m => resolveCollectionPackage(m.text).dependencies[0].version))].sort())
-      .toEqual(Array.from({ length: 30 }, (_, i) => `0.${i + 1}.0`).sort());
+      .toEqual(Array.from({ length: 40 }, (_, i) => `0.${i + 1}.0`).sort());
   });
   for (const manifest of manifests) {
     describe(manifest.file, () => {

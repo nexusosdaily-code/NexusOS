@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Take initial key-membership run only","program":"map.takeWhileKeyIn","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","z"]]},"right":{"entries":[["a","ignored"],["c","ignored"]]}},"expect":{"value":{"entries":[["a","x"]]}}},
+{"name":"Empty membership set gives empty prefix","program":"map.takeWhileKeyIn","inputs":{"map":{"entries":[["a","x"]]},"right":{"entries":[]}},"expect":{"value":{"entries":[]}}},
+{"name":"Drop prefix keeps later matching members","program":"map.dropWhileKeyIn","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","z"]]},"right":{"entries":[["a","ignored"],["c","ignored"]]}},"expect":{"value":{"entries":[["b","y"],["c","z"]]}}},
+{"name":"All-member prefix drops entirely","program":"map.dropWhileKeyIn","inputs":{"map":{"entries":[["","x"]]},"right":{"entries":[["","ignored"]]}},"expect":{"value":{"entries":[]}}}
+]}

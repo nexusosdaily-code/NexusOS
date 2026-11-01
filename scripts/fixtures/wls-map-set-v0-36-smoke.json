@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Same ordered entries compare equal","program":"map.equalsOrdered","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","x"],["b","y"]]}},"expect":{"value":true}},
+{"name":"Reordered keys are not ordered-equal","program":"map.equalsOrdered","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["b","y"],["a","x"]]}},"expect":{"value":false}},
+{"name":"Set ordered comparison ignores payloads","program":"set.equalsOrdered","inputs":{"left":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["a","changed"],["b",""]]}},"expect":{"value":true}},
+{"name":"Empty and nonempty sets differ","program":"set.equalsOrdered","inputs":{"left":{"entries":[]},"right":{"entries":[["",""]]}},"expect":{"value":false}}
+]}

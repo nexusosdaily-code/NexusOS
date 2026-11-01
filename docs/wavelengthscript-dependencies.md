@@ -1,6 +1,6 @@
 # WavelengthScript dependency documentation
 
-**Documentation disclosure snapshot: 1 November 2026.**
+**Documentation disclosure snapshot: 2 November 2026.**
 
 This workspace index can include additions beyond an earlier GitHub disclosure
 snapshot. Updating it locally does not itself update GitHub, establish passing
@@ -12,7 +12,12 @@ or all third-party dependencies have been rewritten in WavelengthScript.
 
 ## Scope and evidence
 
-The latest audited batch is [0.19.0–0.30.0: twelve working dependency versions](wavelengthscript-map-set-v0-19-30.md),
+The latest audited batch is [0.31.0–0.40.0: ten working dependency versions](wavelengthscript-map-set-v0-31-40.md),
+adding 20 native algorithms, exact-version consumers and executable learning
+examples. Version 0.40.0 exposes 106 Map/Set APIs within the unchanged
+execution limits.
+
+The preceding [0.19.0–0.30.0: twelve working dependency versions](wavelengthscript-map-set-v0-19-30.md),
 adding 24 native algorithms, exact-version consumers and executable learning
 examples. Version 0.30.0 exposes 86 Map/Set APIs. The preceding
 [0.18.0: ordered collection updates](wavelengthscript-map-set-v0-18.md)

@@ -46,6 +46,13 @@ add("map.countCommonKeys map.countMatchingEntries map.mergeIfAbsent map.mergeExi
 add("map.countDistinctValues map.hasDuplicateValues", { map });
 add("map.replaceEntryIfValue", { map, key: "a", expected: "x", replacement: "y" });
 add("map.deleteEntryIfValue", { map, key: "a", expected: "x" });
+add("map.takeUntilValue map.dropUntilValue map.takeLastWhileValue map.dropLastWhileValue map.findEntryByValue map.findLastEntryByValue",
+  { map, value: "x" });
+add("map.distinctValuesFirst map.distinctValuesLast", { map });
+add("map.filterByValueSet map.rejectByValueSet map.remapValues map.takeWhileKeyIn map.dropWhileKeyIn map.takeLastWhileKeyIn map.dropLastWhileKeyIn",
+  { map, right: map });
+add("map.remapValuesOrDefault", { map, right: map, fallback: "" });
+add("map.equalsOrdered set.equalsOrdered map.countChangedEntries map.countRemovedKeys", { left: map, right: map });
 add("set.moveToEnd", { set: map, value: "a" });
 add("set.toggle", { set: map, value: "a" });
 add("set.replaceIfAbsent", { set: map, value: "a", replacement: "b" });
@@ -160,6 +167,16 @@ const releases = [
   ["wls-map-set-package-v0-28.json", "e1d78a83608d1beef3d08e70bfac16cb468ca63aeeef6f59efa1953959de7224"],
   ["wls-map-set-package-v0-29.json", "52626f765188ffd13e53e74d827f0bf888e3d5fd73c44c99004a5066f3ea0aa6"],
   ["wls-map-set-package-v0-30.json", "989c7925fda2b0df58c2bbdf005e58554f1fd5e84aeb4a8e23eb7af4211dd8cc"],
+  ["wls-map-set-package-v0-31.json", "6cc2ea55bb352e74a524aa585058892dd7f746e681d922dd6d5d24455e164939"],
+  ["wls-map-set-package-v0-32.json", "cc29a593eda96dddaf8ef1efab34f2821d30012c853a22cbca452f941f1bbaa4"],
+  ["wls-map-set-package-v0-33.json", "8e17afbaac53f42c7a74766b337b0085277ef5d4a4344be5ee24b3cd15bd3ddb"],
+  ["wls-map-set-package-v0-34.json", "a2502f27c0e456a67f0843d63d06beddcc961ff2a8f4ba73bbc5d3893f93f1a5"],
+  ["wls-map-set-package-v0-35.json", "6532d203647c5ad3d250936c0f5c13621353393603dd4b6beda14ad82341c08b"],
+  ["wls-map-set-package-v0-36.json", "9401bf1d568d3e4b85c0b5d43093850864c4de29309648d40533d88b9843bcc7"],
+  ["wls-map-set-package-v0-37.json", "95729ee1fd575cf8329554a51f0276d9b2b85bd6fba10ba743afc7c802d27dd2"],
+  ["wls-map-set-package-v0-38.json", "343fa0a21e2452c1304f1a1a6be1f4e692773f7d87c81e559dfab65a60a656a2"],
+  ["wls-map-set-package-v0-39.json", "f0367a6c184fe82af1579e4b11ff0e7aa08fab4418337d6ba28ce9987af9676b"],
+  ["wls-map-set-package-v0-40.json", "03b386b75ec574749c9a3173febce54f3517d3bce4bf26e70fccb305b354c5f4"],
 ] as const;
 it.each(releases)("preserves %s lock and validates all its declared APIs", async (file, digest) => {
   const text = fixture(file), resolved = resolveCollectionPackage(text);

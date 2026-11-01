@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Changed count excludes additions and removals","program":"map.countChangedEntries","inputs":{"left":{"entries":[["a","x"],["b","y"],["removed","z"]]},"right":{"entries":[["a","x"],["b","new"],["added","z"]]}},"expect":{"value":1}},
+{"name":"Present empty value can change","program":"map.countChangedEntries","inputs":{"left":{"entries":[["a",""]]},"right":{"entries":[["a","x"]]}},"expect":{"value":1}},
+{"name":"Removed count is directional","program":"map.countRemovedKeys","inputs":{"left":{"entries":[["a","x"],["removed","z"]]},"right":{"entries":[["a","new"],["added","z"]]}},"expect":{"value":1}},
+{"name":"Empty left has no removals","program":"map.countRemovedKeys","inputs":{"left":{"entries":[]},"right":{"entries":[["added",""]]}},"expect":{"value":0}}
+]}

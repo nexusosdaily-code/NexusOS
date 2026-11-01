@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Take contiguous matching suffix only","program":"map.takeLastWhileValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"],["d","x"]]},"value":"x"},"expect":{"value":{"entries":[["c","x"],["d","x"]]}}},
+{"name":"Nonmatching final value yields empty suffix","program":"map.takeLastWhileValue","inputs":{"map":{"entries":[["a","x"],["b","y"]]},"value":"x"},"expect":{"value":{"entries":[]}}},
+{"name":"Drop suffix preserves earlier matches","program":"map.dropLastWhileValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"value":"x"},"expect":{"value":{"entries":[["a","x"],["b","y"]]}}},
+{"name":"All matching values drop entirely","program":"map.dropLastWhileValue","inputs":{"map":{"entries":[["",""],["b",""]]},"value":""},"expect":{"value":{"entries":[]}}}
+]}

@@ -180,6 +180,26 @@ export const MAP_SET_V0_29_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_28_PROG
   "map.mergeIfAbsent": "map/mergeIfAbsent.wls", "map.mergeExisting": "map/mergeExisting.wls" } as const);
 export const MAP_SET_V0_30_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_29_PROGRAM_FILES,
   "map.replaceEntryIfValue": "map/replaceEntryIfValue.wls", "map.deleteEntryIfValue": "map/deleteEntryIfValue.wls" } as const);
+export const MAP_SET_V0_31_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_30_PROGRAM_FILES,
+  "map.takeUntilValue": "map/takeUntilValue.wls", "map.dropUntilValue": "map/dropUntilValue.wls" } as const);
+export const MAP_SET_V0_32_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_31_PROGRAM_FILES,
+  "map.takeLastWhileValue": "map/takeLastWhileValue.wls", "map.dropLastWhileValue": "map/dropLastWhileValue.wls" } as const);
+export const MAP_SET_V0_33_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_32_PROGRAM_FILES,
+  "map.distinctValuesFirst": "map/distinctValuesFirst.wls", "map.distinctValuesLast": "map/distinctValuesLast.wls" } as const);
+export const MAP_SET_V0_34_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_33_PROGRAM_FILES,
+  "map.filterByValueSet": "map/filterByValueSet.wls", "map.rejectByValueSet": "map/rejectByValueSet.wls" } as const);
+export const MAP_SET_V0_35_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_34_PROGRAM_FILES,
+  "map.remapValues": "map/remapValues.wls", "map.remapValuesOrDefault": "map/remapValuesOrDefault.wls" } as const);
+export const MAP_SET_V0_36_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_35_PROGRAM_FILES,
+  "map.equalsOrdered": "map/equalsOrdered.wls", "set.equalsOrdered": "set/equalsOrdered.wls" } as const);
+export const MAP_SET_V0_37_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_36_PROGRAM_FILES,
+  "map.countChangedEntries": "map/countChangedEntries.wls", "map.countRemovedKeys": "map/countRemovedKeys.wls" } as const);
+export const MAP_SET_V0_38_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_37_PROGRAM_FILES,
+  "map.findEntryByValue": "map/findEntryByValue.wls", "map.findLastEntryByValue": "map/findLastEntryByValue.wls" } as const);
+export const MAP_SET_V0_39_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_38_PROGRAM_FILES,
+  "map.takeWhileKeyIn": "map/takeWhileKeyIn.wls", "map.dropWhileKeyIn": "map/dropWhileKeyIn.wls" } as const);
+export const MAP_SET_V0_40_PROGRAM_FILES = Object.freeze({ ...MAP_SET_V0_39_PROGRAM_FILES,
+  "map.takeLastWhileKeyIn": "map/takeLastWhileKeyIn.wls", "map.dropLastWhileKeyIn": "map/dropLastWhileKeyIn.wls" } as const);
 /** Fixed, cumulative surfaces. Never infer older versions from the current catalogue. */
 export const MAP_SET_BATCH_SURFACES = Object.freeze({
   "0.19.0": MAP_SET_V0_19_PROGRAM_FILES, "0.20.0": MAP_SET_V0_20_PROGRAM_FILES,
@@ -188,8 +208,13 @@ export const MAP_SET_BATCH_SURFACES = Object.freeze({
   "0.25.0": MAP_SET_V0_25_PROGRAM_FILES, "0.26.0": MAP_SET_V0_26_PROGRAM_FILES,
   "0.27.0": MAP_SET_V0_27_PROGRAM_FILES, "0.28.0": MAP_SET_V0_28_PROGRAM_FILES,
   "0.29.0": MAP_SET_V0_29_PROGRAM_FILES, "0.30.0": MAP_SET_V0_30_PROGRAM_FILES,
+  "0.31.0": MAP_SET_V0_31_PROGRAM_FILES, "0.32.0": MAP_SET_V0_32_PROGRAM_FILES,
+  "0.33.0": MAP_SET_V0_33_PROGRAM_FILES, "0.34.0": MAP_SET_V0_34_PROGRAM_FILES,
+  "0.35.0": MAP_SET_V0_35_PROGRAM_FILES, "0.36.0": MAP_SET_V0_36_PROGRAM_FILES,
+  "0.37.0": MAP_SET_V0_37_PROGRAM_FILES, "0.38.0": MAP_SET_V0_38_PROGRAM_FILES,
+  "0.39.0": MAP_SET_V0_39_PROGRAM_FILES, "0.40.0": MAP_SET_V0_40_PROGRAM_FILES,
 });
-export const LIBRARY_PROGRAM_FILES = Object.freeze({ ...COLLECTION_PROGRAM_FILES, ...MAP_SET_V0_30_PROGRAM_FILES });
+export const LIBRARY_PROGRAM_FILES = Object.freeze({ ...COLLECTION_PROGRAM_FILES, ...MAP_SET_V0_40_PROGRAM_FILES });
 export type LibraryProgramId = keyof typeof LIBRARY_PROGRAM_FILES;
 export const LIBRARY_PROGRAM_IDS = Object.freeze(Object.keys(LIBRARY_PROGRAM_FILES) as LibraryProgramId[]);
 

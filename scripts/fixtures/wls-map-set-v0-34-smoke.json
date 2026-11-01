@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"Filter payloads by right keys not right values","program":"map.filterByValueSet","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"right":{"entries":[["x","ignored"]]}},"expect":{"value":{"entries":[["a","x"],["c","x"]]}}},
+{"name":"Empty membership set matches nothing","program":"map.filterByValueSet","inputs":{"map":{"entries":[["a","x"]]},"right":{"entries":[]}},"expect":{"value":{"entries":[]}}},
+{"name":"Reject matching payloads in place","program":"map.rejectByValueSet","inputs":{"map":{"entries":[["a","x"],["b","y"]]},"right":{"entries":[["x","y"]]}},"expect":{"value":{"entries":[["b","y"]]}}},
+{"name":"Empty-string membership is present","program":"map.rejectByValueSet","inputs":{"map":{"entries":[["a",""],["b","x"]]},"right":{"entries":[["","anything"]]}},"expect":{"value":{"entries":[["b","x"]]}}}
+]}

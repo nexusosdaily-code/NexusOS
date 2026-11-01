@@ -3,6 +3,13 @@ import { executeMap, type MapValue } from "./wls-map-vm";
 import { getCollectionProgramSource } from "./wls-library";
 
 export type { MapValue } from "./wls-map-vm";
+export {
+  mapTakeUntilValue, mapDropUntilValue, mapTakeLastWhileValue, mapDropLastWhileValue,
+  mapDistinctValuesFirst, mapDistinctValuesLast, mapFilterByValueSet, mapRejectByValueSet,
+  mapRemapValues, mapRemapValuesOrDefault, mapEqualsOrdered, mapCountChangedEntries,
+  mapCountRemovedKeys, mapFindEntryByValue, mapFindLastEntryByValue, mapTakeWhileKeyIn,
+  mapDropWhileKeyIn, mapTakeLastWhileKeyIn, mapDropLastWhileKeyIn,
+} from "./wls-map-batch-library";
 function run(id: string, inputs: Readonly<Record<string, unknown>>) {
   return executeMap(getCollectionProgramSource(id), inputs).value;
 }

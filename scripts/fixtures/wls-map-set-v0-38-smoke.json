@@ -1,0 +1,6 @@
+{"profile":"WLS-TEST/1","cases":[
+{"name":"First exact match returns one original entry","program":"map.findEntryByValue","inputs":{"map":{"entries":[["","x"],["b","y"],["c","x"]]},"value":"x"},"expect":{"value":{"entries":[["","x"]]}}},
+{"name":"Missing value returns an empty map","program":"map.findEntryByValue","inputs":{"map":{"entries":[["a",""]]},"value":"x"},"expect":{"value":{"entries":[]}}},
+{"name":"Last exact match returns one original entry","program":"map.findLastEntryByValue","inputs":{"map":{"entries":[["a","x"],["b","y"],["c","x"]]},"value":"x"},"expect":{"value":{"entries":[["c","x"]]}}},
+{"name":"Empty-string key and value remain present","program":"map.findLastEntryByValue","inputs":{"map":{"entries":[["a",""],["",""]]},"value":""},"expect":{"value":{"entries":[["",""]]}}}
+]}
