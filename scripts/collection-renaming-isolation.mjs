@@ -423,11 +423,38 @@ export async function checkNestedLifecycleControls(name, { watchdogTest } = {}) 
   }
 }
 
+export async function closeLifecycleContext(context, browser, page) {
+  // Chromium can retain a terminated nested-worker parent's protocol target
+  // until its context closes. Enumeration before that boundary is not a
+  // reliable native teardown signal (nor is a fixture's termination counter).
+  // Arm every observer BEFORE closing the context; require both the actual
+  // close notifications and the context's disappearance within one deadline.
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("Native lifecycle context teardown timed out after 3000ms")), 3_000);
+  });
+  try {
+    const workers = page ? page.workers() : [];
+    const closed = workers.map(worker => worker.waitForEvent("close", { timeout: 3_000 }));
+    await Promise.race([
+      Promise.all([...closed, context.close()]),
+      deadline,
+    ]);
+    assert.equal(browser.contexts().includes(context), false, "Native context must disappear");
+    if (page) {
+      assert.equal(page.isClosed(), true, "Native lifecycle page must close");
+      assert.equal(page.workers().length, 0, "No native worker may survive context teardown");
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function runNestedLifecycleFault(browser, name, baseFixture, fault, watchdogHang) {
   const forbidden = [], workerLoads = [];
   const expectedLoads = [...baseFixture.workerAssets, ...baseFixture.nestedWorkerAssets];
   const failedAssets = fault === "load-failure" ? baseFixture.nestedWorkerAssets : [];
-  let sentinel, assetHost, context, readyForTeardown = false;
+  let sentinel, assetHost, context, page, readyForTeardown = false;
   try {
     sentinel = await createSentinel();
     assetHost = await createNestedAssetHost(baseFixture, baseFixture.policy, workerLoads, failedAssets);
@@ -436,7 +463,7 @@ export async function runNestedLifecycleFault(browser, name, baseFixture, fault,
     await installGuards(context, {
       ...fixture, workerAssets: expectedLoads, forbidden, workerLoads, failedAssets,
     });
-    const page = await context.newPage();
+    page = await context.newPage();
     page.setDefaultTimeout(15_000);
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
@@ -478,11 +505,6 @@ export async function runNestedLifecycleFault(browser, name, baseFixture, fault,
         cloneFailure: fault === "child-clone-failure" ? cloneFailure : null,
       },
     }, "Every created native worker and deadline must be cleaned before page rejection");
-    // terminate() is synchronous above; delivery of the native protocol close
-    // notification is not. Require that notification, with a bounded deadline,
-    // rather than assuming the browser observer updates in the page's turn.
-    await Promise.all(page.workers().map(worker => worker.waitForEvent("close", { timeout: 3_000 })));
-    assert.equal(page.workers().length, 0, "Native parent must disappear, not merely report termination");
     if (fault === "page-clone-failure") {
       // Immediate termination can cancel the parent script before its request.
       assert.ok(workerLoads.length <= 1 && workerLoads.every(load => baseFixture.workerAssets.includes(load)),
@@ -494,7 +516,7 @@ export async function runNestedLifecycleFault(browser, name, baseFixture, fault,
     assert.deepEqual(assetHost.unexpected, []);
     assert.deepEqual(sentinel.arrivals, []);
     assert.deepEqual(errors, []);
-    console.log(`LIFECYCLE REJECT ${name} ${fault}: parent rejected; all created workers terminated, deadlines cleared; no network verdict`);
+    console.log(`LIFECYCLE REJECT ${name} ${fault}: parent rejected; termination calls recorded, deadlines cleared; native context closure pending; no network verdict`);
     readyForTeardown = true;
   } finally {
     if (watchdogHang === "teardown" && readyForTeardown) {
@@ -503,8 +525,7 @@ export async function runNestedLifecycleFault(browser, name, baseFixture, fault,
       await new Promise(() => {});
     }
     try {
-      await context?.close();
-      if (context) assert.equal(browser.contexts().includes(context), false);
+      if (context) await closeLifecycleContext(context, browser, page);
     } finally {
       try { await assetHost?.close(); } finally { await sentinel?.close(); }
     }
