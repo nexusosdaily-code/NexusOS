@@ -171,6 +171,7 @@
     "ws": "^8.21.0"
   },
   "scripts": {
+    "test:browser-complete-collections": "node_modules/.bin/node scripts/test-browser-collection-renaming.mjs --complete-apis-only",
     "audit": "node scripts/pre-publish-audit.js",
     "build": "npm run check:wls-library && npm run check:wls-dependency-guide && node_modules/.bin/node node_modules/tsx/dist/cli.mjs script/build.ts",
     "check": "tsc",
