@@ -93,6 +93,20 @@ describe("founder BTC access — real login guard and authenticate middleware", 
     expect(res.cookie).not.toHaveBeenCalled();
     expect(fixtures.createSession).not.toHaveBeenCalled();
   });
+  it.each(["unsigned", "wrong-owner"])("rejects a %s persistence result before issuing a cookie", async fault => {
+    fixtures.createSession.mockResolvedValueOnce({
+      id: "corrupt-session",
+      userId: fault === "wrong-owner" ? "another-account" : user.id,
+      token: fault === "unsigned" ? "attacker-chosen-token" : createFounderSessionToken(),
+      expiresAt: new Date(Date.now() + 10000),
+    });
+    const res = response();
+    await founderBtcLoginHandler(request({ wifKey: "synthetic-btc-secret-not-a-real-key" }), res);
+    expect(res.code).toBe(503);
+    expect(res.cookie).not.toHaveBeenCalled();
+    expect(fixtures.getWallet).not.toHaveBeenCalled();
+    expect(fixtures.updateUserLastLogin).not.toHaveBeenCalled();
+  });
   it.each(["Nexus", "nexus", "NEXUS"])("blocks the repository password login for %s before issuing a session", async username => {
     const res = response(), next = vi.fn();
     await blockFounderPasswordAccess(request({ username, password: "repository-known-password" }), res, next);

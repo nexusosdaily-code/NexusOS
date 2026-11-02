@@ -26,9 +26,14 @@ describe("pull-request safeguard boundaries", () => {
     expect(workflow.match(/run: npm run build\n/g)).toHaveLength(1);
     expect(workflow).toContain("run: npm run check:types");
     expect(workflow).not.toMatch(/run:.*(?:test:all|test:client|check:release-wave-vault)/);
-    for (const config of ["p2p-security", "wave-vault-security"]) {
-      expect(workflow).toContain(`--config vitest.${config}.config.ts`);
-    }
+    expect(workflow).toContain("--config vitest.p2p-security.config.ts");
+    expect(workflow).toContain("run: npm run test:browser-wave-vault");
+    const manifest = JSON.parse(readFileSync("package.json", "utf8"));
+    expect(manifest.scripts["test:browser-wave-vault"])
+      .toBe("node_modules/.bin/node scripts/test-wave-vault-browsers.mjs");
+    const runner = readFileSync("scripts/test-wave-vault-browsers.mjs", "utf8");
+    expect(runner).toContain('"--config", "vitest.wave-vault-security.config.ts"');
+    expect(runner).toContain("verifyWaveVaultBrowserReport(JSON.parse(readFileSync(reportPath");
     expect(workflow).toContain("run: npm run test:browser-live-video");
     expect(workflow).toContain("postgresql-16");
     expect(workflow).toContain("/usr/lib/postgresql/16/bin");

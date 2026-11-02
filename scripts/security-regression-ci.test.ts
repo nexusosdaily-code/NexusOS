@@ -63,6 +63,15 @@ it("keeps the isolated Python privacy regression mandatory and bounded in the re
   for (const scope of [workflow, job, steps[0]]) {
     expect(scope["continue-on-error"]).toBeUndefined();
   }
-  expect(readFileSync(new URL("../tests/test_security_finding_triage.py", import.meta.url), "utf8"))
-    .toContain("def test_energy_budget_output_stays_in_fixed_input_standalone_demo");
+  const privacy = spawnSync("python3", [
+    "-I", fileURLToPath(new URL("../tests/test_security_finding_triage.py", import.meta.url)),
+  ], {
+    encoding: "utf8", timeout: 5_000, maxBuffer: 65_536,
+    env: { PATH: process.env.PATH },
+  });
+  expect(privacy.error).toBeUndefined();
+  expect(privacy.signal).toBeNull();
+  expect(privacy.status).toBe(0);
+  expect(privacy.stderr).toMatch(/Ran [1-9]\d* tests?\b/);
+  expect(privacy.stderr).toMatch(/\bOK\b/);
 });

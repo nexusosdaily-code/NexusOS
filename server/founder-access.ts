@@ -66,6 +66,12 @@ export async function founderBtcLoginHandler(req: Request, res: Response): Promi
       return;
     }
     const session = await storage.createSession(user.id, req.ip, req.headers["user-agent"], "founder_btc");
+    // Fail closed if persistence ever returns a corrupt or unrelated session.
+    // Never put an unverified storage result into an authenticated cookie.
+    if (session.userId !== user.id || !isFounderBtcSession(session.token)) {
+      res.status(503).json({ error: "Founder session could not be verified." });
+      return;
+    }
     await storage.updateUserLastLogin(user.id);
     // createSession generates a fresh signed random token server-side. Request
     // cookies/body tokens are never adopted as this authenticated session ID.
