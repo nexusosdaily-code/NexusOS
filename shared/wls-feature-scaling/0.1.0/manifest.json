@@ -1,0 +1,12 @@
+{
+  "name": "@wls/feature-scaling",
+  "version": "0.1.0",
+  "executionProfile": "WLS-PY/1",
+  "operations": ["scalingAbs", "scalingMaximum", "scalingValue"],
+  "dependencies": [{"name": "@wls/fixed-point", "version": "0.1.0"}],
+  "pipelineDependency": {"name": "@wls/fractional-learning", "version": "0.2.0"},
+  "distribution": "local-only",
+  "syntheticOnly": true,
+  "externalCapabilities": [],
+  "source": "kernel.wls"
+}

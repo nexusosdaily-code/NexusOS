@@ -71,8 +71,10 @@ describe("WNSP execution commit point", () => {
   });
 
   it("does not return actionable partial state or transfers when cycle-capped", () => {
+    // Reach the execution cap with real instructions, not the removed EXEC fallback.
     const source = '@store partial := 7\ntransfer_nxt("sample", "2")\n' +
-      Array.from({ length: 2_049 }, () => "x").join("\n");
+      Array.from({ length: 2_049 }, () => "tune(520nm)").join("\n");
+    expect(compileWLS(source).filter(instruction => instruction.mnem === "TUNE")).toHaveLength(2_049);
     const result = runToHalt(source, 0);
     expect(result.halted).toBe(false);
     expect(result.truncated).toBe(true);
@@ -80,6 +82,12 @@ describe("WNSP execution commit point", () => {
     expect(result.stateDelta).toEqual({});
     expect(result.effects).toEqual([]);
     expect(result.output.some(o => o.text.startsWith("TRUNCATED"))).toBe(true);
+  });
+
+  it("rejects unsupported filler instead of treating it as execution", () => {
+    expect(() => compileWLS("x")).toThrow("Unsupported contract instruction");
+    expect(() => runToHalt('@store partial := 7\ntransfer_nxt("sample", "2")\nx', 0))
+      .toThrow("Unsupported contract instruction");
   });
 });
 

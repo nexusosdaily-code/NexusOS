@@ -217,7 +217,9 @@
     "check:wls-library": "node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/generate-wls-library.ts --check",
     "generate:wls-dependency-guide": "node_modules/.bin/node scripts/generate-wls-dependency-guide.mjs",
     "check:wls-dependency-guide": "node_modules/.bin/node scripts/generate-wls-dependency-guide.mjs --check",
-    "test:wls-dependencies": "node_modules/.bin/node node_modules/vitest/vitest.mjs run --maxWorkers=2 server/wls- scripts/wls- client/src/__tests__/wls- client/src/__tests__/learn-collections client/src/__tests__/learn-maps client/src/__tests__/learn-sets client/src/__tests__/learn-current-dependencies client/src/__tests__/collection-analytics client/src/components/collection-workspace.test.tsx"
+    "test:wls-dependencies": "node_modules/.bin/node node_modules/vitest/vitest.mjs run --maxWorkers=2 server/wls- scripts/wls- client/src/__tests__/wls- client/src/__tests__/learn-collections client/src/__tests__/learn-maps client/src/__tests__/learn-sets client/src/__tests__/learn-current-dependencies client/src/__tests__/collection-analytics client/src/components/collection-workspace.test.tsx",
+    "test:browser-fixed-point": "node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/test-browser-fixed-point.ts",
+    "test:browser-feature-scaling": "node_modules/.bin/node node_modules/tsx/dist/cli.mjs scripts/test-browser-feature-scaling.ts"
   },
   "type": "module",
   "version": "1.0.0"

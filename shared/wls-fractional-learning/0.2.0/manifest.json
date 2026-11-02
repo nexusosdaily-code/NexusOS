@@ -1,0 +1,15 @@
+{
+  "name": "@wls/fractional-learning",
+  "version": "0.2.0",
+  "executionProfile": "WLS-PY/1",
+  "operations": ["fractionalMargin2", "fractionalPredict", "fractionalRateUpdate"],
+  "scale": 1000,
+  "learningRate": "configurable-0.001-through-1.000",
+  "classification": "unrounded-margin-nonnegative",
+  "dependencies": [{"name": "@wls/fixed-point", "version": "0.1.0", "executionProfile": "WLS-PY/1"}],
+  "distribution": "local-only",
+  "externalCapabilities": [],
+  "quantization": "complete-new-parameter-half-away-from-zero",
+  "syntheticOnly": true,
+  "source": "kernel.wls"
+}

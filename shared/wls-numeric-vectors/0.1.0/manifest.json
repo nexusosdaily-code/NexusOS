@@ -1,0 +1,9 @@
+{
+  "name": "@wls/numeric-vectors",
+  "version": "0.1.0",
+  "executionProfile": "WLS-PY/1",
+  "source": "kernel.wls",
+  "operations": ["vectorSumStep", "vectorDotStep"],
+  "distribution": "local-only",
+  "externalCapabilities": []
+}

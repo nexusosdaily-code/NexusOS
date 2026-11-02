@@ -708,3 +708,15 @@ are acknowledged in the [research record](./docs/RESEARCH_STATUS.md).
 ---
 
 **NexusOS · AGPL-3.0 · https://github.com/nexusosdaily-code/NexusOS**
+
+## Bounded WavelengthScript numerical learning
+
+The repository now includes working, local numerical vectors, fixed-point decimals, integer-unit measurements, bounded perceptron learning and fractional learning, plus fitted feature scaling. These execute real WLS instructions in the pure VM; they are not placeholders or a general AI framework.
+
+- [Numerical vectors](docs/wavelengthscript-numeric-vectors.md)
+- [Fixed-point decimals](docs/wavelengthscript-fixed-point.md) and [integer-unit measurements](docs/wavelengthscript-fixed-point-units.md)
+- [Learning feasibility](docs/wavelengthscript-learning-feasibility.md) and [fractional learning](docs/wavelengthscript-fractional-learning.md)
+- [Fitted feature scaling and completed browser audit](docs/wavelengthscript-feature-scaling.md)
+- [Complete website dependency guide](public/wavelengthscript-dependencies.html)
+
+Native Chromium, Firefox and WebKit audits exercise preprocessing directly, check independent reference outputs and intermediate training parameters, and reject deliberately incorrect programs. Scope remains bounded synthetic experiments, not physical-device certification or large-model capability.
