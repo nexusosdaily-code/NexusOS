@@ -1,0 +1,45 @@
+// Verbatim local kernel snapshot; tests require byte equality with the canonical
+// .wls file. No runtime filesystem, raw-import hook or source download is needed.
+export const LEARNING_KERNEL_SOURCE = `// WLS-PY/1 — pure computation; no external effects
+@562.98nm FUNC {"line":1,"args":["linearDot2","w1","w2","x1","x2"]}
+@550.21nm LOAD {"line":2,"args":["w1"]}
+@550.21nm LOAD {"line":2,"args":["x1"]}
+@581.42nm MUL {"line":2,"args":[]}
+@550.21nm LOAD {"line":2,"args":["w2"]}
+@550.21nm LOAD {"line":2,"args":["x2"]}
+@581.42nm MUL {"line":2,"args":[]}
+@528.94nm ADD {"line":2,"args":[]}
+@584.26nm RETURN {"line":2,"args":[]}
+@576.6nm CONST {"line":1,"args":[null]}
+@584.26nm RETURN {"line":1,"args":[]}
+@548.79nm END {"line":1,"args":[]}
+@562.98nm FUNC {"line":4,"args":["linearPredict2","w1","w2","bias","x1","x2"]}
+@550.21nm LOAD {"line":5,"args":["w1"]}
+@550.21nm LOAD {"line":5,"args":["w2"]}
+@550.21nm LOAD {"line":5,"args":["x1"]}
+@550.21nm LOAD {"line":5,"args":["x2"]}
+@545.96nm CALL {"line":5,"args":["linearDot2",4]}
+@550.21nm LOAD {"line":5,"args":["bias"]}
+@528.94nm ADD {"line":5,"args":[]}
+@576.6nm CONST {"line":5,"args":[0]}
+@541.7nm GE {"line":5,"args":[]}
+@553.76nm JFALSE {"line":5,"args":[25]}
+@576.6nm CONST {"line":6,"args":[1]}
+@584.26nm RETURN {"line":6,"args":[]}
+@576.6nm CONST {"line":7,"args":[0]}
+@584.26nm RETURN {"line":7,"args":[]}
+@576.6nm CONST {"line":4,"args":[null]}
+@584.26nm RETURN {"line":4,"args":[]}
+@548.79nm END {"line":4,"args":[]}
+@562.98nm FUNC {"line":9,"args":["linearUpdate","weight","error","feature"]}
+@550.21nm LOAD {"line":10,"args":["weight"]}
+@550.21nm LOAD {"line":10,"args":["error"]}
+@550.21nm LOAD {"line":10,"args":["feature"]}
+@581.42nm MUL {"line":10,"args":[]}
+@528.94nm ADD {"line":10,"args":[]}
+@584.26nm RETURN {"line":10,"args":[]}
+@576.6nm CONST {"line":9,"args":[null]}
+@584.26nm RETURN {"line":9,"args":[]}
+@548.79nm END {"line":9,"args":[]}
+@559.79nm HALT {"line":11,"args":[]}
+`;

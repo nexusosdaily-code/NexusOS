@@ -232,6 +232,16 @@ history and limits. No new interpreter permissions or live P2P changes.
 - [Exact-source integrity locks and verified-source execution](wavelengthscript-package-locks.md)
 - [Repeatable library test suites](wavelengthscript-test-tools.md)
 
+## Additional bounded numerical and learning dependencies
+
+These separate local packages complement, rather than renumber or replace,
+the retained 0.1.0–0.40.0 collection releases:
+
+- [Bounded numerical vectors and dot products](wavelengthscript-numeric-vectors.md)
+- [Decimal fixed-point fractional arithmetic](wavelengthscript-fixed-point.md)
+- [Fractional learning and configurable learning rates](wavelengthscript-fractional-learning.md)
+- [Fitted feature scaling and scaled learning](wavelengthscript-feature-scaling.md)
+
 ## Still outside the implemented scope
 
 General module resolution, arbitrary package installation, richer/general Maps,
