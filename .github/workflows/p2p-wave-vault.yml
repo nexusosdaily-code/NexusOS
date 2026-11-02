@@ -76,7 +76,7 @@ jobs:
         run: node_modules/.bin/node node_modules/vitest/vitest.mjs run --config vitest.p2p-security.config.ts --reporter=verbose --reporter=json --outputFile=generated-artifacts/ci/p2p.json
       - name: Wave Vault storage, ACL and independent receiver fixtures
         if: ${{ !cancelled() }}
-        run: node_modules/.bin/node node_modules/vitest/vitest.mjs run --config vitest.wave-vault-security.config.ts --reporter=verbose --reporter=json --outputFile=generated-artifacts/ci/wave-vault.json
+        run: npm run test:browser-wave-vault
       - name: Independent native live-video fixtures
         if: ${{ !cancelled() }}
         run: npm run test:browser-live-video -- --reporter=verbose --reporter=json --outputFile=generated-artifacts/ci/live-video.json

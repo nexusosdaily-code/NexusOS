@@ -276,7 +276,18 @@ describe("private wave filing with real isolated PostgreSQL",()=>{
     }
     // Missing executables/libraries are explicit skips, never passes. Other
     // launch/runtime failures must fail, with no fallback to a different engine.
+    // Nix's downloaded engines need their own closure. Never expose that
+    // override to the Nix-packaged Chromium or disposable PostgreSQL processes.
+    const libraryPath=process.env.WNSP_TEST_BROWSER_LIBRARY_PATH;
+    const browserEnv=engine!==chromium&&libraryPath
+      ?Object.fromEntries([
+        ["LD_LIBRARY_PATH",libraryPath],
+        ...["HOME","PATH","TMPDIR","XDG_CACHE_HOME","LIBGL_ALWAYS_SOFTWARE","EGL_PLATFORM",
+          "__EGL_VENDOR_LIBRARY_FILENAMES","LIBGL_DRIVERS_PATH"]
+          .filter(key=>process.env[key]).map(key=>[key,process.env[key]!]),
+      ]):undefined;
     const browser=await engine.launch({executablePath,headless:true,
+      ...(browserEnv?{env:browserEnv}:{}),
       ...(engine===chromium?{args:["--no-sandbox"]}:{})}).catch(error=>{
       const message=String(error);
       if(/Host system is missing dependencies|lib[\w.+-]+\.so(?:\.\d+)*: cannot open shared object file/.test(message)){
