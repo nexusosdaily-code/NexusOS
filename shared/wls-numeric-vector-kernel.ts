@@ -1,0 +1,23 @@
+// Verbatim snapshot of shared/wls-numeric-vectors/0.1.0/kernel.wls.
+// Canonical-byte equality is an automatic build test, not an authenticity claim.
+export const NUMERIC_VECTOR_KERNEL_SOURCE = `// WLS-PY/1 — pure computation; no external effects
+@562.98nm FUNC {"line":1,"args":["vectorSumStep","total","value"]}
+@550.21nm LOAD {"line":2,"args":["total"]}
+@550.21nm LOAD {"line":2,"args":["value"]}
+@528.94nm ADD {"line":2,"args":[]}
+@584.26nm RETURN {"line":2,"args":[]}
+@576.6nm CONST {"line":1,"args":[null]}
+@584.26nm RETURN {"line":1,"args":[]}
+@548.79nm END {"line":1,"args":[]}
+@562.98nm FUNC {"line":4,"args":["vectorDotStep","total","left","right"]}
+@550.21nm LOAD {"line":5,"args":["total"]}
+@550.21nm LOAD {"line":5,"args":["left"]}
+@550.21nm LOAD {"line":5,"args":["right"]}
+@581.42nm MUL {"line":5,"args":[]}
+@528.94nm ADD {"line":5,"args":[]}
+@584.26nm RETURN {"line":5,"args":[]}
+@576.6nm CONST {"line":4,"args":[null]}
+@584.26nm RETURN {"line":4,"args":[]}
+@548.79nm END {"line":4,"args":[]}
+@559.79nm HALT {"line":6,"args":[]}
+`;

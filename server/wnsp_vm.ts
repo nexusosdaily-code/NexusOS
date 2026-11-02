@@ -3,7 +3,7 @@
 // v1.1 adds: STORE/LOAD (persistent state), XFER_NXT/XFER_SATS (transfers),
 //            CALL (sub-contract invocation).
 import { encodeVMName, vmBand } from "../shared/wnsp-model";
-import { assertVmSource, assertNotCollectionSource, VM_MAX_CYCLES } from "../shared/vm-security";
+import { assertVmSource, assertLegacyExecutionSource, UnsupportedExecutionError, VM_MAX_CYCLES } from "../shared/vm-security";
 
 // ── Physics helpers ───────────────────────────────────────────────────────────
 export function nmToBand(nm: number): string {
@@ -79,7 +79,7 @@ export function freshVM(initialState?: Record<string, any>): VMState {
 // ── WavelengthScript compiler ─────────────────────────────────────────────────
 export function compileWLS(src: string): Ins[] {
   assertVmSource(src);
-  assertNotCollectionSource(src);
+  assertLegacyExecutionSource(src);
   if (!src.trim()) return [];
   const ins: Ins[] = [];
   let off = 0;
@@ -92,15 +92,15 @@ export function compileWLS(src: string): Ins[] {
     if (!line || line.startsWith("//") || line.startsWith(";") || line.startsWith("#")) continue;
 
     // 0x09 GATE — nonlinear load-based routing
-    const mGate = line.match(/GATE\(load\s*>\s*(\d+)\s*→\s*(\d+\.?\d*)nm\s*:\s*(\d+\.?\d*)nm\)/);
+    const mGate = line.match(/^GATE\(load\s*>\s*(\d+)\s*→\s*(\d+\.?\d*)nm\s*:\s*(\d+\.?\d*)nm\)/);
     if (mGate) { add(0x09, "GATE", `load>${mGate[1]} → ${mGate[2]}nm : ${mGate[3]}nm`, "nonlinear switch", undefined, undefined, { gateThreshold: parseInt(mGate[1]), gateHigh: parseFloat(mGate[2]), gateLow: parseFloat(mGate[3]) }); continue; }
 
     // 0x03 EMIT — spectral emission
-    const m1 = line.match(/@emit\((\d+\.?\d*)nm,\s*(Ψ\([^)]+\))\)/);
+    const m1 = line.match(/^@emit\((\d+\.?\d*)nm,\s*(Ψ\([^)]+\))\)/);
     if (m1) { add(0x03, "EMIT", `λ=${m1[1]}nm  ${m1[2]}`, `emit on ${nmToBand(parseFloat(m1[1]))} band`, parseFloat(m1[1]), m1[2]); continue; }
 
     // 0x01 TUNE — receiver band
-    const m2 = line.match(/tune\((\d+\.?\d*)nm\)/);
+    const m2 = line.match(/^tune\((\d+\.?\d*)nm\)/);
     if (m2) { add(0x01, "TUNE", `λ=${m2[1]}nm`, `receiver → ${nmToBand(parseFloat(m2[1]))} band`, parseFloat(m2[1])); continue; }
 
     // 0x0A AGENT — agent registration
@@ -112,19 +112,19 @@ export function compileWLS(src: string): Ins[] {
     if (m4) { const e = ceEncode(m4[1]); add(0x07, "LABEL", `${m4[1]}  ${e.psi}`, `fn → λ=${e.nm}nm`, e.nm, e.psi); continue; }
 
     // 0x0A AGENT — public node
-    const m5 = line.match(/node\.register\("([^"]+)"/);
+    const m5 = line.match(/^node\.register\("([^"]+)"/);
     if (m5) { const e = ceEncode(m5[1]); add(0x0A, "AGENT", `"${m5[1]}"  ${e.psi}  PUBLIC`, "spectral network node", e.nm, e.psi); continue; }
 
     // 0x06 OCS — oscillating loop
-    const m6 = line.match(/oscillate\(([^)]+)\)/);
+    const m6 = line.match(/^oscillate\(([^)]+)\)/);
     if (m6) { add(0x06, "OCS", m6[1].trim(), "non-blocking wave loop"); continue; }
 
     // 0x05 BROAD — broadcast
-    const m7 = line.match(/broadcast\(([^)]+)\)/);
+    const m7 = line.match(/^broadcast\(([^)]+)\)/);
     if (m7) { const e = ceEncode(m7[1].replace(/[^a-zA-Z]/g, "") || "data"); add(0x05, "BROAD", m7[1].trim(), `broadcast λ=${e.nm}nm`, e.nm); continue; }
 
     // 0x02 PUSH — register bind
-    const m8 = line.match(/@(\d+\.?\d*)nm\s+let\s+(\w+)\s*:=/);
+    const m8 = line.match(/^@(\d+\.?\d*)nm\s+let\s+(\w+)\s*:=/);
     if (m8) { add(0x02, "PUSH", `@${m8[1]}nm  "${m8[2]}"`, `bind at λ=${m8[1]}nm`, parseFloat(m8[1])); continue; }
 
     // 0x03 EMIT (shorthand)
@@ -182,10 +182,7 @@ export function compileWLS(src: string): Ins[] {
     const mCall = line.match(/^call\("([^"]+)"\)/);
     if (mCall) { add(0x14, "CALL", `"${mCall[1]}"`, `call sub-contract "${mCall[1]}"`); continue; }
 
-    // 0x0B EXEC — default fallback
-    const word = line.split(/\s/)[0].replace(/[^a-zA-Z]/g, "") || "op";
-    const e = ceEncode(word);
-    add(0x0B, "EXEC", `@${e.nm}nm`, line.slice(0, 60), e.nm);
+    throw new UnsupportedExecutionError("Unsupported contract instruction; no logging-only EXEC fallback is allowed.");
   }
   add(0xFF, "HALT", "", "wavefunction terminated");
   return ins;
@@ -197,17 +194,27 @@ export function stepVM(
   ins: Ins[],
   channelLoad: number,
 ): { state: VMState; effect: StepEffect | null } {
+  return executeStep(state, ins, channelLoad, true);
+}
+
+/** Only a private run-to-completion state may use the non-copying path. */
+function executeStep(
+  state: VMState,
+  ins: Ins[],
+  channelLoad: number,
+  snapshot: boolean,
+): { state: VMState; effect: StepEffect | null } {
   if (state.halted || state.pc >= ins.length) return { state: { ...state, halted: true }, effect: null };
   const i = ins[state.pc];
-  const s: VMState = {
+  const s: VMState = snapshot ? {
     ...state,
-    pc: state.pc + 1,
-    cycleCount: state.cycleCount + 1,
     registers: [...state.registers],
     agents:    [...state.agents],
     output:    [...state.output],
     kvDirty:   { ...state.kvDirty },
-  };
+  } : state;
+  s.pc++;
+  s.cycleCount++;
   let effect: StepEffect | null = null;
 
   switch (i.op) {
@@ -268,8 +275,7 @@ export function stepVM(
     }
 
     case 0x0B:
-      s.output.push({ text: `EXEC  ${i.cmt.slice(0, 60)}`, type: "sys" });
-      break;
+      throw new UnsupportedExecutionError("Unsupported EXEC instruction; logging is not execution.");
 
     // ── v1.1 opcodes ─────────────────────────────────────────────────────────
 
@@ -376,11 +382,15 @@ export function runToHalt(
   const instructions = compileWLS(sourceCode);
   const { nm, psi } = ceEncode(sourceCode.slice(0, 32) || "contract");
   let state = freshVM(initialState);
+  // Public stepping turns the initial null-prototype dirty map into a plain
+  // snapshot on its first instruction. Preserve that observable representation
+  // once, without repeating the copy at every private execution step.
+  if (instructions.length) state.kvDirty = { ...state.kvDirty };
   const effects: StepEffect[] = [];
   let truncated = false;
 
   while (!state.halted && state.cycleCount < MAX_CYCLES) {
-    const { state: next, effect } = stepVM(state, instructions, channelLoad);
+    const { state: next, effect } = executeStep(state, instructions, channelLoad, false);
     state = next;
     if (effect) effects.push(effect);
   }

@@ -1,13 +1,15 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import { alias, clientProjectConfig } from "./vitest.shared";
-import { databaseTestFiles } from "./vitest.database";
+import { alias, clientProjectConfig } from "./vitest.shared.ts";
+import { databaseTestFiles } from "./vitest.database.ts";
 
 export default defineConfig({
   plugins: [react()],
   resolve: { alias },
   test: {
     globals: true,
+    // Keep CPU-heavy native subprocess checks within their existing deadlines.
+    maxWorkers: 2,
     // @vitest-environment directives in individual files always take precedence
     // over the project-level environment below, so legacy tests that carry
     // `// @vitest-environment jsdom` continue to work unchanged.
