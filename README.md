@@ -2,6 +2,13 @@
 
 **AGPL-3.0 project · WavelengthScript language technology and blockchain development**
 
+## Development disclosure — 19 November 2026
+
+Read the [development record](docs/development-record.md) and the [release coverage review](docs/release-coverage-20261119.md). They cover WLS hashing and integrity, the participant-demonstrated PC/iPad file workflow and Explorer receipt, connected navigation, transfer feedback, balance freshness and synthetic bundle recovery.
+
+The website counterpart is [NexusOS Development Record](https://wnsp.io/development-record). The disclosure distinguishes development observations from production verification. This documentation update does not synchronise application source or certify live funds.
+
+
 ## WavelengthScript dependency documentation
 
 See the [complete dependency documentation index](docs/wavelengthscript-dependencies.md)
