@@ -1,0 +1,223 @@
+{
+  "title": "NexusOS development record",
+  "reviewDate": "2026-11-19",
+  "position": "WavelengthScript, WNSP encoding and practical blockchain software on conventional computers are the current focus. The wider hardware vision remains research, not a delivered photonic computer.",
+  "release": "On 19 November 2026, participant-provided physical-device evidence demonstrated WLS-authorised file delivery in both PC/iPad directions. The iPad-to-PC operation also reached explicit acknowledgement, a durable receipt, NexusOS block inclusion and a matching refreshed Explorer record. These were development-environment observations, not production verification. Public envelope linkage, participant acknowledgement and external settlement are separate claims.",
+  "publication": "This is a development disclosure. Workspace code, historical disclosures, test results, remote repository updates and website publication are different events. Evidence marked as a workspace reference is not included in the GitHub documentation export.",
+  "financialBoundary": "In this source version, NXT-only bundles, verified Blink BOLT11 payments and individually approved, funded sats staking operations have dedicated adapters. Other monetary actions and financial automation remain held. These prepared controls do not establish which code an older deployment is running. New sats stakes issue no WNUSD. Existing balances, disputed positions and old confirmations are not repaired or retrospectively certified.",
+  "records": [
+    {
+      "id": "representation",
+      "title": "CE/WNSP representations and conformance",
+      "period": "Historical specifications; dates retained in source",
+      "status": "Implemented software and documented models",
+      "improvements": "Character and spectral representations, reference tables and conformance guidance make the encoding reproducible and inspectable rather than relying on an interface illustration.",
+      "limits": "A software spectral coordinate or energy-equivalent calculation does not establish physical orthogonality, transmission, hardware performance or cryptographic security.",
+      "sources": ["docs/wnsp-conformance.md", "docs/ASCII-Wavelength-Table.md"]
+    },
+    {
+      "id": "language",
+      "title": "WavelengthScript compiler and virtual machines",
+      "period": "Continuing language development",
+      "status": "Implemented, bounded execution profiles",
+      "improvements": "Source-to-instruction workflows, compilation validation and browser workers provide inspectable execution paths. Supported semantics and limits are documented; unsupported source must fail rather than succeed through a logging-only fallback.",
+      "limits": "Not every Python or other programming-language construct is supported. Encoding previews are not executable programs. This is not WLS self-hosting or a completed rewrite of the application in WLS.",
+      "sources": ["docs/wavelength-python-subset.md", "docs/wavelengthscript-dependencies.md"]
+    },
+    {
+      "id": "dependencies",
+      "title": "Dependencies, collections and offline tooling",
+      "period": "Current dependency index preserves release history",
+      "status": "Implemented software",
+      "improvements": "Versioned libraries, bounded collections, Maps and string Sets, manifests, compatibility checks and source-integrity locks make capabilities reusable. Offline tooling separates execution-profile compatibility from dependency identity and file resolution.",
+      "limits": "A manifest or integrity lock is not unrestricted package support, source authorship, filesystem access or a grant of financial authority.",
+      "sources": ["docs/wavelengthscript-dependencies.md", "docs/disclosure-export-check.md"]
+    },
+    {
+      "id": "scripts",
+      "title": "Human writing systems and Unicode",
+      "period": "Documented opt-in catalogue expansion",
+      "status": "Implemented encoding and catalogue tools",
+      "improvements": "Pinned Unicode identities, official character-name and sequence discovery, and reversible coordinate representations extend text handling beyond English while preserving exact character data and existing mappings.",
+      "limits": "Writing systems are not interchangeable with languages. Encoding characters does not translate their meaning, identify an ancient language automatically or decipher historical scripts. Catalogue coverage is not a claim to understand every human language.",
+      "sources": ["docs/unicode-catalogue.md", "docs/unicode-coordinate-profile.md"]
+    },
+    {
+      "id": "binary",
+      "title": "Binary values and established hashing",
+      "period": "Versioned binary runtime documentation",
+      "status": "Implemented host-backed computation",
+      "improvements": "Binary WLS profiles reuse established SHA-256 through bounded host-backed execution. A separate streaming profile accepts acknowledged chunks and explicit EOF, including declared inputs up to 256 MiB. Reviewed repository-local binary and streaming packages pin exact WLS source bytes through dependency locks. Benchmarks and native audit gates check reproducible results, report ownership and stale-PASS rejection.",
+      "limits": "This is not a new hash or SHA-256 authored entirely in WLS. Streaming hash capacity is not the 64 KiB application-transfer limit or a guarantee of whole-application memory use. Locked packages are not registry publication. Dated browser/benchmark results are not current release clearance or proof of universal speed gains.",
+      "sources": ["docs/wavelengthscript-binary.md", "docs/wls-streaming-package.md", "docs/wls-binary-package-audit.md", "docs/wls-streaming-benchmark.md", "docs/wls-locked-binary-browser-gate.md"]
+    },
+    {
+      "id": "protocol",
+      "title": "Unchanged Python protocol through WLS",
+      "period": "Evidence record dated 17 November 2026",
+      "status": "Implemented and tested compatibility workflow",
+      "improvements": "The recorded unchanged wnsp_protocol_v7.py passes through the WLS-PY/2 translation, compiler and browser-worker execution workflow. Exported entries accept bounded JSON arguments; supported clock input is explicit. Hashing reuses the existing dependency.",
+      "limits": "A TypeScript parser/compiler/interpreter supplies this compatibility profile. It is not unrestricted Python, CPython/Pyodide, arbitrary imports, semantic human-language translation, a natively WLS-authored protocol or photonic execution. Historical browser and test counts remain dated in the evidence record.",
+      "sources": ["reports/wls-protocol-execution.md", "reports/wls-protocol-dependency-coverage.md"]
+    },
+    {
+      "id": "learning",
+      "title": "Bounded learning and fitted preprocessing",
+      "period": "Learning Lab and numerical feasibility records",
+      "status": "Implemented synthetic-data experiment",
+      "improvements": "Browser-local training, held-out predictions, visible parameters and inspectable generated stages demonstrate a small constrained linear classifier. Fitted preprocessing belongs to training and is reused for evaluation, not refitted on held-out rows.",
+      "limits": "This is not general AI, unrestricted Python, automatic learning from user data or an externally validated intelligence result. Dataset, feature, epoch and execution limits remain part of the experiment.",
+      "sources": ["docs/wavelengthscript-learning-feasibility.md"]
+    },
+    {
+      "id": "files",
+      "title": "P2P files, Wave Vault and shared access",
+      "period": "October–November 2026 evidence and implementation records",
+      "status": "Implemented file/storage workflows with stated limits",
+      "improvements": "Whole-file filing, addressed delivery, incoming-share discovery, grants and quotas connect collaboration to private storage. P2P work adds real integrity workers, batched reads, negotiated SHA-256/Merkle checks and local chunk proofs. Dated independent Chromium/Firefox tests cover both directions at 256 MiB using SHA-256. Storage SDK patches and regressions address initiation, ordered parts, resume numbering and unreadable or shortened sources without silently discarding saved progress.",
+      "limits": "The 256 MiB P2P audit is same-host native-browser evidence, not a WebKit transport pass, physical arbitrary-network proof or the separate 64 KiB WLS workflow limit. Access control is not operator-inaccessible encryption; revocation cannot erase obtained copies. SDK recovery tests are not a guarantee against every storage outage. Commerce remains subject to financial holds.",
+      "sources": ["docs/wave-vault.md", "docs/wave-vault-browser-verification.md", "docs/p2p-live-commerce.md", "docs/p2p-live-integrity-audit-20261103.md", "docs/p2p-mixed-browser-audit-20261116.md", "docs/release-coverage-20261119.md"]
+    },
+    {
+      "id": "media",
+      "title": "Live broadcasting and browser/device evidence",
+      "period": "Dated automated and owner-reported records",
+      "status": "Implemented media workflows; bounded compatibility evidence",
+      "improvements": "Room access, signalling, live media and cleanup are documented separately from actual decoded playback. Native automated tests and specific reported physical-device combinations are identified as different kinds of evidence.",
+      "limits": "Signalling success alone is not delivery. Recorded failures, absent TURN fallback and unverified browser/device combinations are not hidden by successful examples. No universal availability, privacy or emergency-delivery guarantee is made.",
+      "sources": ["docs/live-video-browser-verification.md", "docs/p2p-live-commerce.md"]
+    },
+    {
+      "id": "recording",
+      "title": "Financial recording and historical evidence",
+      "period": "Prospective recording fixes and separate reconciliation",
+      "status": "Implemented safeguards; historical reconciliation remains separate",
+      "improvements": "Exact-unit accounting, shared writer reviews, transaction records, atomicity and durable retry identities address partial or duplicated financial outcomes. Historical audit entries are distinguished from modern authoritative transaction receipts.",
+      "limits": "Later reconciliation or anchoring cannot manufacture an original confirmation. Development and production data are not made equal by copying screenshot balances. Private account histories and lost-wallet details are excluded from this public record.",
+      "sources": ["docs/shared-sats-writer-audit.md", "client/public/monetary-verification-audit.html"]
+    },
+    {
+      "id": "monetary",
+      "title": "NexusOS monetary verification",
+      "period": "18 November 2026 restricted rollout",
+      "status": "Implemented application-managed integrity records",
+      "improvements": "The NXT-only bundle adapter commits its exact debit, linked internal WNUSD issuance, authoritative receipt, authorisation snapshot and blinded hash-linked inclusion together. Owner reads recompute evidence; unintegrated monetary writers and automatic financial workers are held.",
+      "limits": "This is an application-managed database integrity chain, not independently distributed consensus, Bitcoin anchoring, proof of custody, dollars or reserves. A privileged operator controlling both code and database can rewrite both. The verifier fails closed above its documented segment capacity.",
+      "sources": ["client/public/monetary-verification-audit.html", "server/monetary-verification.ts"]
+    },
+    {
+      "id": "staking",
+      "title": "Individually reviewed and funded sats staking",
+      "period": "18 November 2026 prospective V2 adapter",
+      "status": "Implemented restricted adapter, not blanket reopening",
+      "improvements": "Exact founder-reviewed approvals bind an owner, operation, backing/funding evidence and position snapshot. Principal and pre-funded NXT rewards, maturity, retry identity, zero fees and treasury penalties are recorded atomically with inclusion.",
+      "limits": "No automatic approval is generated. Historical/unreviewed stakes remain unavailable; new stakes issue no WNUSD. Recorded operator review is not an independently authenticated reserve proof. No historical backfill, redemption, balance repair or outgoing-lock release is authorised.",
+      "sources": ["server/verified-sats-staking.ts", "client/public/monetary-verification-audit.html"]
+    },
+    {
+      "id": "lightning",
+      "title": "Settlement-linked Blink Lightning payments",
+      "period": "18 November 2026 verified-payment adapter",
+      "status": "Implemented restricted mainnet BTC-wallet BOLT11 workflow",
+      "improvements": "A durable owner-bound intent and exact sats reservation precede a one-shot provider submission. Independent outgoing account evidence checks identity, network, units, amount, fees and payment proof. Settlement persistence and recoverable NexusOS inclusion are separate steps.",
+      "limits": "Only the named adapter is enabled, not deposits, other providers or legacy queue replay. A local fee reserve is not a provider-enforced routing cap or proof of provider solvency. Ambiguous outcomes do not automatically refund or resend. Explorer reads never contact the provider.",
+      "sources": ["server/verified-lightning.ts", "server/verified-lightning-provider.ts", "client/public/monetary-verification-audit.html"]
+    },
+    {
+      "id": "explorer",
+      "title": "Connected read-only blockchain explorer",
+      "period": "18 November 2026 enhancement; run-specific checks in audit",
+      "status": "Implemented, with release validation recorded separately",
+      "improvements": "Bounded block/receipt browsing, stable identifier search, linked details and exact owner-only financial views replace the contract-only explorer. Public execution rows require deployed public contracts and exclude caller identity, output, state, financial payloads and balances. Legacy chain and public-app history readers use the same safe projection. Contract wallet/state inspection now requires the owning session and account binding; failed reads never imply zero funds.",
+      "limits": "Public linkage checks do not reveal or verify private source data. VM execution does not prove settlement. Legacy records remain unverified, private address histories are not public, and the legacy mempool view is unavailable rather than presented as empty. Owner lists are latest-50 windows with exact-ID lookup, not exhaustive statements.",
+      "sources": ["docs/blockchain-explorer.md", "client/public/explorer-audit.html"]
+    },
+    {
+      "id": "research",
+      "title": "Scientific, governance and hardware disclosures",
+      "period": "Original dated disclosures preserved",
+      "status": "Mixed: software, calculations, reports and proposals explicitly separated",
+      "improvements": "Evidence records distinguish implemented software, calculations, reported measurements and proposed capabilities. Original numbered claims and licensing provenance remain historical records; current summaries should use the live register rather than an obsolete fixed claim count.",
+      "limits": "Public disclosure is not independent validation, a granted patent, legal enactment or experimental proof. Electrically tested coils do not establish integrated photonic computing, optical relay, quantum memory or ZERO-G operation. Protected authority and promotional holds are not lifted by this release.",
+      "sources": ["PRIOR_ART.md", "CHANGELOG.md", "docs/PROJECT_DIRECTION.md"]
+    },
+    {
+      "id": "wls-application-files",
+      "title": "Application WLS file requests and blockchain receipts",
+      "period": "18 November 2026 integration; 19 November 2026 participant physical-device test",
+      "status": "Implemented; participant-demonstrated transfer and Explorer-linked receipt",
+      "improvements": "Explicit WLS compilation and VM authorisation connect existing identities and native file transport to integrity checking, acknowledgement, durable receipts and Nexus Explorer details. A searchable recipient directory and exact registered-wave ownership validation avoid confusing wave addresses with internal wallet addresses. Participant screenshots showed a 52.7 KiB document delivered in both directions between a PC and iPad; the reverse transfer was opened in Word, explicitly acknowledged, included and inspected in Explorer, retaining Public linkage checked after refresh.",
+      "limits": "Files are limited to 64 KiB. Physical evidence is participant-provided and limited to the tested development-device pair; automated isolation/recovery tests are separate evidence. Both-direction inclusion, physical interrupted-recovery testing, arbitrary-network compatibility and production verification are not established. Participant assertions are not remote attestation, independent consensus or external settlement. QR, Bluetooth and offline sharing remain future work; other features and a whole-project WLS rewrite are not complete.",
+      "sources": ["docs/wls-application-file-workflow.md", "server/wls-file-records.ts", "server/wls-file-routes.ts"]
+    },
+    {
+      "id": "shared-workspace",
+      "title": "Combined calls, files and Learning Lab",
+      "period": "16–17 November 2026 integration and dated evidence",
+      "status": "Implemented combined workspace; evidence scopes retained",
+      "improvements": "Shared session owners connect calls, file delivery and local Learning Lab panels without remounting active media on panel changes. Native checks exercise worker failures, edited-source deadlines, recovery and independent receivers; participant confirmations of combined use are recorded separately.",
+      "limits": "Successful signalling is not decoded playback. Synthetic browser checks and participant-reported physical use are not interchangeable, and untested headset, background or device combinations remain unverified. This does not route every media feature through WLS or provide Bluetooth/offline operation.",
+      "sources": ["reports/shared-workspace-audit.html", "docs/wls-learning-lab.md"]
+    },
+    {
+      "id": "development-reliability",
+      "title": "Development, upload and audit reliability",
+      "period": "November 2026 source changes and dated checks",
+      "status": "Implemented safeguards; not blanket production clearance",
+      "improvements": "Database-inclusive tests use disposable isolation; publishing keeps database-writing suites out of the build. Native hash audit reports are attempt-scoped, atomically admitted and fail closed on missing or stale evidence. Runtime work adds request diagnostics, startup-preview and HMR checks, founder-access/login-response safeguards and dependency compatibility/security patches.",
+      "limits": "Test isolation and source fixes do not establish that all production errors or old-tab differences are resolved. This record does not enable new login methods, expose secret configuration or reproduce private account histories. Prior full-build counts apply to their tested source, not automatically to every later change.",
+      "sources": ["docs/release-coverage-20261119.md", "docs/wls-hashing-completion-review-20261103.md", "docs/wls-locked-binary-browser-gate.md"]
+    },
+    {
+      "id": "november-release-additions",
+      "title": "Navigation, transfer feedback and balance freshness",
+      "period": "19 November 2026 release handoff",
+      "status": "Merged software and synthetic regression coverage",
+      "improvements": "Shared Nexus navigation makes collaboration, Wave Vault, marketplace, WLS tooling and the Explorer easier to find. Send and receive controls distinguish activity from confirmed outcomes. The Spectral IDE distinguishes encoding previews from executable source, and the Hub uses matching registered data for the canonical wave badge. The private ledger display labels cached or unavailable data instead of treating it as a fresh balance. Synthetic Chromium coverage verifies that two pending bundle amounts recover their own original receipts without extra debits.",
+      "limits": "This does not change account funds, establish live custody or verify a browser wallet's network. The synthetic ledger test is not a real-funds run. Encoding previews do not execute as programs. A status highlight is not proof of settlement or a substitute for a receipt.",
+      "sources": ["docs/release-coverage-20261119.md"]
+    },
+    {
+      "id": "release-coverage",
+      "title": "Publication-baseline coverage review",
+      "period": "19 November 2026 disclosure audit",
+      "status": "Source inventory complete for a fixed historical comparison",
+      "improvements": "The fixed historical review inventories 142 commits and 418 changed paths since the latest reachable 2 November publication marker. A handoff addendum covers 10 further commits through the completed bundle recovery check. The review maps hashing, integrity, upload recovery, shared workspace, runtime and other major changes to evidence. Internal metadata and sensitive configuration are excluded from public feature claims.",
+      "limits": "The marker is not a verified fingerprint of the currently served build. This is not an exact live-release diff, line-by-line code/security audit or a fresh full-build run. Historical or unchanged background capabilities are not relabelled as new, and publication and GitHub updates remain separate actions.",
+      "sources": ["docs/release-coverage-20261119.md"]
+    },
+    {
+      "id": "direction",
+      "title": "Long-term whole-project WLS direction",
+      "period": "Standing product direction, not a completed migration",
+      "status": "Future goal supported by incremental software work",
+      "improvements": "Language semantics, dependencies, protocol compatibility and inspectable execution provide reusable progress toward eventually authoring the project in WLS.",
+      "limits": "The existing web application still relies on its conventional host stack. Host-language wrappers and AI-assisted coding are not a completed WLS rewrite or a delivered specialised migration agent.",
+      "sources": ["docs/PROJECT_DIRECTION.md", "README.md"]
+    }
+  ],
+  "workspaceOnlySources": [
+    "docs/wavelengthscript-binary.md",
+    "docs/wls-streaming-package.md",
+    "docs/wls-binary-package-audit.md",
+    "docs/wls-streaming-benchmark.md",
+    "docs/wls-locked-binary-browser-gate.md",
+    "reports/wls-protocol-execution.md",
+    "reports/wls-protocol-dependency-coverage.md",
+    "docs/p2p-live-integrity-audit-20261103.md",
+    "docs/p2p-mixed-browser-audit-20261116.md",
+    "client/public/monetary-verification-audit.html",
+    "server/monetary-verification.ts",
+    "server/verified-sats-staking.ts",
+    "server/verified-lightning.ts",
+    "server/verified-lightning-provider.ts",
+    "docs/blockchain-explorer.md",
+    "client/public/explorer-audit.html",
+    "docs/wls-application-file-workflow.md",
+    "server/wls-file-records.ts",
+    "server/wls-file-routes.ts",
+    "reports/shared-workspace-audit.html",
+    "docs/wls-learning-lab.md",
+    "docs/wls-hashing-completion-review-20261103.md"
+  ]
+}
