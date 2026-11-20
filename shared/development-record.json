@@ -1,11 +1,20 @@
 {
   "title": "NexusOS development record",
-  "reviewDate": "2026-11-19",
-  "position": "WavelengthScript, WNSP encoding and practical blockchain software on conventional computers are the current focus. The wider hardware vision remains research, not a delivered photonic computer.",
-  "release": "On 19 November 2026, participant-provided physical-device evidence demonstrated WLS-authorised file delivery in both PC/iPad directions. The iPad-to-PC operation also reached explicit acknowledgement, a durable receipt, NexusOS block inclusion and a matching refreshed Explorer record. These were development-environment observations, not production verification. Public envelope linkage, participant acknowledgement and external settlement are separate claims.",
+  "reviewDate": "2026-11-20",
+  "position": "WavelengthScript is the core language we're engineering for NexusOS. Our goal is to build NexusOS software in WavelengthScript using our spectral coordinate system, so those coordinates are part of how programs work, not just how they're displayed. Current execution runs on conventional computers. The wider hardware vision remains research, not a delivered photonic computer.",
+  "release": "On 20 November 2026, a signed-in desktop test showed a native WavelengthScript build compile, run and save a private Explorer receipt. A second native build verified a private PDF attachment. After explicit opt-in, Explorer checked the public block linkage for each receipt. Separately, the CE–SE Pipeline ran a supported Python example through a translation path, a way to bring code into the ecosystem rather than a substitute for native WavelengthScript. These were development-environment observations, not production verification.",
   "publication": "This is a development disclosure. Workspace code, historical disclosures, test results, remote repository updates and website publication are different events. Evidence marked as a workspace reference is not included in the GitHub documentation export.",
   "financialBoundary": "In this source version, NXT-only bundles, verified Blink BOLT11 payments and individually approved, funded sats staking operations have dedicated adapters. Other monetary actions and financial automation remain held. These prepared controls do not establish which code an older deployment is running. New sats stakes issue no WNUSD. Existing balances, disputed positions and old confirmations are not repaired or retrospectively certified.",
   "records": [
+    {
+      "id": "wls-build-launch",
+      "title": "Native WavelengthScript builds and Explorer receipts",
+      "period": "20 November 2026",
+      "status": "Participant-tested in signed-in desktop development Preview",
+      "improvements": "A program written in native WavelengthScript was compiled and executed under WLS-CORE-LAUNCH/2, completing in 10 VM cycles and saving a private Explorer receipt. A separate native launch verified the stored bytes of one 213,767-byte PDF against its SHA-256 checksum and recorded the attachment on the private receipt without passing the file to the VM. The CE–SE Pipeline translated a supported Python example to wavelength-tagged instructions and ran them in a dedicated WLS-PY/1 executor in 34 VM cycles, not in the native WLS VM. After explicit opt-in, Explorer checked public linkage for all three non-financial build receipts.",
+      "limits": "The public record contains a blinded commitment and block linkage, not the source, output, or attachment. Linkage does not independently verify execution or establish Bitcoin settlement. The PDF test did not establish the full 16 MiB attachment limit or production storage readiness. These tests do not establish full Python compatibility, a completed NexusOS rewrite in WLS, or native photonic execution.",
+      "sources": ["docs/wavelengthscript-dependencies.md", "docs/wavelength-python-subset.md", "shared/wls-build-launch.ts", "server/wls-build-records.ts"]
+    },
     {
       "id": "representation",
       "title": "CE/WNSP representations and conformance",
@@ -197,6 +206,8 @@
     }
   ],
   "workspaceOnlySources": [
+    "shared/wls-build-launch.ts",
+    "server/wls-build-records.ts",
     "docs/wavelengthscript-binary.md",
     "docs/wls-streaming-package.md",
     "docs/wls-binary-package-audit.md",

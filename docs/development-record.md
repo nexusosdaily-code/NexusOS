@@ -1,10 +1,10 @@
 # NexusOS development record
 
-Evidence review: 2026-11-19.
+Evidence review: 2026-11-20.
 
-WavelengthScript, WNSP encoding and practical blockchain software on conventional computers are the current focus. The wider hardware vision remains research, not a delivered photonic computer.
+WavelengthScript is the core language we're engineering for NexusOS. Our goal is to build NexusOS software in WavelengthScript using our spectral coordinate system, so those coordinates are part of how programs work, not just how they're displayed. Current execution runs on conventional computers. The wider hardware vision remains research, not a delivered photonic computer.
 
-On 19 November 2026, participant-provided physical-device evidence demonstrated WLS-authorised file delivery in both PC/iPad directions. The iPad-to-PC operation also reached explicit acknowledgement, a durable receipt, NexusOS block inclusion and a matching refreshed Explorer record. These were development-environment observations, not production verification. Public envelope linkage, participant acknowledgement and external settlement are separate claims.
+On 20 November 2026, a signed-in desktop test showed a native WavelengthScript build compile, run and save a private Explorer receipt. A second native build verified a private PDF attachment. After explicit opt-in, Explorer checked the public block linkage for each receipt. Separately, the CE–SE Pipeline ran a supported Python example through a translation path, a way to bring code into the ecosystem rather than a substitute for native WavelengthScript. These were development-environment observations, not production verification.
 
 This is a development disclosure. Workspace code, historical disclosures, test results, remote repository updates and website publication are different events. Evidence marked as a workspace reference is not included in the GitHub documentation export.
 
@@ -15,6 +15,16 @@ In this source version, NXT-only bundles, verified Blink BOLT11 payments and ind
 ## Development index
 
 This consolidated index covers the major development areas and links their detailed histories; it is not a claim that every old statement remains valid today.
+
+### Native WavelengthScript builds and Explorer receipts
+
+**Period:** 20 November 2026. **Status:** Participant-tested in signed-in desktop development Preview.
+
+**Improvement:** A program written in native WavelengthScript was compiled and executed under WLS-CORE-LAUNCH/2, completing in 10 VM cycles and saving a private Explorer receipt. A separate native launch verified the stored bytes of one 213,767-byte PDF against its SHA-256 checksum and recorded the attachment on the private receipt without passing the file to the VM. The CE–SE Pipeline translated a supported Python example to wavelength-tagged instructions and ran them in a dedicated WLS-PY/1 executor in 34 VM cycles, not in the native WLS VM. After explicit opt-in, Explorer checked public linkage for all three non-financial build receipts.
+
+**Limits:** The public record contains a blinded commitment and block linkage, not the source, output, or attachment. Linkage does not independently verify execution or establish Bitcoin settlement. The PDF test did not establish the full 16 MiB attachment limit or production storage readiness. These tests do not establish full Python compatibility, a completed NexusOS rewrite in WLS, or native photonic execution.
+
+**Evidence:** [docs/wavelengthscript-dependencies.md](../docs/wavelengthscript-dependencies.md) · [docs/wavelength-python-subset.md](../docs/wavelength-python-subset.md) · `shared/wls-build-launch.ts` (workspace reference) · `server/wls-build-records.ts` (workspace reference)
 
 ### CE/WNSP representations and conformance
 
