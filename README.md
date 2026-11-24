@@ -2,6 +2,10 @@
 
 **AGPL-3.0 project · WavelengthScript language technology and blockchain development**
 
+## NexusOS enhancements and the WLS Verifier — 24 November 2026
+
+Read the [software disclosure](docs/nexusos-wls-verifier-disclosure.md) for the signed build proof, cross-reference to the exact Explorer block, and online-to-offline verification workflow. It reports the Workspace pilot and its limits; this documentation update does not synchronise the application source or announce production availability.
+
 ## Development disclosure — 19 November 2026
 
 Read the [development record](docs/development-record.md) and the [release coverage review](docs/release-coverage-20261119.md). They cover WLS hashing and integrity, the participant-demonstrated PC/iPad file workflow and Explorer receipt, connected navigation, transfer feedback, balance freshness and synthetic bundle recovery.
