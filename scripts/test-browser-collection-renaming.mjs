@@ -54,7 +54,13 @@ assert.deepEqual(new Set(smoke.cases.map(c => c.program)), new Set(renamingProgr
 const bundle = await build({
   configFile: false, envFile: false, root: path.resolve("tests/browser/collection-renaming"),
   plugins: [react()], css: { postcss: { plugins: [] } },
-  resolve: { alias: { "@": path.resolve("client/src"), "@shared": path.resolve("shared") } },
+  // The fixture entry and real component live in different workspace roots.
+  // Publishing's npm install can give each root its own React copy; hooks
+  // must use the same instance as the fixture's React DOM renderer.
+  resolve: {
+    dedupe: ["react", "react-dom"],
+    alias: { "@": path.resolve("client/src"), "@shared": path.resolve("shared") },
+  },
   worker: { format: "es" },
   build: { write: false, minify: false, target: "es2022" }, logLevel: "warn",
 });
