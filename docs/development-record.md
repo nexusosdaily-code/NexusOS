@@ -1,12 +1,12 @@
 # NexusOS development record
 
-Evidence review: 2026-11-20.
+Evidence review: 2026-11-27.
 
 WavelengthScript is the core language we're engineering for NexusOS. Our goal is to build NexusOS software in WavelengthScript using our spectral coordinate system, so those coordinates are part of how programs work, not just how they're displayed. Current execution runs on conventional computers. The wider hardware vision remains research, not a delivered photonic computer.
 
 On 20 November 2026, a signed-in desktop test showed a native WavelengthScript build compile, run and save a private Explorer receipt. A second native build verified a private PDF attachment. After explicit opt-in, Explorer checked the public block linkage for each receipt. Separately, the CE–SE Pipeline ran a supported Python example through a translation path, a way to bring code into the ecosystem rather than a substitute for native WavelengthScript. These were development-environment observations, not production verification.
 
-This is a development disclosure. Workspace code, historical disclosures, test results, remote repository updates and website publication are different events. Evidence marked as a workspace reference is not included in the GitHub documentation export.
+The founder authorised the scoped WLS disclosure and roadmap on 27 November 2026. Workspace code, historical disclosures, test results, remote repository updates and website publication are different events. Approval is not a deployment claim. Further Bluetooth development, Android legacy expansion and native BLE testing are stopped unless explicitly restarted by the founder. Online sharing and offline proof checking are preserved. Evidence marked as a workspace reference is not included in the GitHub documentation export.
 
 ## Current financial boundary
 
@@ -182,7 +182,7 @@ This consolidated index covers the major development areas and links their detai
 
 **Improvement:** Explicit WLS compilation and VM authorisation connect existing identities and native file transport to integrity checking, acknowledgement, durable receipts and Nexus Explorer details. A searchable recipient directory and exact registered-wave ownership validation avoid confusing wave addresses with internal wallet addresses. Participant screenshots showed a 52.7 KiB document delivered in both directions between a PC and iPad; the reverse transfer was opened in Word, explicitly acknowledged, included and inspected in Explorer, retaining Public linkage checked after refresh.
 
-**Limits:** Files are limited to 64 KiB. Physical evidence is participant-provided and limited to the tested development-device pair; automated isolation/recovery tests are separate evidence. Both-direction inclusion, physical interrupted-recovery testing, arbitrary-network compatibility and production verification are not established. Participant assertions are not remote attestation, independent consensus or external settlement. QR, Bluetooth and offline sharing remain future work; other features and a whole-project WLS rewrite are not complete.
+**Limits:** Files are limited to 64 KiB. Physical evidence is participant-provided and limited to the tested development-device pair; automated isolation/recovery tests are separate evidence. Both-direction inclusion, physical interrupted-recovery testing, arbitrary-network compatibility and production verification are not established. Participant assertions are not remote attestation, independent consensus or external settlement. Later online QR work and offline proof checking are recorded separately. Further Bluetooth development, Android legacy expansion and native BLE testing are stopped unless explicitly restarted by the founder. A whole-project WLS rewrite is not complete.
 
 **Evidence:** `docs/wls-application-file-workflow.md` (workspace reference) · `server/wls-file-records.ts` (workspace reference) · `server/wls-file-routes.ts` (workspace reference)
 
@@ -234,8 +234,10 @@ This consolidated index covers the major development areas and links their detai
 
 **Limits:** The existing web application still relies on its conventional host stack. Host-language wrappers and AI-assisted coding are not a completed WLS rewrite or a delivered specialised migration agent.
 
-**Evidence:** [docs/PROJECT_DIRECTION.md](../docs/PROJECT_DIRECTION.md) · [README.md](../README.md)
+**Evidence:** [docs/PROJECT_DIRECTION.md](../docs/PROJECT_DIRECTION.md) · [README.md](../README.md) · [docs/wls-source-trust-roadmap.md](../docs/wls-source-trust-roadmap.md)
 
 ## Release audit
 
 See the [release coverage review](release-coverage-20261119.md) for the public scope, evidence and limits. Historical counts in linked reports are not fresh clearance for this combined build.
+
+For the later pilot, see [NexusOS enhancements and the WLS Verifier](nexusos-wls-verifier-disclosure.md).

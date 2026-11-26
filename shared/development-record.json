@@ -1,9 +1,9 @@
 {
   "title": "NexusOS development record",
-  "reviewDate": "2026-11-20",
+  "reviewDate": "2026-11-27",
   "position": "WavelengthScript is the core language we're engineering for NexusOS. Our goal is to build NexusOS software in WavelengthScript using our spectral coordinate system, so those coordinates are part of how programs work, not just how they're displayed. Current execution runs on conventional computers. The wider hardware vision remains research, not a delivered photonic computer.",
   "release": "On 20 November 2026, a signed-in desktop test showed a native WavelengthScript build compile, run and save a private Explorer receipt. A second native build verified a private PDF attachment. After explicit opt-in, Explorer checked the public block linkage for each receipt. Separately, the CE–SE Pipeline ran a supported Python example through a translation path, a way to bring code into the ecosystem rather than a substitute for native WavelengthScript. These were development-environment observations, not production verification.",
-  "publication": "This is a development disclosure. Workspace code, historical disclosures, test results, remote repository updates and website publication are different events. Evidence marked as a workspace reference is not included in the GitHub documentation export.",
+  "publication": "The founder authorised the scoped WLS disclosure and roadmap on 27 November 2026. Workspace code, historical disclosures, test results, remote repository updates and website publication are different events. Approval is not a deployment claim. Further Bluetooth development, Android legacy expansion and native BLE testing are stopped unless explicitly restarted by the founder. Online sharing and offline proof checking are preserved. Evidence marked as a workspace reference is not included in the GitHub documentation export.",
   "financialBoundary": "In this source version, NXT-only bundles, verified Blink BOLT11 payments and individually approved, funded sats staking operations have dedicated adapters. Other monetary actions and financial automation remain held. These prepared controls do not establish which code an older deployment is running. New sats stakes issue no WNUSD. Existing balances, disputed positions and old confirmations are not repaired or retrospectively certified.",
   "records": [
     {
@@ -156,7 +156,7 @@
       "period": "18 November 2026 integration; 19 November 2026 participant physical-device test",
       "status": "Implemented; participant-demonstrated transfer and Explorer-linked receipt",
       "improvements": "Explicit WLS compilation and VM authorisation connect existing identities and native file transport to integrity checking, acknowledgement, durable receipts and Nexus Explorer details. A searchable recipient directory and exact registered-wave ownership validation avoid confusing wave addresses with internal wallet addresses. Participant screenshots showed a 52.7 KiB document delivered in both directions between a PC and iPad; the reverse transfer was opened in Word, explicitly acknowledged, included and inspected in Explorer, retaining Public linkage checked after refresh.",
-      "limits": "Files are limited to 64 KiB. Physical evidence is participant-provided and limited to the tested development-device pair; automated isolation/recovery tests are separate evidence. Both-direction inclusion, physical interrupted-recovery testing, arbitrary-network compatibility and production verification are not established. Participant assertions are not remote attestation, independent consensus or external settlement. QR, Bluetooth and offline sharing remain future work; other features and a whole-project WLS rewrite are not complete.",
+      "limits": "Files are limited to 64 KiB. Physical evidence is participant-provided and limited to the tested development-device pair; automated isolation/recovery tests are separate evidence. Both-direction inclusion, physical interrupted-recovery testing, arbitrary-network compatibility and production verification are not established. Participant assertions are not remote attestation, independent consensus or external settlement. Later online QR work and offline proof checking are recorded separately. Further Bluetooth development, Android legacy expansion and native BLE testing are stopped unless explicitly restarted by the founder. A whole-project WLS rewrite is not complete.",
       "sources": ["docs/wls-application-file-workflow.md", "server/wls-file-records.ts", "server/wls-file-routes.ts"]
     },
     {
@@ -202,7 +202,7 @@
       "status": "Future goal supported by incremental software work",
       "improvements": "Language semantics, dependencies, protocol compatibility and inspectable execution provide reusable progress toward eventually authoring the project in WLS.",
       "limits": "The existing web application still relies on its conventional host stack. Host-language wrappers and AI-assisted coding are not a completed WLS rewrite or a delivered specialised migration agent.",
-      "sources": ["docs/PROJECT_DIRECTION.md", "README.md"]
+      "sources": ["docs/PROJECT_DIRECTION.md", "README.md", "docs/wls-source-trust-roadmap.md"]
     }
   ],
   "workspaceOnlySources": [
