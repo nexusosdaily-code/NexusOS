@@ -2,9 +2,9 @@
 
 **AGPL-3.0 project · WavelengthScript language technology and blockchain development**
 
-## NexusOS enhancements and the WLS Verifier — 24 November 2026
+## NexusOS enhancements and the WLS Verifier — 27 November 2026
 
-Read the [software disclosure](docs/nexusos-wls-verifier-disclosure.md) for the signed build proof, cross-reference to the exact Explorer block, and online-to-offline verification workflow. It reports the Workspace pilot and its limits; this documentation update does not synchronise the application source or announce production availability.
+Read the [software disclosure](docs/nexusos-wls-verifier-disclosure.md) for supported CE–SE, Compiler and VM receipts, exact Explorer linkage, accepted Samsung offline recordings and altered-proof rejection. The [version 1.0 WLS source and trust roadmap](docs/wls-source-trust-roadmap.md) defines gated whole-project application-source and trust-reduction work. Further Bluetooth development, Android legacy expansion and native BLE testing are stopped unless explicitly restarted by the founder; existing implementation, historical evidence, online sharing and offline verification are preserved within existing access and release boundaries. This documentation update does not synchronise application source or claim production availability, a completed WLS rewrite, independent consensus or physical BLE delivery.
 
 ## Development disclosure — 19 November 2026
 

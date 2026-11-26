@@ -1,0 +1,173 @@
+{
+  "date": "26 November 2026",
+  "title": "NexusOS enhancements and the WLS Verifier",
+  "revision": "1.0 — 27 November 2026",
+  "summary": "WavelengthScript is the central language being engineered toward a cohesive NexusOS implementation in its spectral coordinate system. The current development workflow connects native WLS execution and supported Python translation to private receipts, separately approved public Explorer blocks, and local WLS Verifier checks online or offline. Recorded Samsung tests demonstrate both Python-entry and extended native VM workflows, including rejection of an altered signed proof. This disclosure distinguishes demonstrated software on current devices from pending integration, independent distribution, full-chain validation and future hardware engineering. It is not notice of a production release.",
+  "sections": [
+    {
+      "id": "nexusos-enhancements",
+      "title": "What NexusOS added",
+      "paragraphs": [
+        "The CE→SE Pipeline, WavelengthScript Compiler and WNSP Virtual Machine use a shared reviewed-build and receipt workflow for supported executable profiles. Native WLS-CORE/1 and extended WLS-CORE-LAUNCH/2 programs run directly in the bounded WLS runtime; Python WLS-PY/1 is an interoperability entry path, not the primary language goal. Other language encoding previews, effectful programs and local-only execution modes are not automatically eligible for portable build proofs.",
+        "The editor shows the exact compiled program for review before launch. The supported receipt launch profiles run without filesystem, network or wallet capabilities. The VM also offers an original Python build example using an explicit WLS-PY/1 source header. Translated instructions alone are not a substitute for original source when launching a new reviewed receipt. This is not unrestricted Python, a completed rewrite of NexusOS in WavelengthScript, or physical photonic execution.",
+        "Explorer’s My receipts view records the owner’s launch result, profile, cycles and digests. Supported core and Python launch profiles accept up to 64 KiB of UTF-8 source; the extended core launch profile accepts up to 128 KiB. Optional private attachments have separate limits: up to four files and 16 MiB combined. They are checked at launch but not consumed by the VM. The receipt is not a download or proof that an attachment is still stored.",
+        "Public inclusion is explicit and separate from launching, downloading a proof or sharing a file. Explorer exposes the versioned block and blinded commitments, not private source, attachment metadata or account identity. Public linkage is recorded in the relevant NexusOS record domain; it is not Bitcoin settlement, proof of reserves or independent network consensus."
+      ]
+    },
+    {
+      "id": "cross-reference",
+      "title": "Cross-reference an exact build against Explorer",
+      "paragraphs": [
+        "For eligible new WLS-PY/1, WLS-CORE/1 and WLS-CORE-LAUNCH/2 builds in Preview, Download private WLS proof exports the signed compiled program and its recorded result digest and cycle count. Export requires separate consent because the compiled program can reveal code and embedded values. The portable program budget is 256 KiB, separate from source and attachment limits. A successfully launched receipt is not by itself proof that its program fits the portable export budget.",
+        "After export, Open WLS Verifier opens the checking app and Continue to Explorer selects the same receipt. If the owner chooses public inclusion for that receipt, Explorer offers a separate Download WLS block link file and a verifier handoff identifying the selected public block. Neither navigation nor proof export automatically creates public inclusion. Share the link file only with people allowed to associate that private proof with the public block.",
+        "Verify proof checks the issuer signature against a trusted key and checks the compiled-program digest and signed execution profile. Run and compare executes those exact instructions locally with the shared WLS runtime and compares the result digest and cycle count. It does not independently recompile the original source or repeat external actions. Failed signature checks clear verified status and prevent replay.",
+        "Check NexusOS block link recomputes the commitment to the specific signed receipt and recalculates the public block hash. The block number, full block hash and WLS proof commitment can then be compared with Explorer. Two runs of identical code can have the same result but are different receipts; one run’s link does not verify the other. Older proofs and blocks remain unchanged and do not gain this exact-receipt link.",
+        "A portable file-acknowledgement proof is different. It checks signed, blinded record evidence and its supplied checkpoint linkage. It does not replay the transfer, retrieve the file, attest a remote device, or prove a person read it.",
+        "Keep the original private build proof for the receipt being checked. A digest-only receipt cannot recreate that proof. Launching the same source again makes a new receipt and cannot replace the original proof for an older block. Original attachments, screenshots, recordings and downloaded audit summaries are supporting material, not executable proof files."
+      ]
+    },
+    {
+      "id": "online-offline",
+      "title": "Switch from online preparation to offline comparison",
+      "steps": [
+        "Online: On the source device, launch a reviewed build and save the private WLS proof. From that exact receipt in Explorer, opt into public inclusion if desired, then download the WLS block-link file. Keep Explorer open on a connected device or save its block details if both devices will be offline.",
+        "Prepare the verifying device: Open WLS Verifier while connected, choose Prepare offline if needed and wait for Ready offline. Save both downloads to Files or Downloads as files, not as screenshots, copied text, web links or an audit summary.",
+        "Offline: Disconnect Wi-Fi and mobile data. In WLS Verifier, choose the private proof under Evidence and tap Verify proof, then Run and compare. In Check NexusOS block link, choose the second file and run the check. The bundled sample can demonstrate replay but cannot substitute for the original proof for this block.",
+        "Compare: MATCH confirms local replay agrees with the signed result and cycle count. Block link confirmed against the verified WLS proof confirms the exact receipt commitment and block hash check; Matches selected Explorer block additionally confirms equality with the selected Explorer reference. Compare the full block hash against live Explorer on a separate connected device or against saved Explorer block details. These checks work without calling NexusOS."
+      ],
+      "paragraphs": [
+        "There is no in-app network switch or live Explorer lookup in WLS Verifier. The device controls connectivity; Explorer needs a connection to show live history. Ready offline confirms preparation of the app cache, not that files have been saved or that every network radio is off. Turning connectivity off does not require reloading the app. After a reload, reselect the saved original proof and block-link files; the verifier does not persist these private files.",
+        "The checker works on saved evidence whether the browser is connected or disconnected. Offline operation is a demonstrated capability, not merely a proposed feature. Offline checks do not fetch newer blocks, current issuer revocations or live chain state."
+      ]
+    },
+    {
+      "id": "related-enhancements",
+      "title": "Related NexusOS improvements and their limits",
+      "paragraphs": [
+        "WLS-authorised file requests are separate from build attachments. The signed-in flow binds an exact recipient and file digest, requires recipient acceptance, verifies bytes locally and records a separate acknowledgement. The WLS file workflow is limited to 64 KiB. Directory selection and invitation links help users find the correct operation; an invite, VM halt or accepted request does not mean the file was delivered. Connection success depends on the devices and networks; offline verifier operation is not proof of offline Bluetooth transfer or later reconciliation.",
+        "The Social Broadcast source separates private drafts and public or private NexusOS P2P offers from opt-in sends to a connected social account. The Instagram Reels and YouTube upload paths depend on authorised provider configuration and eligibility; controlled provider tests do not establish live publishing. An uncertain external write is not automatically repeated.",
+        "Navigation brings the pipeline, receipts, Explorer and verifier handoffs together. In development, the preview client is versioned so an older cached copy is not reused after an interface change. The disclosure does not change financial holds, enable new monetary paths or verify live balances. The wider dated release inventory remains separate from this November update."
+      ]
+    },
+    {
+      "id": "evidence",
+      "title": "What was demonstrated and audited",
+      "paragraphs": [
+        "Earlier PC/iPad and Samsung/iPad screenshots document file receipt acknowledgement, local file download and opening, and proof/Explorer comparisons. The earlier Preview block #25 comparison was accepted as a working pipeline test. That evidence is retained; later recordings add continuous workflow evidence rather than invalidating those earlier observations.",
+        "Reviewed Samsung screen recording dated 26 November 2026, approximately 4 minutes 22 seconds: a Python-entry WLS build completed in 34 cycles, the private proof and optional public block link were saved, Wi-Fi and mobile data were switched off, proof checks succeeded, Run and compare returned MATCH, and the saved link matched selected Explorer block #30. This is accepted physical-device evidence of the recorded offline workflow.",
+        "A second reviewed Samsung screen recording dated 26 November 2026, approximately 5 minutes 14 seconds, followed the WNSP VM workflow with WLS-CORE-LAUNCH/2. Its receipt recorded 10 cycles. The verifier reported offline, replay returned MATCH, and the saved block link matched selected Explorer block #33. The user then generated and selected an altered test copy: verification reported The issuer signature does not match this proof, authenticity and integrity returned to NOT VERIFIED, and replay was disabled. The tamper-rejection test passed because the altered proof was rejected, not accepted.",
+        "Together, these recordings establish the observed Python-entry and extended native VM proof/replay/block-link workflows on the tested Samsung device, including offline checking and altered-proof rejection. They are not evidence of Bluetooth delivery, every device or OS combination, an independently distributed verifier, a complete project security audit, or validation of every historical block. Raw recordings and private evidence are not embedded or automatically published by this disclosure.",
+        "Reference for that comparison: the Preview Explorer public record for block #25, envelope version 2. Block hash: 1c22442d63f6ddd6cce9d70906a6db100b50a811929ae55529b609b536a46850. WLS proof commitment: ca8cb6b57a86d77ef152491ec35446b45a76a79aeca6a5806e67ef2ec979cc8d. These public values are a comparison reference, not the private proof, the value used to open its commitment, a live production block, or an independent checkpoint.",
+        "Automated checks covered owner-only export, separate consent, exact receipt binding, refusal before inclusion, incompatible or altered evidence, unchanged legacy behavior, and all three supported execution profiles. The shared-workflow verification run passed 89 focused tests; Chromium exercised the three profiles through offline replay and exact block matching with the fixture host stopped. Earlier bounded Chromium and WebKit checks remain separate evidence. Tests used disposable identities, isolated PostgreSQL and disposable signing keys, not live funds or the founder's credentials. These are results of identified development checks, not a claim that all tests or all browsers passed a full release regression or independent security certification.",
+        "Download audit summary produces a redacted local report of the proof checks and replay status. It is not a proof, cannot be re-imported as one, and is not a substitute for comparing the block-link result."
+      ]
+    },
+    {
+      "id": "offline-sharing",
+      "title": "Bluetooth development stopped; existing sharing preserved",
+      "paragraphs": [
+        "Further Bluetooth development, Android legacy expansion and native BLE testing are stopped unless the founder explicitly restarts them. This supersedes earlier instructions to continue the pilot. Existing code, historical results and private evidence are preserved, not deleted or relabelled as failures. Working online WLS Files sharing and local offline proof verification remain available within their existing access and release boundaries.",
+        "The current native Bluetooth pilot targets Samsung Galaxy on Android 12 or later and an iPad supporting CoreBluetooth peripheral mode and Secure Enclave. The iPad advertises and the Galaxy scans/connects in both file directions. It is not a browser, Expo Go, Wi-Fi relay or general phone-to-phone compatibility claim. Non-sensitive test files are limited to 64 KiB.",
+        "Historically the founder selected Samsung and iPad and confirmed the native app still needs installation on both. Signed internal builds with embedded JavaScript would be required for disconnected launch; the documented iPad path requires Mac/Xcode signing and provisioning. No installation, compatibility expansion or physical Bluetooth acceptance run is scheduled or authorised by this roadmap. No successful physical Bluetooth transfer, offline cold restart or physical-device receipt sync is claimed yet.",
+        "The retained acceptance criteria are historical requirements, not instructions to resume: Wi-Fi and mobile data off with Bluetooth on, accepted delivery in each direction, export of received bytes and independent SHA-256 comparison with the original, followed by reconciliation without retransmission or duplicate receipts. Pairing, an on-screen digest or a simulated transport alone cannot establish those results.",
+        "Device enrolment and sync use an explicitly approved disposable pilot service and separate account authorisation. The normal shared service does not become a Bluetooth pilot merely because these instructions are visible. Reconciliation, publication and public inclusion are separate permissions."
+      ]
+    },
+    {
+      "id": "development-release-status",
+      "title": "Development status, privacy and release permission",
+      "paragraphs": [
+        "The founder authorised this scoped website/GitHub disclosure and incremental roadmap on 27 November 2026. That permission is not evidence of a merge or deployment: code in the workspace, a development page, a source repository and a deployed production service are different release states. The existing scoped disclosure PR must pass its current-head required checks without bypassing protections. Website publication remains a user action after the matching revision is ready. App-store submission, unrelated PRs, campaigns and private evidence publication remain unauthorised.",
+        "The verifier checks saved proof files locally without uploading their contents or requiring a NexusOS login. Private proof export remains opt-in; public inclusion is a separate permanent disclosure of a blinded commitment. File access controls are not a claim that the service operator cannot access every form of stored private data. No new end-to-end encryption, custody guarantee or wallet permission is implied.",
+        "Development availability is separate from verification correctness. Backend interruptions have been observed, followed by recovery. A successfully rendered page and bounded passing checks do not establish that long-duration memory growth or every availability problem has been permanently resolved. No password expiry, reset or founder access restriction is authorised by this disclosure.",
+        "The spectral-coordinate language and longer-term NexusOS architecture are engineering directions. The disclosed executions use present-day software and devices; they do not establish photonic hardware, physical spectral-channel delivery, new physics, or a completed whole-project WLS rewrite. Financial holds, live-fund restrictions and protections against historical backfill remain unchanged."
+      ]
+    },
+    {
+      "id": "independent-release",
+      "title": "What independent means today",
+      "paragraphs": [
+        "The verifier is a separate application and runs the proof checks and shared WLS runtime on the reviewing device. It does not send proofs to the NexusOS backend or require a NexusOS account for verification. The working pilot is shared-origin Workspace Preview, with a disposable issuing key. It is not independently distributed and does not establish a second independently written compiler or VM.",
+        "A reproducible standalone release candidate exists and trusts synthetic examples only. The shared-origin production artifact serves a notice, not the pilot verifier. A production release needs a separately controlled HTTPS origin and release process, authenticated builds, independent review and an approved issuer-key policy. Signed offline trust updates have been rehearsed with test authority; no offline client learns of a compromise on its own."
+      ]
+    },
+    {
+      "id": "chain-history",
+      "title": "Whole-chain history is a separate milestone",
+      "paragraphs": [
+        "The current build checker matches one public block against a signed receipt. It does not export or independently validate the complete WLS build chain. A future history export would identify the record domain and supply its versioned public blocks so a verifier could recompute and check every previous-hash link, without exporting private payloads.",
+        "A published GitHub genesis reference is useful only after its exact bytes and hash are established for the same record domain and pinned to a specific revision. Do not assume a NexusOS genesis reference is the first WLS build block. Two different histories can share a genesis and both have internally consistent links. An independently obtained later checkpoint can distinguish which history was recorded up to that checkpoint. No full-chain export, new external checkpoint or independent consensus is claimed here."
+      ]
+    },
+    {
+      "id": "roadmap-overview",
+      "title": "Incremental WLS source and trust roadmap — version 1.0",
+      "paragraphs": [
+        "Roadmap revision 1.0, 27 November 2026. These are proposed gated stages, not completion dates or permission to implement protected changes. Whole-project WLS application source means authored application logic, not an automatic rewrite of the compiler, runtime, browser, operating system, native adapters or hardware. Every remaining host component must be inventoried and attributed. WLS self-hosting, if later chosen, is a separate bootstrap and compiler-trust problem.",
+        "Starting evidence is the disclosed CE–SE, Compiler and VM workflow, supported WLS-PY/1, WLS-CORE/1 and WLS-CORE-LAUNCH/2 receipt replay, exact Explorer receipt linkage, and accepted Samsung recordings for blocks #30 and #33 including altered-proof rejection. The historical block #25 public reference remains a comparison, not an independent checkpoint. No stage below is declared passed solely from these observations.",
+        "Trust inventory: local computation checks the supplied instructions and signed result; issuer trust authenticates an assertion under an accepted key; software distribution determines which checker and trust roots reached the device; historical linkage checks hashes within a named record domain; authoritative history requires independently authenticated checkpoints and a reviewed finality rule; physical-world claims require separate device, human or external evidence. None implies the others or complete trustlessness.",
+        "Approval boundary for every stage: ordinary non-financial language work may be reviewed within the existing bounded direction. The founder must explicitly approve transport restarts, authentication changes, financial authority, privacy or public-inclusion changes. Protected authority changes must also satisfy the existing three independent reviews and applicable governance requirements; this roadmap neither enacts a governance model nor delegates that authority. No stage authorises historical backfill, balance repair or disclosure of private files."
+      ]
+    },
+    {
+      "id": "roadmap-inventory",
+      "title": "Stage 0 — publish a capability and trust inventory",
+      "paragraphs": [
+        "Prerequisite and starting evidence: use this versioned disclosure and the dated development record; retain the original source/evidence dates. Inventory every user-facing workflow, its authored language, executable profile, host calls, data authority, issuer, distributor, native adapter and physical-evidence status. Mark implemented, demonstrated, untested, stopped and proposed separately.",
+        "Acceptance evidence: a revision-pinned coverage matrix accounts for every application entry point and external capability, with a public-safe evidence link or an explicit evidence gap in each row; check that no private source, recording, identity or proof-opening value is exported. Affordable older Android devices remain intended users, not tested compatibility: record browser/resource/security constraints and available existing online or offline-verifier paths without promising support or restarting legacy Android/BLE work.",
+        "Remaining assumptions and unresolved choices: inventory completeness, evidence ownership, minimum secure device baseline and sustainable resource budgets require review. Native adapters and device OS security remain external dependencies. Approval: founder review of scope and exclusions; protected changes follow the roadmap approval boundary.",
+        "Compatibility and rollback: this stage changes descriptions only. Keep dated evidence and existing features intact; correct the inventory with a new version rather than rewriting history or changing runtime behaviour."
+      ]
+    },
+    {
+      "id": "roadmap-semantics",
+      "title": "Stage 1 — pin WLS semantics and conformance",
+      "paragraphs": [
+        "Prerequisite: Stage 0 capability inventory. Start from the existing bounded profiles and reference compiler/runtime, not a claim of general Python support. Specify grammar, types, numeric overflow and rounding, Unicode/binary behaviour, deterministic inputs, errors, resource limits, cycle accounting, capability effects and canonical source/program/result encodings for each version.",
+        "Acceptance evidence: publish immutable semantics and positive, negative and boundary vectors; every specified operation has expected results or rejection, with byte-identical digests and cycle counts across the named reference environments. Unsupported instructions and effects must fail closed. Record compiler/runtime versions and test source revisions; differential results must be explained rather than normalised away.",
+        "Remaining assumptions and unresolved choices: numeric representation, deterministic scheduling and future capability ABI remain design decisions; passing a shared implementation's tests does not prove a specification or compiler correct. Approval: language-maintainer review under founder-approved scope; authority-bearing effects still need separate protected approval.",
+        "Compatibility and rollback: pin profile and semantics versions in proofs and packages. Keep old replay vectors and supported readers; reject unknown versions explicitly. Introduce incompatible semantics under a new profile, with an opt-in migration and return to the previous release without reinterpreting or resigning historical evidence."
+      ]
+    },
+    {
+      "id": "roadmap-independent",
+      "title": "Stage 2 — independent checking and authenticated distribution",
+      "paragraphs": [
+        "Prerequisite: Stages 0–1. Start with the reproducible synthetic-only standalone candidate and rehearsed test-key updates. Separate proof issuance, release approval, trust-checkpoint authority and recovery. A second origin alone is not independent control, and reusing the same runtime is not an independently implemented checker.",
+        "Acceptance evidence: at least two independently controlled clean builders reproduce the same pinned release bytes; authenticate the digest and trust bootstrap outside NexusOS. An independently maintained checker must pass the published conformance and adversarial vectors and compare actual saved proof results. Verify the hosted bytes, origin ownership and release permissions; rehearse key compromise, retirement, expiry, rollback-floor persistence and recovery with disposable keys before any public-key policy approval.",
+        "Remaining assumptions and unresolved choices: root quorum, independent maintainers, build toolchains, browser/OS supply chain, trusted clock and update reachability remain trust assumptions. An offline client cannot discover new revocations. Select maintainers and recovery channels explicitly, not by this roadmap. Approval: founder and independent release/security reviewers approve issuer and distribution policies; protected authority rules remain mandatory.",
+        "Compatibility and rollback: retain authenticated prior releases and old proof-format fixtures. A safe rollback must not lower trust-checkpoint floors or revive compromised issuers. Use separately authenticated recovery for a broken trust root; never accept an in-band root reset solely vouched for by the compromised distributor."
+      ]
+    },
+    {
+      "id": "roadmap-migrations",
+      "title": "Stage 3 — migrate bounded application logic to WLS",
+      "paragraphs": [
+        "Prerequisite: Stages 0–2 for any independently distributed migration claim. Start with pure, non-financial application modules and the specified profile; maintain an explicit ledger of WLS-authored logic, translated compatibility code and host/native adapters. Whole-project source is reached only when every application module is accounted for, not when a wrapper calls existing host logic.",
+        "Acceptance evidence: for each small migration publish public-safe source provenance and a reproducible build, differential fixtures against the previous implementation, negative/capability-denial tests, measured memory/time limits and user-visible create/read/edit/delete or recovery parity where applicable. Test approved affordable-device/browser combinations separately and label unsupported or untested cases. Private inputs stay private. No BLE expansion is a dependency of this stage.",
+        "Remaining assumptions and unresolved choices: migration order, UI authoring, storage/network capability interfaces, compiler bootstrap and acceptable performance budgets require review. The runtime, compiler, OS, hardware and native adapters remain trusted until independently addressed. Review external-world effects separately from deterministic replay. Approval: founder approves each bounded migration; authentication, financial and protected authority changes require their separate existing approvals.",
+        "Compatibility and rollback: use opt-in versioned adapters and reversible routing to the previous implementation; preserve APIs, saved data, original receipts and consent. Shadow comparisons must have no duplicate writes. Do not migrate live balances, backfill history or silently change existing authorisations. Stop and revert the new path on parity, privacy or resource failures."
+      ]
+    },
+    {
+      "id": "roadmap-history",
+      "title": "Stage 4 — independently check history and review finality",
+      "paragraphs": [
+        "Prerequisite: Stages 0–2 and stable record-domain semantics; Stage 3 parity is additionally required before migrated writers participate. Start from today's single exact-receipt/block check, not from assumed whole-chain validation. Specify a bounded public history export with domain identity, canonical genesis bytes/hash, versioned blocks and independently authenticated later checkpoints.",
+        "Acceptance evidence: a separate checker recomputes every supplied previous-hash link and commitment, and rejects deletion, reordering, mutation, domain substitution, truncation presented as complete, and forks inconsistent with an independently obtained checkpoint. Demonstrate that two internally consistent histories sharing genesis are not automatically authoritative. Before calling any history final, publish and independently review the threat model, membership/Sybil assumptions, quorum, fork choice, finality, censorship/liveness and recovery rules; exercise conflicting histories and authority failures with disposable data.",
+        "Remaining assumptions and unresolved choices: who witnesses checkpoints, who can write history, adversary and quorum thresholds, availability and the consensus/finality design remain undecided. Hash linkage alone is not authoritative history, Bitcoin settlement or consensus. Approval: founder plus all required independent and governance reviews for protected authority; no consensus model is enacted by this roadmap.",
+        "Compatibility and rollback: keep record domains and historical envelopes immutable; old blocks do not gain new guarantees. Add explicitly versioned prospective checkpoints and readers. On disagreement stop finality claims and new affected writes, retain both evidence sets for review and fall back to labelled single-record checking, never silently choose or rewrite history."
+      ]
+    },
+    {
+      "id": "roadmap-validation",
+      "title": "Stage 5 — external validation and reduced operator authority",
+      "paragraphs": [
+        "Prerequisite: the applicable accepted evidence from Stages 0–4; each claimed reduction names precisely which prerequisite passed. Start from the disclosed shared-operator limitations, not a claim of operator-inaccessible storage or complete trustlessness. Independent distribution and independent history authority are separately measured outcomes.",
+        "Acceptance evidence: external reviewers reproduce the released source/build/conformance and migration results, publish public-safe findings and retest fixes. Demonstrate with disposable adversarial exercises that a single compromised operator cannot substitute accepted releases, trust roots or checkpoint history under the approved policy. Publish a before/after authority matrix, named residual powers, incident/recovery evidence and measured affordable-device access results.",
+        "Remaining assumptions and unresolved choices: reviewers, independent hosting/funding, multi-party authority thresholds, recovery availability and privacy architecture need explicit approval. Physical delivery, human consent, custody, sensors and external-world truth cannot be inferred from a VM receipt. Cryptography still depends on algorithms, implementations, keys, operating systems and hardware. Do not promise an absolute absence of trust or universal device access.",
+        "Compatibility and rollback: reductions are prospective, separately versioned and independently reviewed. Preserve old evidence and readers without relabelling their guarantees. If independence or safety fails, withdraw the affected claim and suspend the affected path; do not silently restore unilateral authority. Approval: founder and the applicable independent/governance authorities must approve protected changes and any recovery, with no automatic campaign or transport restart."
+      ]
+    }
+  ]
+}
